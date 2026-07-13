@@ -1,8 +1,10 @@
 package com.mongmong.familyshield
 
 import android.app.Activity
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.net.Uri
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
@@ -15,11 +17,18 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
-    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG }
+    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
+    private val safetyPlan by lazy { SafetyPlanStore(this) }
     private var currentAnalysis: ScamAnalysis? = null
+
+    private val defaultCallbackScript =
+        "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
+            "2. 안전 확인 질문을 물어보고 답을 확인합니다.\n" +
+            "3. 답이 어색하면 송금, 앱 설치, 인증번호 제공을 거부합니다.\n" +
+            "4. 필요하면 112 또는 182에 신고합니다."
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +44,7 @@ class MainActivity : Activity() {
                 Screen.CHECKER -> checker()
                 Screen.RESULT -> result()
                 Screen.LOG -> incidentLog()
+                Screen.PLAN -> safetyPlanScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -79,6 +89,7 @@ class MainActivity : Activity() {
         section("개인정보 보호", "분석은 로컬 규칙으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         primaryButton("의심 메시지 검사") { show(Screen.CHECKER) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
+        secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
         section("가족 확인 루틴", "1. 기존에 저장된 번호로 직접 전화하기\n2. 가족만 아는 안전단어 묻기\n3. 송금, 상품권, 앱 설치는 확인 전 중단하기")
     }
 
@@ -111,7 +122,7 @@ class MainActivity : Activity() {
         title("분석 결과")
         riskCard(analysis)
         section("권장 행동", analysis.summary)
-        section("가족 콜백/안전단어", "앱 안의 결과만 믿지 말고 기존 연락처로 직접 전화하세요. 가족끼리 정한 안전단어를 묻고, 답이 어색하면 송금을 멈추세요.")
+        familyPlanSection()
         section("긴급 대응", "이미 돈을 보냈다면 즉시 은행 지급정지, 112 또는 182 신고, 계정 비밀번호 변경, 원격제어 앱 삭제를 진행하세요.")
         primaryButton("사건 기록에 저장") {
             incidents.add(analysis)
@@ -143,6 +154,116 @@ class MainActivity : Activity() {
         }
         primaryButton("새 검사") { show(Screen.CHECKER) }
         secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.familyPlanSection() {
+        val plan = safetyPlan.load()
+        if (plan.isBlank) {
+            section(
+                "가족 확인 루틴",
+                "아직 저장된 안전 계획이 없습니다. 안전단어와 콜백 번호를 미리 저장해두면 위급할 때 더 빠르게 확인할 수 있습니다."
+            )
+            primaryButton("가족 안전 계획 만들기") { show(Screen.PLAN) }
+            return
+        }
+
+        val body = buildString {
+            if (plan.safeWord.isNotBlank()) {
+                append("1. 안전 확인 질문을 먼저 물어보세요: “${plan.safeWord}”\n")
+            } else {
+                append("1. 가족만 아는 안전단어나 질문을 먼저 물어보세요.\n")
+            }
+            append("2. 답이 어색하면 아래 저장된 번호로 직접 전화해 확인하세요.\n")
+            append("3. 확인 전에는 송금, 앱 설치, 인증번호(OTP) 제공을 거부하세요.")
+            if (plan.callbackScript.isNotBlank()) {
+                append("\n\n콜백 스크립트:\n${plan.callbackScript}")
+            }
+        }
+        section("가족 안전 계획", body)
+        plan.contacts.filter { it.number.isNotBlank() }.forEach { contact ->
+            val label = contact.label.ifBlank { "저장된 번호" }
+            secondaryButton("$label 전화 연결 (${contact.number})") { dial(contact.number) }
+        }
+        secondaryButton("안전 계획 수정") { show(Screen.PLAN) }
+    }
+
+    private fun LinearLayout.safetyPlanScreen() {
+        val plan = safetyPlan.load()
+        title("가족 안전 계획")
+        subtitle("안전단어와 연락처는 직접 입력하며, 이 기기에만 저장됩니다. 서버로 전송되지 않습니다.")
+        section("사용 방법", "위급한 메시지를 받으면 아래 안전단어를 묻고, 저장된 번호로 직접 전화해 확인하세요.")
+
+        label("안전 확인 질문 / 단어")
+        val safeWordInput = EditText(this@MainActivity).apply {
+            hint = "예: 우리 가족만 아는 어릴 적 별명은?"
+            setText(plan.safeWord)
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+        }
+        addView(safeWordInput, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(14)))
+
+        label("신뢰하는 연락처 (한 줄에 하나, \"이름 - 번호\")")
+        val contactsInput = EditText(this@MainActivity).apply {
+            hint = "예: 엄마 - 010-1234-5678\n아빠 - 010-2345-6789"
+            setText(formatContacts(plan.contacts))
+            minLines = 3
+            gravity = Gravity.TOP
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+        }
+        addView(contactsInput, LinearLayout.LayoutParams(match, dp(120)).withMargins(bottom = dp(14)))
+
+        label("콜백 스크립트")
+        val scriptInput = EditText(this@MainActivity).apply {
+            hint = "가족에게 확인할 때 읽을 대사"
+            setText(plan.callbackScript.ifBlank { defaultCallbackScript })
+            minLines = 5
+            gravity = Gravity.TOP
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            setBackgroundColor(Color.WHITE)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+        }
+        addView(scriptInput, LinearLayout.LayoutParams(match, dp(150)).withMargins(bottom = dp(16)))
+
+        primaryButton("저장하기") {
+            safetyPlan.save(
+                SafetyPlan(
+                    safeWord = safeWordInput.text.toString().trim(),
+                    callbackScript = scriptInput.text.toString().trim(),
+                    contacts = parseContacts(contactsInput.text.toString())
+                )
+            )
+            toast("가족 안전 계획을 저장했습니다.")
+            show(Screen.HOME)
+        }
+        secondaryButton("계획 삭제") {
+            safetyPlan.clear()
+            toast("저장된 안전 계획을 삭제했습니다.")
+            show(Screen.PLAN)
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun formatContacts(contacts: List<TrustedContact>): String =
+        contacts.joinToString("\n") { "${it.label} - ${it.number}" }
+
+    private fun parseContacts(raw: String): List<TrustedContact> =
+        raw.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .map { line ->
+                val idx = line.indexOf(" - ")
+                if (idx > 0) {
+                    TrustedContact(line.substring(0, idx).trim(), line.substring(idx + 3).trim())
+                } else {
+                    TrustedContact(line, "")
+                }
+            }
+            .toList()
+
+    private fun dial(number: String) {
+        startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(number)}")))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {
@@ -183,6 +304,12 @@ class MainActivity : Activity() {
         setTextColor(0xFF475569.toInt())
         setLineSpacing(4f, 1f)
     }, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(18)))
+
+    private fun LinearLayout.label(textValue: String) = addView(TextView(this@MainActivity).apply {
+        text = textValue
+        textSize = 13f
+        setTextColor(0xFF64748B.toInt())
+    }, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(4)))
 
     private fun LinearLayout.section(heading: String, body: String) {
         val box = vertical {

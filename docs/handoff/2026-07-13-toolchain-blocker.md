@@ -1,5 +1,10 @@
 # Build Verification Handoff — 2026-07-13
 
+> **Note:** For the most recent fresh verification (including the family
+> safety plan slice added later in this same day), see
+> `docs/handoff/2026-07-13-toolchain-verified.md`. This file remains accurate
+> for the history of how the toolchain blocker was originally resolved.
+
 ## Summary
 
 Claude Code initially reported `BLOCKED` because its non-interactive sandbox could not run binaries and the repo had no Java in PATH. Hermes then independently recovered the toolchain without sudo by installing local tooling under ignored `.tools/`, ran fresh Gradle verification, and produced a debug APK.

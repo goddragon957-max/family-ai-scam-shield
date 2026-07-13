@@ -65,6 +65,33 @@ enum class ScamSignal(
         "가족이나 은행 직원에게 알리지 말라고 압박합니다.",
         25,
         listOf("비밀|말하지\\s*마|알리지\\s*마|혼자만|통화\\s*끊지\\s*마|누구에게도").map { Regex(it) }
+    ),
+    PHONE_NUMBER_CHANGE(
+        "가족 번호 변경 사칭",
+        "가족이 휴대폰 번호가 바뀌었다며 새 번호로만 연락하라고 할 수 있습니다.",
+        22,
+        listOf("번호\\s*바뀌었|번호\\s*바꿨|이\\s*번호로\\s*(저장|연락)|새\\s*번호로\\s*연락").map { Regex(it) }
+    ),
+    LOAN_REFINANCE_FEE(
+        "대환대출/보증료 편취",
+        "대환대출, 저금리 전환을 미끼로 보증료나 선입금을 요구할 수 있습니다.",
+        22,
+        listOf("대환\\s*대출|전환\\s*대출|보증료|선\\s*입금").map { Regex(it) }
+    ),
+    GIFTICON_PIN(
+        "기프티콘/상품권 PIN 요구",
+        "기프티콘이나 상품권의 PIN 번호를 사진이나 문자로 요구할 수 있습니다.",
+        25,
+        listOf("기프티콘|핀\\s*번호|pin\\s*번호|상품권\\s*번호").map { Regex(it, RegexOption.IGNORE_CASE) }
+    ),
+    DEEPFAKE_VOICE(
+        "딥페이크/음성 복제 의심",
+        "목소리를 복제하거나 AI로 합성한 음성으로 가족을 사칭할 수 있습니다.",
+        22,
+        listOf(
+            "목소리\\s*복제", "음성\\s*복제", "목소리\\s*합성", "음성\\s*합성",
+            "ai\\s*음성", "ai\\s*목소리", "보이스\\s*피싱", "딥페이크\\s*(목소리|영상|통화)?"
+        ).map { Regex(it, RegexOption.IGNORE_CASE) }
     )
 }
 
@@ -98,7 +125,10 @@ object ScamAnalyzer {
             ScamSignal.URGENT_TRANSFER to ScamSignal.FAMILY_EMERGENCY,
             ScamSignal.APP_INSTALL to ScamSignal.CREDENTIALS,
             ScamSignal.LINK to ScamSignal.CREDENTIALS,
-            ScamSignal.SECRECY to ScamSignal.URGENT_TRANSFER
+            ScamSignal.SECRECY to ScamSignal.URGENT_TRANSFER,
+            ScamSignal.PHONE_NUMBER_CHANGE to ScamSignal.URGENT_TRANSFER,
+            ScamSignal.DEEPFAKE_VOICE to ScamSignal.URGENT_TRANSFER,
+            ScamSignal.GIFTICON_PIN to ScamSignal.SECRECY
         ).count { (a, b) -> a in matches && b in matches } * 10
 
         val score = (matches.sumOf { it.score } + synergy).coerceAtMost(100)
