@@ -78,4 +78,27 @@ class ScamAnalyzerTest {
         assertTrue(ScamSignal.DEEPFAKE_VOICE in result.matchedSignals)
         assertEquals(RiskLevel.HIGH, result.riskLevel)
     }
+
+    @Test
+    fun liveCallScreenSharePressureIsFlagged() {
+        val result = ScamAnalyzer.analyze(
+            "은행 보안팀입니다. 통화 끊지 말고 화면공유 켠 뒤 보안앱 APK를 설치하고 인증번호를 불러주세요."
+        )
+
+        assertTrue(ScamSignal.LIVE_CALL_CONTROL in result.matchedSignals)
+        assertTrue(ScamSignal.APP_INSTALL in result.matchedSignals)
+        assertTrue(ScamSignal.CREDENTIALS in result.matchedSignals)
+        assertEquals(RiskLevel.HIGH, result.riskLevel)
+    }
+
+    @Test
+    fun guardianAdviceTellsFamilyToStopAndCallBack() {
+        val result = ScamAnalyzer.analyze(
+            "엄마 나 번호 바뀌었어. 이 번호로 저장해. 급히 계좌로 돈 보내줘. 아무한테도 말하지 마."
+        )
+
+        assertTrue(result.guardianAdvice.verdict.contains("지금 멈춤"))
+        assertTrue(result.guardianAdvice.immediateActions.any { it.contains("기존에 저장된 가족 번호") })
+        assertTrue(result.guardianAdvice.immediateActions.any { it.contains("송금") })
+    }
 }

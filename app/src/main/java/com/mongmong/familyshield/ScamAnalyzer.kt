@@ -84,6 +84,19 @@ enum class ScamSignal(
         25,
         listOf("기프티콘|핀\\s*번호|pin\\s*번호|상품권\\s*번호").map { Regex(it, RegexOption.IGNORE_CASE) }
     ),
+    LIVE_CALL_CONTROL(
+        "통화 유지/화면공유 압박",
+        "통화를 끊지 못하게 하거나 화면공유·원격 확인을 요구할 수 있습니다.",
+        24,
+        listOf(
+            "통화\\s*(끊지|종료하지)\\s*(마|말)",
+            "끊지\\s*말고",
+            "화면\\s*공유",
+            "스피커폰",
+            "원격\\s*확인",
+            "보안\\s*앱"
+        ).map { Regex(it, RegexOption.IGNORE_CASE) }
+    ),
     DEEPFAKE_VOICE(
         "딥페이크/음성 복제 의심",
         "목소리를 복제하거나 AI로 합성한 음성으로 가족을 사칭할 수 있습니다.",
@@ -107,6 +120,64 @@ data class ScamAnalysis(
             RiskLevel.MEDIUM -> "주의 신호가 있습니다. 링크를 누르거나 돈을 보내기 전에 가족 확인 루틴을 진행하세요."
             RiskLevel.SAFE -> "강한 사기 신호는 적습니다. 그래도 민감정보와 송금 요청은 직접 확인하세요."
         }
+
+    val guardianAdvice: GuardianAdvice
+        get() = GuardianAdvisor.advise(this)
+}
+
+data class GuardianAdvice(
+    val verdict: String,
+    val immediateActions: List<String>,
+    val callbackPrompt: String
+)
+
+object GuardianAdvisor {
+    fun advise(analysis: ScamAnalysis): GuardianAdvice {
+        val signals = analysis.matchedSignals.toSet()
+        val actions = linkedSetOf<String>()
+
+        val verdict = when (analysis.riskLevel) {
+            RiskLevel.HIGH -> "AI 보호자 판단: 지금 멈춤. 송금·앱설치·인증번호 제공 금지."
+            RiskLevel.MEDIUM -> "AI 보호자 판단: 확인 전 보류. 링크·송금·개인정보 입력 금지."
+            RiskLevel.SAFE -> "AI 보호자 판단: 강한 위험 신호는 적지만, 돈이나 인증번호 요청은 직접 확인."
+        }
+
+        if (ScamSignal.FAMILY_EMERGENCY in signals || ScamSignal.DEEPFAKE_VOICE in signals || ScamSignal.PHONE_NUMBER_CHANGE in signals) {
+            actions += "전화를 끊고 기존에 저장된 가족 번호로 직접 다시 전화하세요. 새 번호로 확인하지 마세요."
+        }
+        if (ScamSignal.URGENT_TRANSFER in signals || ScamSignal.GIFT_CRYPTO in signals || ScamSignal.GIFTICON_PIN in signals) {
+            actions += "송금, 상품권 구매, 기프티콘/PIN 전달을 즉시 멈추세요."
+        }
+        if (ScamSignal.APP_INSTALL in signals || ScamSignal.LIVE_CALL_CONTROL in signals) {
+            actions += "통화 유지·화면공유·원격제어·APK/보안앱 설치 요구는 거절하세요."
+        }
+        if (ScamSignal.CREDENTIALS in signals) {
+            actions += "계좌번호, 비밀번호, OTP, 신분증 사진을 말하거나 보내지 마세요."
+        }
+        if (ScamSignal.LINK in signals || ScamSignal.BAIT in signals || ScamSignal.LOAN_REFINANCE_FEE in signals) {
+            actions += "문자 링크 대신 은행·정부기관 공식 앱이나 대표번호로 직접 확인하세요."
+        }
+        if (ScamSignal.IMPERSONATION in signals) {
+            actions += "검찰·경찰·은행을 자칭하면 기관 대표번호로 끊고 다시 거세요."
+        }
+        if (ScamSignal.SECRECY in signals) {
+            actions += "‘비밀로 해라’는 말이 나오면 가족 단톡방이나 보호자에게 바로 공유하세요."
+        }
+        if (actions.isEmpty()) {
+            actions += "대화가 돈·인증번호·앱설치로 이어지면 다시 검사하고 가족 확인 루틴을 실행하세요."
+        }
+
+        val callbackPrompt = when {
+            ScamSignal.DEEPFAKE_VOICE in signals || ScamSignal.FAMILY_EMERGENCY in signals ->
+                "안전 질문: 우리 가족만 아는 별명/장소를 물어보고, 대답이 애매하면 통화를 종료하세요."
+            ScamSignal.PHONE_NUMBER_CHANGE in signals ->
+                "확인 질문: 예전 번호로 직접 전화해 ‘번호 변경’ 사실을 확인하기 전에는 새 번호를 저장하지 마세요."
+            else ->
+                "확인 질문: 지금 요청을 기존 가족 번호나 공식 대표번호로 다시 확인하세요."
+        }
+
+        return GuardianAdvice(verdict, actions.toList(), callbackPrompt)
+    }
 }
 
 object ScamAnalyzer {
@@ -128,6 +199,9 @@ object ScamAnalyzer {
             ScamSignal.SECRECY to ScamSignal.URGENT_TRANSFER,
             ScamSignal.PHONE_NUMBER_CHANGE to ScamSignal.URGENT_TRANSFER,
             ScamSignal.DEEPFAKE_VOICE to ScamSignal.URGENT_TRANSFER,
+            ScamSignal.DEEPFAKE_VOICE to ScamSignal.FAMILY_EMERGENCY,
+            ScamSignal.LIVE_CALL_CONTROL to ScamSignal.APP_INSTALL,
+            ScamSignal.LIVE_CALL_CONTROL to ScamSignal.CREDENTIALS,
             ScamSignal.GIFTICON_PIN to ScamSignal.SECRECY
         ).count { (a, b) -> a in matches && b in matches } * 10
 

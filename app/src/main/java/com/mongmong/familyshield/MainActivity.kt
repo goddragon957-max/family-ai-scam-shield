@@ -54,8 +54,8 @@ class MainActivity : Activity() {
     }
 
     private fun LinearLayout.onboarding() {
-        title("가족 사기 방패")
-        subtitle("의심스러운 문자, 카카오톡, 통화 내용을 붙여넣어 기기 안에서만 사기 위험 신호를 확인합니다.")
+        title("가족 AI 보이스피싱 방패")
+        subtitle("의심 문자, 카카오톡, 통화 녹취를 붙여넣으면 AI 보호자 모드가 기기 안에서 위험 신호와 확인 행동을 정리합니다.")
         section(
             "시작 전 동의",
             "이 앱은 가족의 동의와 대화를 돕는 도구입니다.\n" +
@@ -84,20 +84,20 @@ class MainActivity : Activity() {
     }
 
     private fun LinearLayout.home() {
-        title("오늘도 확인하고 멈추기")
-        subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 가족 확인 루틴을 진행하세요.")
-        section("개인정보 보호", "분석은 로컬 규칙으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
-        primaryButton("의심 메시지 검사") { show(Screen.CHECKER) }
+        title("가족 AI 보호자 대기 중")
+        subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
+        primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
-        section("가족 확인 루틴", "1. 기존에 저장된 번호로 직접 전화하기\n2. 가족만 아는 안전단어 묻기\n3. 송금, 상품권, 앱 설치는 확인 전 중단하기")
+        section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/182 또는 은행 지급정지")
     }
 
     private fun LinearLayout.checker() {
-        title("의심 내용 붙여넣기")
+        title("AI 보호자 분석")
         subtitle("문자, 카카오톡, 통화 녹취를 직접 붙여넣으세요. 민감정보는 지우고 검사해도 됩니다.")
         val input = EditText(this@MainActivity).apply {
-            hint = "예: 엄마 나 폰 고장났어. 급히 계좌로 돈 보내줘..."
+            hint = "예: 엄마 나 폰 고장났어. 통화 끊지 말고 급히 계좌로 돈 보내줘..."
             minLines = 8
             gravity = Gravity.TOP
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
@@ -105,7 +105,7 @@ class MainActivity : Activity() {
             setPadding(dp(14), dp(12), dp(14), dp(12))
         }
         addView(input, LinearLayout.LayoutParams(match, dp(180)).withMargins(bottom = dp(16)))
-        primaryButton("로컬 분석하기") {
+        primaryButton("AI 보호자 분석하기") {
             val text = input.text.toString()
             if (text.isBlank()) {
                 toast("검사할 내용을 붙여넣어 주세요.")
@@ -119,8 +119,9 @@ class MainActivity : Activity() {
 
     private fun LinearLayout.result() {
         val analysis = currentAnalysis ?: ScamAnalyzer.analyze("")
-        title("분석 결과")
+        title("AI 분석 결과")
         riskCard(analysis)
+        aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
         familyPlanSection()
         section("긴급 대응", "이미 돈을 보냈다면 즉시 은행 지급정지, 112 또는 182 신고, 계정 비밀번호 변경, 원격제어 앱 삭제를 진행하세요.")
@@ -289,6 +290,18 @@ class MainActivity : Activity() {
             })
         }
         addView(box, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(14)))
+    }
+
+    private fun LinearLayout.aiGuardianSection(analysis: ScamAnalysis) {
+        val advice = analysis.guardianAdvice
+        val body = buildString {
+            append(advice.verdict)
+            append("\n\n즉시 할 일:\n")
+            advice.immediateActions.forEach { action -> append("• ").append(action).append("\n") }
+            append("\n")
+            append(advice.callbackPrompt)
+        }.trim()
+        section("AI 보호자 방지 루틴", body)
     }
 
     private fun LinearLayout.title(textValue: String) = addView(TextView(this@MainActivity).apply {

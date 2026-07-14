@@ -1,14 +1,14 @@
-# 가족 사기 방패 Android MVP
+# 가족 AI 보이스피싱 방패 Android MVP
 
-Korean Android Kotlin MVP for checking suspicious family scam messages locally on-device. The app is consent-first, uses simple native Android Views, and does not request SMS, call, contact, or network permissions.
+Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspicious SMS/Kakao/call transcript text is pasted manually, analyzed locally on-device, and turned into a practical "AI 보호자" stop/callback routine. The app is consent-first, uses simple native Android Views, and does not request SMS, call, contact, microphone, internet, or network permissions.
 
 ## Flow
 
 1. 명시적 동의 온보딩
 2. 홈 대시보드
 3. 의심 SMS/Kakao/통화 녹취 붙여넣기
-4. 로컬 규칙 기반 사기 신호 분석
-5. 위험도, 탐지 신호, 가족 콜백/안전단어 루틴, 긴급 대응 안내
+4. 로컬 규칙 기반 AI 보호자 분석
+5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내
 6. 기기 로컬 사건 기록 저장
 
 ## Family Safety Plan
@@ -23,6 +23,14 @@ Korean Android Kotlin MVP for checking suspicious family scam messages locally o
 저장된 번호로 바로 전화(`ACTION_DIAL`, 통화 권한 요청 없음)할 수 있도록 안내합니다.
 계획이 없으면 결과 화면에 계획 생성 CTA가 표시됩니다. 모든 데이터는
 `SharedPreferences`에만 저장되며 기기 밖으로 전송되지 않습니다.
+
+## AI Guardian Advice
+
+The app does not call a remote model in this MVP. "AI 보호자" means a deterministic on-device prevention engine that converts matched scam signals into concrete stop/callback actions:
+
+- verdict: 지금 멈춤 / 확인 전 보류 / 강한 위험 신호 적음
+- immediate actions: stop transfer, refuse APK/remote-control/screen-share, do not share OTP/ID, use official numbers
+- callback prompt: ask a family safe question and call back through an already-saved trusted number
 
 ## Analyzer Signals
 
@@ -40,6 +48,7 @@ The local analyzer scores these signals:
 - 가족 번호 변경 사칭 ("번호 바뀌었어", "이 번호로 저장해")
 - 대환대출/보증료 편취 (대환대출, 전환대출, 보증료, 선입금)
 - 기프티콘/상품권 PIN 요구
+- 통화 유지/화면공유/원격 확인 압박
 - 딥페이크/음성 복제 의심 (목소리 복제, 음성 합성, 보이스피싱)
 
 ## Build And Test
@@ -93,6 +102,7 @@ run and result.
 - No server and no network analysis.
 - No automatic SMS/call monitoring.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.
+- Android backup is disabled (`android:allowBackup="false"`) so local incident/safety-plan data is not included in platform cloud backup.
 - The user must paste suspicious text manually.
 - Incident logs are stored only in local `SharedPreferences` on the device.
 - Rule-based scoring is a safety checklist, not a guarantee. Always call family through an already-saved trusted number before sending money, installing apps, or sharing authentication codes.
