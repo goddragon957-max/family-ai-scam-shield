@@ -6,10 +6,14 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 
 1. 명시적 동의 온보딩
 2. 홈 대시보드
-3. 의심 SMS/Kakao/통화 녹취 붙여넣기
+3. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
 4. 로컬 규칙 기반 AI 보호자 분석
 5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내
 6. 기기 로컬 사건 기록 저장
+
+## Share Entry
+
+The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plain`). A user can share a suspicious Kakao/SMS/memo text into the app; after consent, the checker opens with the shared text pre-filled. This does not add SMS, contact, call, microphone, or internet permissions.
 
 ## Family Safety Plan
 

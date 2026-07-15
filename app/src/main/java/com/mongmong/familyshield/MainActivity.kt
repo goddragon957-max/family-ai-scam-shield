@@ -23,6 +23,7 @@ class MainActivity : Activity() {
     private val incidents by lazy { IncidentStore(this) }
     private val safetyPlan by lazy { SafetyPlanStore(this) }
     private var currentAnalysis: ScamAnalysis? = null
+    private var pendingSharedText: String? = null
 
     private val defaultCallbackScript =
         "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
@@ -30,9 +31,58 @@ class MainActivity : Activity() {
             "3. 답이 어색하면 송금, 앱 설치, 인증번호 제공을 거부합니다.\n" +
             "4. 필요하면 112 또는 182에 신고합니다."
 
+    companion object {
+        private const val KEY_PENDING_SHARED_TEXT = "pending_shared_text"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        show(if (prefs.getBoolean("consented", false)) Screen.HOME else Screen.ONBOARDING)
+        pendingSharedText = savedInstanceState?.getString(KEY_PENDING_SHARED_TEXT) ?: extractSharedText(intent)
+        if (savedInstanceState == null && !pendingSharedText.isNullOrBlank()) {
+            clearSharedIntent()
+        }
+        val consented = prefs.getBoolean("consented", false)
+        val startScreen = when {
+            !consented -> Screen.ONBOARDING
+            pendingSharedText.isNullOrBlank() -> Screen.HOME
+            else -> Screen.CHECKER
+        }
+        show(startScreen)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        if (!pendingSharedText.isNullOrBlank()) {
+            outState.putString(KEY_PENDING_SHARED_TEXT, pendingSharedText)
+        }
+        super.onSaveInstanceState(outState)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        val sharedText = extractSharedText(intent)
+        if (sharedText.isNullOrBlank()) {
+            pendingSharedText = null
+            clearSharedIntent()
+            show(if (prefs.getBoolean("consented", false)) Screen.HOME else Screen.ONBOARDING)
+            return
+        }
+        pendingSharedText = sharedText
+        clearSharedIntent()
+        show(if (prefs.getBoolean("consented", false)) Screen.CHECKER else Screen.ONBOARDING)
+    }
+
+    private fun extractSharedText(intent: Intent?): String? {
+        if (intent == null || intent.action != Intent.ACTION_SEND) return null
+        val type = intent.type.orEmpty()
+        if (!type.startsWith("text/")) return null
+        return SharedTextParser.composeSharedText(
+            text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT),
+            subject = intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)
+        )
+    }
+
+    private fun clearSharedIntent() {
+        setIntent(Intent(this, MainActivity::class.java).apply { action = Intent.ACTION_MAIN })
     }
 
     private fun show(screen: Screen) {
@@ -76,7 +126,7 @@ class MainActivity : Activity() {
         primaryButton("동의하고 시작") {
             if (consentFamily.isChecked && consentLocal.isChecked) {
                 prefs.edit().putBoolean("consented", true).apply()
-                show(Screen.HOME)
+                show(if (pendingSharedText.isNullOrBlank()) Screen.HOME else Screen.CHECKER)
             } else {
                 toast("두 항목에 동의해야 시작할 수 있습니다.")
             }
@@ -96,8 +146,17 @@ class MainActivity : Activity() {
     private fun LinearLayout.checker() {
         title("AI 보호자 분석")
         subtitle("문자, 카카오톡, 통화 녹취를 직접 붙여넣으세요. 민감정보는 지우고 검사해도 됩니다.")
+        val sharedText = pendingSharedText.orEmpty()
+        if (sharedText.isNotBlank()) {
+            section("공유된 내용 불러옴", "카카오톡/SMS/메모에서 공유한 텍스트를 아래 입력칸에 넣었습니다. 민감정보는 지우고 분석해도 됩니다.")
+        }
         val input = EditText(this@MainActivity).apply {
             hint = "예: 엄마 나 폰 고장났어. 통화 끊지 말고 급히 계좌로 돈 보내줘..."
+            if (sharedText.isNotBlank()) {
+                setText(sharedText)
+                setSelection(text.length)
+                pendingSharedText = null
+            }
             minLines = 8
             gravity = Gravity.TOP
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE
