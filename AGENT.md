@@ -9,7 +9,7 @@ Korean Android MVP for a "가족 AI 보이스피싱 방패" app: a consent-first
 - Prefer simple native Android Views (no Compose) to minimize dependency/toolchain risk.
 - Local-only MVP: no server, no network analysis, no surveillance.
 - First-run consent onboarding must be explicit.
-- Core path: 동의 온보딩 → AI 보호자 로컬 분석 → 위험 신호 설명 → 즉시 중단 행동 → 가족 확인 루틴/대응 체크리스트 → 사건 기록.
+- Core path: 동의 온보딩 → AI 보호자 로컬 분석 → 위험 신호 설명 → 즉시 중단 행동 → 가족 확인 루틴/대응 체크리스트 → 원문 미포함 가족 공유 리포트 또는 사건 기록.
 - Android `ACTION_SEND` text/plain share entry is allowed: Kakao/SMS/memo text can open the checker pre-filled after consent, without adding SMS/contact/call/microphone/internet permissions.
 - Family safety plan: users can save a safe word, manually typed trusted callback contacts (no contact picker), and a callback script locally (`SafetyPlanStore`, `SharedPreferences`). The result screen surfaces this plan (or a CTA to create one) and offers `ACTION_DIAL` shortcuts — no `CALL_PHONE` permission requested.
 - Korean UI copy. Clear, practical, non-alarmist.

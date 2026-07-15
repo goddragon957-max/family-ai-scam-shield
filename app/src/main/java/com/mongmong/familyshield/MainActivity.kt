@@ -184,6 +184,7 @@ class MainActivity : Activity() {
         section("권장 행동", analysis.summary)
         familyPlanSection()
         section("긴급 대응", "이미 돈을 보냈다면 즉시 은행 지급정지, 112 또는 182 신고, 계정 비밀번호 변경, 원격제어 앱 삭제를 진행하세요.")
+        primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
         primaryButton("사건 기록에 저장") {
             incidents.add(analysis)
             toast("사건 기록에 저장했습니다.")
@@ -324,6 +325,16 @@ class MainActivity : Activity() {
 
     private fun dial(number: String) {
         startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(number)}")))
+    }
+
+    private fun shareSafetyReport(analysis: ScamAnalysis) {
+        val report = SafetyReportBuilder.build(analysis)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 확인 요청")
+            putExtra(Intent.EXTRA_TEXT, report)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 안전 리포트 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {
