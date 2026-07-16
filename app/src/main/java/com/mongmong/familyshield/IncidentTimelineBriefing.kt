@@ -285,7 +285,7 @@ object IncidentTimelineBriefingBuilder {
         val counts = linkedMapOf<String, Int>()
         incidents.forEach { incident ->
             incident.signals.labels.distinct().forEach { label ->
-                counts[label] = counts.getOrDefault(label, 0) + 1
+                counts[label] = (counts[label] ?: 0) + 1
             }
         }
         return counts.entries

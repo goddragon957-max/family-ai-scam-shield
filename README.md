@@ -16,6 +16,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 10. 상황별 신고·상담 연락처와 말할 내용 확인
 11. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 12. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
+13. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
 
 ## Share Entry
 
@@ -37,6 +38,30 @@ The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plai
 연락처 이름·전체 번호, 계좌·비밀번호·OTP/PIN·링크 값은 공유문에 포함하지 않습니다. 모든 추천은
 기기 안에서 결정되며 자동 문자·통화·연락처 감시, 네트워크 호출, 새 Android 권한을 사용하지
 않습니다.
+
+## Account & Device Lockdown Checklist (계정·기기 잠금 체크리스트)
+
+홈과 현재 AI 분석 결과의 "계정·기기 잠금 체크리스트"에서 사기 노출 뒤 직접 확인할 보호 순서를
+볼 수 있습니다. `AccountLockdownChecklistBuilder`는 현재 `ScamAnalysis?`의 탐지 신호만 입력으로
+사용해 은행·카드·결제 보호, 메신저·SNS 계정 복구, 기기·원격제어 정리, 비밀번호·OTP·보안수단
+재설정, 링크·스미싱 후속 확인, 유심·전화번호 보호, 증거 보존·공식 도움 항목을 항상 같은 순서로
+만듭니다. 원격제어·앱·화면공유 신호는 연결 차단과 안전한 다른 기기에서의 계정 보호를, 금융·
+인증정보 신호는 은행·카드 확인과 비밀번호·보안수단 재설정을, 링크 신호는 재접속 금지와 증거·
+공식 도움을, 가족 사칭·번호 변경 신호는 메신저 경고와 가족 콜백을 우선 안내합니다.
+
+분석 결과가 없을 때도 일반 계정 점검과 증거·공식 도움을 보여주며 안전 흐름 길잡이, 새 분석,
+긴급 대응 센터, 증거 보존 체크리스트, 신고·상담 연락처로 연결합니다. 분석 결과가 있으면 새 분석
+대신 신고용 상담 준비 카드로 이어집니다. 이 화면은 기존 기능을 다시 구현하지 않고 해당 화면으로
+이동할 뿐이며, 체크 완료 상태나 선택을 저장하지 않고 사건 기록을 자동 추가·수정·삭제하지
+않습니다. 앱이 설정을 바꾸거나 앱·악성코드를 제거하고, 계정·카드·거래를 잠그거나 피해 회복을
+보장하는 기능도 아닙니다. 모든 조치는 사용자가 신뢰할 수 있는 기기와 공식 경로에서 직접
+진행합니다.
+
+"가족에게 잠금 체크리스트 공유"는 사용자가 직접 누를 때 Android `ACTION_SEND`의 `text/plain`만
+사용합니다. 공유문은 정적으로 정의된 항목과 기존 앱 행동 이름만 포함하며 붙여넣은 원문,
+개인정보 가림 단서, 안전단어·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·링크·도메인·
+신분정보 값을 넣지 않습니다. 체크리스트는 기기 안에서 결정되며 네트워크 호출이나 새 Android
+권한을 추가하지 않습니다.
 
 ## Privacy Center (개인정보 센터)
 
@@ -373,6 +398,7 @@ run and result.
 
 - No server and no network analysis.
 - The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.
+- The Account & Device Lockdown Checklist is deterministic, local-only, stateless manual guidance; it does not change device or account settings, mutate incident logs, or add permissions, and its user-triggered text share contains only static section/action labels rather than analysis or safety-plan values.
 - The Incident Timeline Briefing deterministically summarizes saved privacy-redacted incident fields without creating new stored data; its user-triggered text share contains aggregate risk/signal/action labels only and excludes every per-incident clue, display time, pasted text, and safety-plan value without adding network use or Android permissions.
 - The visible Privacy Center inventories consent, safety-plan readiness/contact count, incident count/retained fields, transient non-stored screens, and every intentionally absent permission without exposing saved values.
 - Privacy Center clearing is explicit and scoped: incident logs, the family safety plan, and onboarding consent are controlled independently; opening the screen never deletes data automatically.

@@ -19,7 +19,8 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
-        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING
+        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
+        ACCOUNT_LOCKDOWN
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -115,6 +116,7 @@ class MainActivity : Activity() {
                 Screen.PRIVACY_CENTER -> privacyCenterScreen()
                 Screen.FLOW_ROUTER -> safetyFlowRouterScreen()
                 Screen.TIMELINE_BRIEFING -> incidentTimelineBriefingScreen()
+                Screen.ACCOUNT_LOCKDOWN -> accountLockdownChecklistScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -157,6 +159,7 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
+        secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
@@ -232,6 +235,86 @@ class MainActivity : Activity() {
         }
     }
 
+    private fun LinearLayout.accountLockdownChecklistScreen() {
+        val checklist = AccountLockdownChecklistBuilder.build(currentAnalysis)
+        val recommendedIds = checklist.recommendedSectionIds.toSet()
+
+        title(checklist.title)
+        subtitle(checklist.intro)
+        section(
+            checklist.recommendationTitle,
+            buildString {
+                append(checklist.recommendationExplanation)
+                append("\n\n")
+                append(
+                    checklist.recommendedSections.joinToString("\n") { section ->
+                        "• ${section.title} · ${section.urgency.label}"
+                    }
+                )
+            }
+        )
+
+        checklist.sections.forEach { section ->
+            val recommended = section.id in recommendedIds
+            val heading = buildString {
+                if (recommended) append("추천 · ")
+                append(section.title)
+                append(" · ")
+                append(section.urgency.label)
+            }
+            section(
+                heading,
+                buildString {
+                    append("왜 확인하나요?\n")
+                    append(section.whyItMatters)
+                    append("\n\n직접 할 일\n")
+                    section.manualSteps.forEachIndexed { index, step ->
+                        append(index + 1).append(". ").append(step).append('\n')
+                    }
+                    append("\n하지 마세요\n")
+                    section.doNotDoNotes.forEach { note ->
+                        append("• ").append(note).append('\n')
+                    }
+                }.trim()
+            )
+            section.actions.forEachIndexed { index, action ->
+                if (recommended && index == 0) {
+                    primaryButton(action.label) { openAccountLockdownAction(action) }
+                } else {
+                    secondaryButton(action.label) { openAccountLockdownAction(action) }
+                }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            checklist.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 잠금 체크리스트 공유") {
+            shareAccountLockdownChecklist(checklist.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openAccountLockdownAction(action: AccountLockdownAction) {
+        when (action.id) {
+            AccountLockdownActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            AccountLockdownActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            AccountLockdownActionId.RESPONSE_CENTER ->
+                openResponseCenter(action.responseSituation)
+            AccountLockdownActionId.EVIDENCE_KIT -> openEvidenceKit(action.evidenceSituation)
+            AccountLockdownActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.ACCOUNT_LOCKDOWN)
+            AccountLockdownActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            AccountLockdownActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
+        }
+    }
+
     private fun LinearLayout.checker() {
         title("AI 보호자 분석")
         subtitle("문자, 카카오톡, 통화 녹취를 직접 붙여넣으세요. 민감정보는 지우고 검사해도 됩니다.")
@@ -289,6 +372,7 @@ class MainActivity : Activity() {
                 "먼저 연결을 끊고 앱 정보를 안전하게 남긴 뒤, 다른 안전한 기기에서 계정을 보호하세요."
         )
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
+        secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("신고용 상담 준비 카드") { show(Screen.REPORT_PREP) }
         secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.RESULT) }
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
@@ -493,8 +577,8 @@ class MainActivity : Activity() {
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
-    private fun openResponseCenter() {
-        selectedIncidentSituation = null
+    private fun openResponseCenter(situation: IncidentSituation? = null) {
+        selectedIncidentSituation = situation
         show(Screen.RESPONSE_CENTER)
     }
 
@@ -1013,6 +1097,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 안전 흐름 요약 공유"))
+    }
+
+    private fun shareAccountLockdownChecklist(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 계정·기기 잠금 체크리스트")
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 잠금 체크리스트 공유"))
     }
 
     private fun shareIncidentTimelineBriefing(summary: String) {
