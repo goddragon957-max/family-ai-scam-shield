@@ -19,7 +19,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
-        HELP_DIRECTORY
+        HELP_DIRECTORY, REPORT_PREP
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -108,6 +108,7 @@ class MainActivity : Activity() {
                 Screen.DRILL -> drillScreen()
                 Screen.SAMPLES -> sampleLibraryScreen()
                 Screen.HELP_DIRECTORY -> helpDirectoryScreen()
+                Screen.REPORT_PREP -> officialReportPrepScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -152,6 +153,7 @@ class MainActivity : Activity() {
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
+        secondaryButton("신고용 상담 준비 카드") { show(Screen.REPORT_PREP) }
         secondaryButton("샘플로 AI 분석 연습") { openSampleLibrary() }
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.HOME) }
@@ -194,8 +196,17 @@ class MainActivity : Activity() {
     }
 
     private fun LinearLayout.result() {
-        val analysis = currentAnalysis ?: ScamAnalyzer.analyze("")
         title("AI 분석 결과")
+        val analysis = currentAnalysis
+        if (analysis == null) {
+            section(
+                "분석 결과 없음",
+                "현재 분석 결과가 없습니다. 의심 내용을 먼저 직접 붙여넣어 분석한 뒤 결과와 상담 준비 카드를 확인하세요."
+            )
+            primaryButton("AI 보호자 분석 먼저 하기") { show(Screen.CHECKER) }
+            secondaryButton("홈으로") { show(Screen.HOME) }
+            return
+        }
         riskCard(analysis)
         actionPlanSection(analysis)
         aiGuardianSection(analysis)
@@ -207,6 +218,7 @@ class MainActivity : Activity() {
                 "먼저 연결을 끊고 앱 정보를 안전하게 남긴 뒤, 다른 안전한 기기에서 계정을 보호하세요."
         )
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
+        secondaryButton("신고용 상담 준비 카드") { show(Screen.REPORT_PREP) }
         secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.RESULT) }
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
         primaryButton("사건 기록에 저장") {
@@ -370,6 +382,50 @@ class MainActivity : Activity() {
         if (helpDirectoryReturnScreen != Screen.HOME) {
             secondaryButton("이전 화면으로") { show(helpDirectoryReturnScreen) }
         }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.officialReportPrepScreen() {
+        title("신고용 상담 준비 카드")
+        subtitle("현재 AI 보호자 분석을 개인정보 가림 단서, 추천 공식 연락처, 상담 대사와 전화 전 체크리스트로 정리합니다.")
+
+        val analysis = currentAnalysis
+        if (analysis == null) {
+            section(
+                "분석 결과가 필요해요",
+                "이 카드는 현재 분석 결과로만 만듭니다. 의심 문자·메신저·통화 내용을 직접 붙여넣어 분석하면 개인정보를 가린 상담 준비 카드를 볼 수 있습니다."
+            )
+            section(
+                "저장하지 않는 임시 안내",
+                "카드는 따로 저장되지 않고 사건 기록도 자동으로 바꾸지 않습니다. 분석은 기기 안에서만 진행됩니다."
+            )
+            primaryButton("AI 보호자 분석 먼저 하기") { show(Screen.CHECKER) }
+            secondaryButton("홈으로") { show(Screen.HOME) }
+            return
+        }
+
+        val prep = OfficialReportPrepBuilder.build(analysis)
+        section("위험 요약", prep.riskSummary)
+        section("개인정보 가림 단서", prep.redactedClue)
+        section("탐지 신호", prep.detectedSignalLabels.joinToString("\n") { "• $it" })
+        section(
+            "상담원에게 말할 내용",
+            prep.scriptLines.mapIndexed { index, line -> "${index + 1}. $line" }.joinToString("\n")
+        )
+        section("전화 전 확인", prep.beforeCallChecklist.joinToString("\n") { "• $it" })
+        section("개인정보·안전 안내", prep.privacySafetyNotes.joinToString("\n") { "• $it" })
+
+        section("추천 공식 연락처", "위 준비 내용을 확인한 뒤 상황에 맞는 공식 창구를 선택하세요.")
+        prep.recommendedEntries.forEach { entry ->
+            val heading = entry.dialNumber?.let { number -> "$number · ${entry.label}" } ?: entry.label
+            section(heading, entry.whenToUse)
+            entry.dialNumber?.let { number ->
+                secondaryButton("$number ${entry.label} 전화 앱에서 열기") { dial(number) }
+            }
+        }
+
+        primaryButton("가족에게 상담 준비 카드 공유") { shareOfficialReportPrep(prep) }
+        secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -621,6 +677,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, directory.familyShareSummary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 신고 연락처 공유"))
+    }
+
+    private fun shareOfficialReportPrep(prep: OfficialReportPrepCard) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 신고용 상담 준비 카드")
+            putExtra(Intent.EXTRA_TEXT, prep.familyShareSummary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 상담 준비 카드 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {

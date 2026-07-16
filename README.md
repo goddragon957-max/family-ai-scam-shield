@@ -9,8 +9,9 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 3. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
 4. 로컬 규칙 기반 AI 보호자 분석
 5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-6. 상황별 신고·상담 연락처와 말할 내용 확인
-7. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+6. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+7. 상황별 신고·상담 연락처와 말할 내용 확인
+8. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 
 ## Share Entry
 
@@ -89,6 +90,31 @@ The important checklist lines are included in the safe family report (`SafetyRep
 않습니다. "가족에게 신고 연락처 공유"는 Android `ACTION_SEND`의 `text/plain`만 사용하며,
 공식 번호와 말할 내용 체크리스트만 포함하고 사용자가 붙여넣은 원문 텍스트나 실제 계좌 전체
 번호, 비밀번호, OTP, 상품권 PIN은 포함하지 않습니다.
+
+## Official Report Prep Card (신고용 상담 준비 카드)
+
+홈이나 AI 분석 결과의 "신고용 상담 준비 카드"에서 열 수 있는 현재 분석 전용 임시 화면입니다.
+분석 결과가 없으면 먼저 의심 내용을 직접 붙여넣어 분석하라는 안전한 빈 상태를 보여줍니다.
+`OfficialReportPrepBuilder`는 `ScamAnalysis`만 입력으로 받아 위험도와 점수, 탐지 신호, 전화 전
+확인 항목, 상담원에게 말할 내용을 결정적으로 정리합니다.
+
+화면의 짧은 단서는 반드시 `IncidentPreviewRedactor`를 거쳐 전화번호, 계좌형 긴 숫자,
+인증번호(OTP), 링크·도메인, 신분정보를 가립니다. 가족 공유 요약에는 이 가림 단서조차 넣지
+않고 위험도, 신호 이름, 추천 공식 연락처, 상담 대사와 전화 전 확인 항목만 포함합니다. 가림 뒤에도
+짧은 입력 전체가 남는 경우에는 단서 대신 원문 비공개 문구를 표시하므로, 붙여넣은 전체 원문을
+화면의 카드나 공유문에 그대로 넣지 않습니다.
+
+추천 연락처는 `OfficialHelpDirectoryBuilder`의 기존 항목을 그대로 재사용합니다. 고위험이거나
+송금·계좌/OTP·원격제어·안전계좌 위험 신호가 있으면 112, 1394, 1332와 은행·카드사 공식
+대표번호 확인 안내를 함께 보여줍니다. 링크·스미싱이나 더 낮은 위험에서도 1394 상담과 가족
+콜백을 먼저 안내하며, 금융·카드 위험이 가능한 경우에는 은행·카드사 공식 번호 확인 안내를
+덧붙입니다. 번호가 있는 공식 항목만 `ACTION_DIAL`로 전화 앱을 열고, 사용자가 직접 통화를
+시작합니다.
+
+"가족에게 상담 준비 카드 공유"는 Android `ACTION_SEND`의 `text/plain`만 사용합니다. 이
+카드와 선택 상태는 `SharedPreferences`에 저장하지 않으며 사건 기록을 자동으로 추가하거나
+수정하지도 않습니다. 모든 정리는 기기 안에서 수행되며, 상담 준비를 위한 참고 안내일 뿐
+법률·금융 자문이나 피해금 회수·환급 약속이 아닙니다.
 
 ## Evidence Preservation Kit (증거 보존 체크리스트)
 
@@ -249,6 +275,7 @@ run and result.
 
 - No server and no network analysis.
 - The Official Help Directory uses static on-device guidance and performs no network lookup.
+- The Official Report Prep Card is derived only from the current local analysis, redacts its on-screen clue, omits all pasted-text excerpts from sharing, is not stored, and never mutates incident logs automatically.
 - No automatic SMS/call monitoring.
 - No automatic evidence capture or upload; the evidence kit is static local guidance and stores no selection or completion state.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.

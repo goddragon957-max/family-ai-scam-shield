@@ -77,6 +77,20 @@ object IncidentPreviewRedactor {
         return limit("$incidentHint · ${redactWithoutLimit(analysis.input)}")
     }
 
+    fun buildPrivacySafeClue(analysis: ScamAnalysis): String {
+        val incidentHint = analysis.matchedSignals.firstOrNull()?.label ?: "일반 확인"
+        val normalizedInput = normalize(analysis.input)
+        val redactedInput = redactWithoutLimit(analysis.input)
+        val candidate = "$incidentHint · $redactedInput"
+        val maskedSensitiveValue = redactedInput != normalizedInput && maskLabels.any(redactedInput::contains)
+
+        return if (maskedSensitiveValue || candidate.length > MAX_PREVIEW_LENGTH) {
+            limit(candidate)
+        } else {
+            "$incidentHint · 붙여넣은 원문 비공개"
+        }
+    }
+
     fun redact(rawText: String): String = limit(redactWithoutLimit(rawText))
 
     private fun redactWithoutLimit(rawText: String): String {
