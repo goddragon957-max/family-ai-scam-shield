@@ -6,18 +6,36 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 
 1. 명시적 동의 온보딩
 2. 홈 대시보드
-3. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
-4. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
-5. 로컬 규칙 기반 AI 보호자 분석
-6. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-7. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
-8. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-9. 상황별 신고·상담 연락처와 말할 내용 확인
-10. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+3. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
+4. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
+5. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
+6. 로컬 규칙 기반 AI 보호자 분석
+7. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
+8. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+9. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+10. 상황별 신고·상담 연락처와 말할 내용 확인
+11. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 
 ## Share Entry
 
 The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plain`). A user can share a suspicious Kakao/SMS/memo text into the app; after consent, the checker opens with the shared text pre-filled. This does not add SMS, contact, call, microphone, or internet permissions.
+
+## Safety Flow Router (안전 흐름 길잡이)
+
+홈 상단의 "지금 뭐부터 할지 고르기"에서 현재 분석의 위험도·탐지 신호와 가족 준비 상태를
+바탕으로 다음 행동을 차분히 고를 수 있습니다. `SafetyFlowRouterBuilder`는 같은 입력에 항상 같은
+순서와 추천을 만드는 로컬 규칙 기반 길잡이이며, 새로운 분석이나 신고 기능을 복제하지 않고 기존
+의심 내용 검사, 가족 콜백·안전 계획, 긴급 대응 센터, 신고용 상담 준비 카드, 신고·상담 연락처,
+증거 보존 체크리스트, 개인정보 센터 화면으로 연결합니다. 분석 결과가 없을 때는 검사와 가족
+콜백 준비를 먼저 안내하고, 분석 결과가 있으면 탐지된 위험 신호에 맞는 기존 흐름을 추천합니다.
+
+어떤 경로를 골랐는지와 추천 경로는 `SharedPreferences`나 다른 영구 저장소에 저장하지 않으며,
+라우터를 열거나 버튼을 누르는 것만으로 사건 기록을 자동 추가·수정하지 않습니다. "가족에게 안전
+흐름 요약 공유"는 사용자가 직접 누를 때 Android `ACTION_SEND`의 `text/plain`으로 경로 이름과
+일반 행동만 전달합니다. 붙여넣은 원문, 화면의 개인정보 가림 단서, 안전단어·콜백 스크립트,
+연락처 이름·전체 번호, 계좌·비밀번호·OTP/PIN·링크 값은 공유문에 포함하지 않습니다. 모든 추천은
+기기 안에서 결정되며 자동 문자·통화·연락처 감시, 네트워크 호출, 새 Android 권한을 사용하지
+않습니다.
 
 ## Privacy Center (개인정보 센터)
 
@@ -30,7 +48,7 @@ The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plai
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -330,6 +348,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.
 - The visible Privacy Center inventories consent, safety-plan readiness/contact count, incident count/retained fields, transient non-stored screens, and every intentionally absent permission without exposing saved values.
 - Privacy Center clearing is explicit and scoped: incident logs, the family safety plan, and onboarding consent are controlled independently; opening the screen never deletes data automatically.
 - The Privacy Center family explanation uses user-triggered `ACTION_SEND` `text/plain` with aggregate status only and excludes safety-plan values, incident previews, and pasted raw text.

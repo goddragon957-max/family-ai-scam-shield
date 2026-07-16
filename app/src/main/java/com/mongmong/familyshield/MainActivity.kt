@@ -19,7 +19,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
-        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER
+        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -113,6 +113,7 @@ class MainActivity : Activity() {
                 Screen.REPORT_PREP -> officialReportPrepScreen()
                 Screen.CALLBACK_CARD -> familyCallbackCardScreen()
                 Screen.PRIVACY_CENTER -> privacyCenterScreen()
+                Screen.FLOW_ROUTER -> safetyFlowRouterScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -154,6 +155,7 @@ class MainActivity : Activity() {
     private fun LinearLayout.home() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
@@ -166,6 +168,66 @@ class MainActivity : Activity() {
         secondaryButton("증거 보존 체크리스트") { openEvidenceKit(null) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/1394 또는 은행 지급정지")
+    }
+
+    private fun LinearLayout.safetyFlowRouterScreen() {
+        val router = SafetyFlowRouterBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+
+        title(router.title)
+        subtitle(router.intro)
+        section(
+            router.recommendationTitle,
+            buildString {
+                append(router.recommendationExplanation)
+                append("\n\n")
+                append(router.recommendedRoutes.joinToString("\n") { route -> "• ${route.label}" })
+            }
+        )
+
+        router.routes.forEach { route ->
+            section(
+                "${route.label} · ${route.urgency.label}",
+                buildString {
+                    append(route.explanation)
+                    append("\n\n안전 메모\n")
+                    append(route.safetyNotes.joinToString("\n") { note -> "• $note" })
+                }
+            )
+            primaryButton(route.primaryAction.label) {
+                openSafetyFlowAction(route.primaryAction)
+            }
+            route.secondaryActions.forEach { action ->
+                secondaryButton(action.label) { openSafetyFlowAction(action) }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            router.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 안전 흐름 요약 공유") {
+            shareSafetyFlowRouter(router.familyShareSummary)
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openSafetyFlowAction(action: SafetyFlowAction) {
+        when (action.id) {
+            SafetyFlowActionId.CHECKER -> show(Screen.CHECKER)
+            SafetyFlowActionId.ANALYSIS_RESULT -> {
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            }
+            SafetyFlowActionId.FAMILY_CALLBACK_CARD -> openFamilyCallbackCard(currentAnalysis)
+            SafetyFlowActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            SafetyFlowActionId.RESPONSE_CENTER -> openResponseCenter()
+            SafetyFlowActionId.REPORT_PREP -> show(Screen.REPORT_PREP)
+            SafetyFlowActionId.OFFICIAL_HELP_DIRECTORY -> openHelpDirectory(Screen.FLOW_ROUTER)
+            SafetyFlowActionId.EVIDENCE_KIT -> openEvidenceKit(action.evidenceSituation)
+            SafetyFlowActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
     }
 
     private fun LinearLayout.checker() {
@@ -843,6 +905,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 콜백 확인 요약 공유"))
+    }
+
+    private fun shareSafetyFlowRouter(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 안전 흐름 안내")
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 안전 흐름 요약 공유"))
     }
 
     private fun sharePrivacySummary(summary: String) {

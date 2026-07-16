@@ -75,7 +75,7 @@ object PrivacyCenterBuilder {
             "앱 자체 서버로 분석 내용이나 저장 데이터를 전송하지 않으며 네트워크 분석을 하지 않습니다.",
             "사용자가 직접 붙여넣거나 텍스트로 공유한 내용만 현재 앱 흐름에서 로컬 분석하며, 붙여넣은 전체 원문은 사건 기록에 저장하지 않습니다.",
             "증거를 자동으로 캡처·수집하지 않으며 문자·통화·연락처를 백그라운드에서 확인하지 않습니다.",
-            "가족 콜백 카드, 상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련, 샘플 선택은 영구 저장하지 않습니다."
+            "안전 흐름 선택, 가족 콜백 카드, 상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련, 샘플 선택은 영구 저장하지 않습니다."
         )
         val cleanupActions = buildCleanupActions(
             incidentCount = safeIncidentCount,
@@ -149,7 +149,7 @@ object PrivacyCenterBuilder {
             PrivacyCenterItem(
                 title = "임시 입력·카드·선택 상태",
                 status = "영구 저장하지 않음",
-                detail = "붙여넣은 입력의 현재 분석, 가족 콜백 카드, 신고용 상담 준비 카드, 대응·증거 보존 체크리스트, " +
+                detail = "붙여넣은 입력의 현재 분석, 안전 흐름 선택, 가족 콜백 카드, 신고용 상담 준비 카드, 대응·증거 보존 체크리스트, " +
                     "가족 안전 연습·3분 훈련 결과, 드릴·샘플 선택은 현재 앱 흐름에서만 사용하며 " +
                     "앱의 SharedPreferences에 저장하지 않습니다."
             )
@@ -297,7 +297,7 @@ object PrivacyCenterBuilder {
         )
         appendLine("- 사건 기록: ${incidentCount}개")
         appendLine("- 현재 버전의 사건 기록에는 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기만 보관하고 붙여넣은 전체 원문은 보관하지 않습니다.")
-        appendLine("- 콜백·상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련, 드릴·샘플 선택은 영구 저장하지 않습니다.")
+        appendLine("- 안전 흐름 선택, 콜백·상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련, 드릴·샘플 선택은 영구 저장하지 않습니다.")
         appendLine()
         appendLine("권한 상태")
         permissionStatusItems.forEach { item ->
