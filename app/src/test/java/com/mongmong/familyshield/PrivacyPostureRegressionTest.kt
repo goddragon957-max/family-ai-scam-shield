@@ -1168,6 +1168,190 @@ class PrivacyPostureRegressionTest {
         assertFalse(explainerShareHelper.contains("SmsManager"))
     }
 
+    @Test
+    fun familySafetyDrillCoachIsPureStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/FamilySafetyDrillCoach.kt"
+        )
+        val readinessSection = activitySource
+            .substringAfter("private fun LinearLayout.readinessSection")
+            .substringBefore("private fun openDrill")
+        val resultScreen = activitySource
+            .substringAfter("private fun LinearLayout.result()")
+            .substringBefore("private fun LinearLayout.incidentLog")
+        val drillScreen = activitySource
+            .substringAfter("private fun LinearLayout.drillScreen")
+            .substringBefore("private fun LinearLayout.familySafetyDrillCard")
+        val drillCardRenderer = activitySource
+            .substringAfter("private fun LinearLayout.familySafetyDrillCard")
+            .substringBefore("private fun openFamilySafetyDrillAction")
+        val drillActionRouter = activitySource
+            .substringAfter("private fun openFamilySafetyDrillAction")
+            .substringBefore("private fun shareFamilySafetyDrillSummary")
+        val drillShareHelper = activitySource
+            .substringAfter("private fun shareFamilySafetyDrillSummary")
+            .substringBefore("private fun openSampleLibrary")
+        val normalizedActionRouter = drillActionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+        assertFalse(modelSource.contains("SafetyPlan"))
+        assertFalse(modelSource.contains("SafetyPlanStore"))
+
+        assertTrue(activitySource.contains("Screen.DRILL -> drillScreen()"))
+        assertFalse(activitySource.contains("selectedDrillScenario"))
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:drill|practice|pass|progress|history|score)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:DRILL|PRACTICE|PASS|PROGRESS|HISTORY|SCORE)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+        assertTrue(
+            readinessSection.contains(
+                "secondaryButton(\"가족 안전 연습 코치\") { openDrill() }"
+            )
+        )
+        assertTrue(
+            resultScreen.contains(
+                "secondaryButton(\"이 신호로 가족 연습하기\") { openDrill() }"
+            )
+        )
+
+        assertTrue(drillScreen.contains("FamilySafetyDrillCoachBuilder.build("))
+        assertTrue(drillScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            drillScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(drillScreen.contains("coach.recommendedCards"))
+        assertTrue(drillScreen.contains("coach.cards"))
+        assertTrue(drillScreen.contains("title(coach.title)"))
+        assertTrue(drillScreen.contains("subtitle(coach.intro)"))
+        assertTrue(drillScreen.contains("coach.fictionNotice"))
+        assertTrue(drillScreen.contains("coach.privacySafetyNotes"))
+        assertTrue(
+            drillScreen.contains(
+                "shareFamilySafetyDrillSummary(coach.familyShareSummary)"
+            )
+        )
+        assertTrue(drillScreen.contains("primaryButton(\"가족에게 연습 과제 공유\")"))
+        assertTrue(drillScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")"))
+        assertTrue(drillScreen.contains("secondaryButton(\"홈으로\")"))
+        val recommendedRenderIndex = drillScreen.indexOf("coach.recommendedCards.forEach")
+        val remainingRenderIndex = drillScreen.indexOf("val remainingCards = coach.cards.filterNot")
+        assertTrue(recommendedRenderIndex >= 0)
+        assertTrue(remainingRenderIndex > recommendedRenderIndex)
+        assertEquals(
+            1,
+            Regex("coach\\.recommendedCards\\.forEach")
+                .findAll(drillScreen)
+                .count()
+        )
+
+        listOf(
+            "card.title",
+            "card.scenario",
+            "card.fictionalSetup",
+            "card.rolePlayLines",
+            "card.expectedStopPhrase",
+            "card.responseSteps",
+            "card.passChecklist",
+            "card.familyReflectionPrompt",
+            "card.difficulty",
+            "card.urgency",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("drill UI omitted $field", drillCardRenderer.contains(field))
+        }
+
+        val statelessUiSource = drillScreen + drillCardRenderer
+        assertFalse(statelessUiSource.contains("analysis.input"))
+        assertFalse(statelessUiSource.contains("IncidentPreviewRedactor"))
+        assertFalse(statelessUiSource.contains("plan.safeWord"))
+        assertFalse(statelessUiSource.contains("plan.callbackScript"))
+        assertFalse(statelessUiSource.contains("plan.contacts"))
+        assertFalse(statelessUiSource.contains("incidents.add("))
+        assertFalse(statelessUiSource.contains("incidents.clear("))
+        assertFalse(statelessUiSource.contains("prefs.edit("))
+        assertFalse(statelessUiSource.contains("safetyPlan.save("))
+        assertFalse(statelessUiSource.contains("CheckBox("))
+        assertFalse(statelessUiSource.contains("EditText("))
+        assertFalse(statelessUiSource.contains("currentAnalysis ="))
+        assertFalse(statelessUiSource.contains(".save("))
+        assertFalse(statelessUiSource.contains("putString("))
+        assertFalse(statelessUiSource.contains("putBoolean("))
+
+        listOf(
+            "FamilySafetyDrillActionId.QUICK_STOP -> show(Screen.QUICK_STOP)",
+            "FamilySafetyDrillActionId.CHECKER -> show(Screen.CHECKER)",
+            "FamilySafetyDrillActionId.ANALYSIS_RESULT -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "FamilySafetyDrillActionId.RISK_SIGNAL_EXPLAINERS -> " +
+                "show(Screen.RISK_SIGNAL_EXPLAINERS)",
+            "FamilySafetyDrillActionId.FAMILY_CALLBACK_CARD -> " +
+                "openFamilyCallbackCard(currentAnalysis)",
+            "FamilySafetyDrillActionId.SAFETY_PLAN -> show(Screen.PLAN)",
+            "FamilySafetyDrillActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)",
+            "FamilySafetyDrillActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)",
+            "FamilySafetyDrillActionId.EVIDENCE_KIT -> openEvidenceKit(null)",
+            "FamilySafetyDrillActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                "openHelpDirectory(Screen.DRILL)",
+            "FamilySafetyDrillActionId.FAMILY_ALERT_MESSAGES -> " +
+                "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "FamilySafetyDrillActionId.TRUSTED_HELPER_HANDOFF -> " +
+                "show(Screen.TRUSTED_HELPER_HANDOFF)",
+            "FamilySafetyDrillActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)",
+            "FamilySafetyDrillActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)"
+        ).forEach { route ->
+            assertTrue("family drill route omitted: $route", normalizedActionRouter.contains(route))
+        }
+        assertFalse(drillActionRouter.contains("dial("))
+        assertFalse(drillActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(drillActionRouter.contains("Intent.ACTION_CALL"))
+
+        val shareArguments = Regex("shareFamilySafetyDrillSummary\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertTrue(drillShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(drillShareHelper.contains("type = \"text/plain\""))
+        assertTrue(drillShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(drillShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(drillShareHelper)
+                .count()
+        )
+        assertFalse(drillShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(drillShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(drillShareHelper.contains("ClipData"))
+        assertFalse(drillShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(drillShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(drillShareHelper.contains("ScamAnalysis"))
+        assertFalse(drillShareHelper.contains("currentAnalysis"))
+        assertFalse(drillShareHelper.contains("analysis.input"))
+        assertFalse(drillShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(drillShareHelper.contains("SafetyPlan"))
+        assertFalse(drillShareHelper.contains("incidents"))
+        assertFalse(drillShareHelper.contains("ContactsContract"))
+        assertFalse(drillShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile

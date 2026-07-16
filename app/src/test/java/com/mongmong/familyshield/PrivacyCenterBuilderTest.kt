@@ -162,7 +162,10 @@ class PrivacyCenterBuilderTest {
             "체크리스트",
             "가족 경고 메시지",
             "공유 이력",
-            "3분 훈련",
+            "가족 안전 연습 코치",
+            "드릴 선택",
+            "통과 여부",
+            "연습 이력",
             "샘플 선택"
         ).forEach { term ->
             assertTrue("transient copy omitted $term", transientCopy.contains(term))

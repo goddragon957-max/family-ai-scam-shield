@@ -24,7 +24,7 @@ data class FamilyReadiness(
 
 object FamilyReadinessBuilder {
     const val READY_ACTION =
-        "저장된 루틴이 준비됐어요. 가족 안전 연습(3분 훈련)으로 안전단어 질문과 콜백을 함께 연습해 보세요."
+        "저장된 루틴이 준비됐어요. 가족 안전 연습 코치에서 멈춤 문구와 콜백을 함께 연습해 보세요."
 
     fun build(plan: SafetyPlan): FamilyReadiness {
         val contactCount = plan.contacts.count { it.number.isNotBlank() }

@@ -32,7 +32,6 @@ class MainActivity : Activity() {
     private var pendingSharedText: String? = null
     private var selectedIncidentSituation: IncidentSituation? = null
     private var selectedEvidenceSituation: IncidentSituation? = null
-    private var selectedDrillScenario: DrillScenario? = null
     private var selectedSampleCategory: ScamSampleCategory? = null
     private var helpDirectoryReturnScreen = Screen.HOME
 
@@ -646,6 +645,7 @@ class MainActivity : Activity() {
         }
         riskCard(analysis)
         secondaryButton("탐지 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
+        secondaryButton("이 신호로 가족 연습하기") { openDrill() }
         actionPlanSection(analysis)
         aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
@@ -1118,60 +1118,162 @@ class MainActivity : Activity() {
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
         if (readiness.level == ReadinessLevel.READY) {
-            secondaryButton("가족 안전 연습 / 3분 훈련") { openDrill() }
+            secondaryButton("가족 안전 연습 코치") { openDrill() }
             secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
         } else {
             secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
-            secondaryButton("가족 안전 연습 / 3분 훈련") { openDrill() }
+            secondaryButton("가족 안전 연습 코치") { openDrill() }
         }
     }
 
     private fun openDrill() {
-        selectedDrillScenario = null
         show(Screen.DRILL)
     }
 
     private fun LinearLayout.drillScreen() {
-        title("가족 안전 연습 · 3분 훈련")
-        subtitle("실제 사건이 아닌 앱에 내장된 가상 시나리오로, 위급한 순간에 쓸 안전단어 질문과 콜백 루틴을 미리 연습합니다.")
-        section("개인정보 보호", "훈련은 내장된 가상 시나리오만 사용합니다. 연습 내용이나 결과를 저장하거나 전송하지 않습니다.")
+        val coach = FamilySafetyDrillCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = coach.recommendedDrillIds.toSet()
 
-        val plan = safetyPlan.load()
-        val readiness = FamilyReadinessBuilder.build(plan)
-        if (plan.safeWord.isNotBlank()) {
-            section("우리 가족 연습 질문", "훈련 중 상대 역할에게 이렇게 물어보세요: “${plan.safeWord}”\n답이 어색하면 요구를 거절하고 저장된 번호로 콜백하는 것까지 연습하세요.")
-        }
-        if (readiness.level == ReadinessLevel.READY) {
-            section("연습 준비 상태 · ${readiness.level.label}", "안전단어, 콜백 연락처, 콜백 스크립트가 모두 저장되어 있어요. 저장된 루틴 그대로 연습하면 됩니다.")
-        } else {
-            section("연습 전 점검 · ${readiness.level.label}", "저장된 안전 계획이 아직 부족해요. 계획을 먼저 채우면 우리 가족만의 질문과 번호로 연습할 수 있습니다.\n다음 할 일: ${readiness.nextAction}")
-            primaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
-        }
-
-        section("연습 방법", SafetyDrillBuilder.FICTION_NOTICE + "\n가족 한 명이 아래 시나리오의 가상 대사를 읽어주고, 다른 가족이 대응을 연습하세요.")
-
-        DrillScenario.entries.forEach { scenario ->
-            secondaryButton(scenario.label) {
-                selectedDrillScenario = scenario
-                show(Screen.DRILL)
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "가상 연습 안내",
+            coach.fictionNotice +
+                "\n가족 한 명이 상대 역할의 가상 대사를 읽고, 다른 가족이 멈춤 문구와 직접 확인 순서를 소리 내어 연습하세요."
+        )
+        section(
+            coach.recommendationTitle,
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 연습할 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.title} · ${card.difficulty.label} · ${card.urgency.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openFamilySafetyDrillAction(action) }
+            } else {
+                secondaryButton(action.label) { openFamilySafetyDrillAction(action) }
             }
         }
 
-        val scenario = selectedDrillScenario
-        if (scenario != null) {
-            val drill = SafetyDrillBuilder.build(scenario)
-            section(drill.title, drill.fictionalScript)
-            section(
-                "이렇게 말하고 행동하세요",
-                drill.responseSteps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
-            )
-            section(
-                "통과 체크리스트",
-                drill.passChecklist.joinToString("\n") { "• $it" }
-            )
+        section(
+            "추천 연습 카드",
+            "현재 로컬 분석 신호와 값 없는 가족 준비도에 맞춘 순서입니다. 통과 여부나 선택은 저장되지 않습니다."
+        )
+        coach.recommendedCards.forEach { card ->
+            familySafetyDrillCard(card, recommended = true)
         }
 
+        val remainingCards = coach.cards.filterNot { card -> card.id in recommendedIds }
+        if (remainingCards.isNotEmpty()) {
+            section(
+                "모든 추가 연습 카드",
+                "추천과 관계없이 가족에게 필요한 가상 상황을 이어서 연습할 수 있습니다."
+            )
+            remainingCards.forEach { card ->
+                familySafetyDrillCard(card, recommended = false)
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 연습 과제 공유") {
+            shareFamilySafetyDrillSummary(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
         secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.familySafetyDrillCard(
+        card: FamilySafetyDrillCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.title)
+            append(" · ")
+            append(card.difficulty.label)
+            append(" · ")
+            append(card.urgency.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("가상 상황\n")
+                append(card.scenario)
+                append("\n\n")
+                append(card.fictionalSetup)
+                append("\n\n역할 대사\n")
+                card.rolePlayLines.forEach { line -> append("• ").append(line).append('\n') }
+                append("\n멈춤 문구\n")
+                append(card.expectedStopPhrase)
+                append("\n\n대응 순서\n")
+                card.responseSteps.forEachIndexed { index, step ->
+                    append(index + 1).append(". ").append(step).append('\n')
+                }
+                append("\n통과 체크\n")
+                card.passChecklist.forEach { item -> append("• ").append(item).append('\n') }
+                append("\n가족과 돌아보기\n")
+                append(card.familyReflectionPrompt)
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openFamilySafetyDrillAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openFamilySafetyDrillAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openFamilySafetyDrillAction(action) }
+        }
+    }
+
+    private fun openFamilySafetyDrillAction(action: FamilySafetyDrillAction) {
+        when (action.id) {
+            FamilySafetyDrillActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            FamilySafetyDrillActionId.CHECKER -> show(Screen.CHECKER)
+            FamilySafetyDrillActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            FamilySafetyDrillActionId.RISK_SIGNAL_EXPLAINERS ->
+                show(Screen.RISK_SIGNAL_EXPLAINERS)
+            FamilySafetyDrillActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FamilySafetyDrillActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            FamilySafetyDrillActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            FamilySafetyDrillActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FamilySafetyDrillActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FamilySafetyDrillActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.DRILL)
+            FamilySafetyDrillActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            FamilySafetyDrillActionId.TRUSTED_HELPER_HANDOFF ->
+                show(Screen.TRUSTED_HELPER_HANDOFF)
+            FamilySafetyDrillActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            FamilySafetyDrillActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+        }
+    }
+
+    private fun shareFamilySafetyDrillSummary(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 연습 과제 공유"))
     }
 
     private fun openSampleLibrary() {
