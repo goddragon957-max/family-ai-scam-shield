@@ -21,8 +21,11 @@ class PrivacyPostureRegressionTest {
             "android.permission.READ_PHONE_STATE",
             "android.permission.ANSWER_PHONE_CALLS",
             "android.permission.READ_CONTACTS",
+            "android.permission.WRITE_CONTACTS",
             "android.permission.RECORD_AUDIO",
             "android.permission.INTERNET",
+            "android.permission.ACCESS_FINE_LOCATION",
+            "android.permission.ACCESS_COARSE_LOCATION",
             "android.permission.POST_NOTIFICATIONS",
             "android.permission.SCHEDULE_EXACT_ALARM",
             "android.permission.RECEIVE_BOOT_COMPLETED",
@@ -4759,6 +4762,560 @@ class PrivacyPostureRegressionTest {
             "READ_CONTACTS",
             "RECORD_AUDIO",
             "INTERNET",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun separateChannelVerificationCoachIsPureStatelessAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SeparateChannelVerificationCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.familyCallbackCardScreen",
+            "private fun LinearLayout.safeVerificationCallScriptsScreen",
+            "private fun LinearLayout.helpDirectoryScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        listOf(
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.separateChannelVerificationCard",
+            "private fun openSeparateChannelVerificationAction",
+            "private fun shareSeparateChannelVerificationCoach"
+        ).forEach { marker ->
+            assertTrue(
+                "separate-channel source marker missing: $marker",
+                activitySource.contains(marker)
+            )
+        }
+
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.SEPARATE_CHANNEL_VERIFICATION_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.mapIndexed { index, marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "separate-channel entry must have one exact show-only button at index $index",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "openHelpDirectory",
+            "openFamilyCallbackCard",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "separate-channel entry button used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.separateChannelVerificationCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.separateChannelVerificationCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openSeparateChannelVerificationAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareSeparateChannelVerificationCoach"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ScamAnalyzer",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "dialNumber",
+            "contact.number",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "separate-channel model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score)")
+                .containsMatchIn(modelSource)
+        )
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                "separate-channel model embedded official number: $exactOfficialNumber",
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        assertTrue(activitySource.contains("SEPARATE_CHANNEL_VERIFICATION_COACH"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.SEPARATE_CHANNEL_VERIFICATION_COACH ->"
+            )
+        )
+        assertTrue(activitySource.contains("separateChannelVerificationCoachScreen()"))
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:separateChannel|verificationStatus|officialNumber|" +
+                    "channelValue|cardProgress|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:SEPARATE_CHANNEL|VERIFICATION_STATUS|OFFICIAL_NUMBER|" +
+                    "CHANNEL_VALUE|CARD_PROGRESS|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(coachScreen.contains("SeparateChannelVerificationCoachBuilder.build("))
+        assertTrue(coachScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            coachScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(coachScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(coachScreen.contains("incidents.load("))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "separate-channel incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareSeparateChannelVerificationCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "separate-channel UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(coachScreen.contains("primaryButton(\"가족에게 별도 경로 확인 안내 공유\")"))
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.verificationSentence",
+            "card.whenToUse",
+            "card.whyItMatters",
+            "card.doNotUseOrShareBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("separate-channel card UI omitted $field", cardRenderer.contains(field))
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "openFamilyCallbackCard",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "separate-channel UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "separate-channel route omitted branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "SeparateChannelVerificationActionId.$actionId -> $destination"
+                )
+            )
+        }
+        listOf(
+            "dial(",
+            "openFamilyCallbackCard",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService"
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "separate-channel router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareSeparateChannelVerificationCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 별도 경로 확인 안내 공유"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "separate-channel share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        val sliceSource = coachScreen + cardRenderer + actionRouter + shareHelper + modelSource
+        val forbiddenSliceApis = listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "Settings.",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "queryIntentActivities",
+            "getPackageInfo",
+            "getApplicationInfo",
+            "canRequestPackageInstalls",
+            "setApplicationEnabledSetting",
+            "clearApplicationUserData",
+            "AppOpsManager",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "OkHttp",
+            "Retrofit",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "Patterns.PHONE",
+            "PhoneNumberUtils",
+            "URLUtil",
+            "InetAddress",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ACTION_PICK",
+            "ACTION_GET_CONTENT",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save("
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "separate-channel slice used forbidden API: $forbiddenSliceApi",
+                sliceSource.contains(forbiddenSliceApi)
+            )
+        }
+
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        val forbiddenProductionTokens = forbiddenSliceApis
+            .filterNot { token ->
+                token == "Intent.ACTION_DIAL" ||
+                    token == "dialNumber" ||
+                    token == "OfficialHelpDirectoryBuilder" ||
+                    token == "directory.entries" ||
+                    token == "incidents.add(" ||
+                    token == "incidents.clear(" ||
+                    token == "prefs.edit(" ||
+                    token == "safetyPlan.save("
+            } + listOf(
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttpClient",
+            "ktor.client",
+            "android.telecom",
+            "android.telephony"
+        )
+        forbiddenProductionTokens.distinct().forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "RECORD_AUDIO",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
             "POST_NOTIFICATIONS",
             "SCHEDULE_EXACT_ALARM",
             "RECEIVE_BOOT_COMPLETED",

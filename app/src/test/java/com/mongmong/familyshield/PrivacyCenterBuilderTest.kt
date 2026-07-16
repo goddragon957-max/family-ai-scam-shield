@@ -170,6 +170,10 @@ class PrivacyCenterBuilderTest {
             "앱 목록",
             "패키지 이름",
             "기기 상태",
+            "별도 경로 확인 코치",
+            "확인 상태",
+            "채널 값",
+            "공식 번호",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -435,6 +439,78 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun separateChannelVerificationCoachIsInventoriedAsManualValueFreeAndNonAutomated() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains("별도 경로 확인 코치")
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith("별도 경로 확인 코치")
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("별도 경로 확인 코치는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("별도 경로 확인 코치 화면")
+        }
+
+        assertTrue(transientInventory.detail.contains("별도 경로 확인 코치"))
+        assertTrue(boundaryStatement.contains("로컬 전용·무상태 수동 안내"))
+        assertTrue(boundaryStatement.contains("새 Android 권한·네트워크·저장소"))
+        assertTrue(
+            boundaryStatement.contains("연락처·문자·메시지·통화·클립보드") &&
+                boundaryStatement.contains("읽거나 감시하지 않")
+        )
+        listOf(
+            "연락처를 읽거나 쓰거나 고르지 않",
+            "전화 앱 열기",
+            "자동 발신",
+            "SMS",
+            "받는 사람 선택",
+            "자동 전송",
+            "웹 탐색",
+            "지도·위치",
+            "기관 번호 조회",
+            "전화번호 검증",
+            "URL·도메인 검증",
+            "링크 스캔",
+            "알림·알람·일정",
+            "스케줄러",
+            "백그라운드 작업",
+            "결제·은행 기능",
+            "기기 제어 기능",
+            "앱 설치·제거·설정 변경"
+        ).forEach { boundary ->
+            assertTrue(
+                "separate-channel boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+        assertTrue(
+            transientInventory.detail.contains(
+                "카드 선택·추천·읽음·공유·확인 상태·채널 값·공식 번호·앱 이름·기기 상태·" +
+                    "체크·메모·진행·이력은 만들거나 기록하지 않"
+            )
+        )
+        assertTrue(
+            persistenceStatement.contains(
+                "별도 경로 확인 코치의 카드 선택·추천·읽음·공유·확인 상태·채널 값·공식 " +
+                    "번호·앱 이름·기기 상태·체크·메모·진행·이력은 만들거나 기록하지 않"
+            )
+        )
+        assertTrue(
+            mutationStatement.contains("별도 경로 확인 코치 화면") &&
+                mutationStatement.contains("카드·경로·공유 버튼") &&
+                mutationStatement.contains("기관 목록") &&
+                mutationStatement.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
     fun familyShareExplainsPrivacyPostureWithoutUserSecretsOrSensitivePatterns() {
         val rawPastedText =
             "엄마 지금 300만원을 계좌 123456789012로 보내고 OTP 654321 PIN 7788 입력 후 https://evil.example 열어"
@@ -538,6 +614,20 @@ class PrivacyCenterBuilderTest {
             summary.contains("화면공유·원격지시 끊기 코치 화면") &&
                 summary.contains("카드·경로·공유 버튼") &&
                 summary.contains("설치 앱·패키지 상태") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("별도 경로 확인 코치") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("연락처 읽기·쓰기·고르기") &&
+                summary.contains("전화 앱 열기·자동 발신·통화·SMS") &&
+                summary.contains("기관 번호 조회·전화번호 검증") &&
+                summary.contains("URL·도메인 검증·링크 스캔") &&
+                summary.contains("결제·은행·기기 제어")
+        )
+        assertTrue(
+            summary.contains("별도 경로 확인 코치 화면") &&
+                summary.contains("기관 목록") &&
                 summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
         )
 
@@ -665,6 +755,14 @@ class PrivacyCenterBuilderTest {
             "기기 설정을 자동으로 바꿉니다",
             "VPN으로 차단합니다",
             "자동 보호합니다",
+            "본인 확인 완료",
+            "번호 검증 완료",
+            "링크 검증 완료",
+            "공식 번호로 확인됐습니다",
+            "공식 링크입니다",
+            "기관을 자동 조회합니다",
+            "번호를 자동 검증합니다",
+            "링크를 자동 검증합니다",
             "환급을 보장합니다",
             "금융 결과를 보장합니다",
             "100%"
@@ -707,6 +805,19 @@ class PrivacyCenterBuilderTest {
                         it.contains("계좌·카드·은행 연동") &&
                         it.contains("자동 정지·동결하지 않") &&
                         it.contains("피해 복구를 자동 수행하지 않습니다")
+                }
+            )
+            assertTrue(
+                center.noCollectionStatements.any {
+                    it.contains("별도 경로 확인 코치") &&
+                        it.contains("로컬 전용") &&
+                        it.contains("무상태 수동") &&
+                        it.contains("연락처를 읽거나 쓰거나 고르지 않") &&
+                        it.contains("기관 번호 조회") &&
+                        it.contains("전화번호 검증") &&
+                        it.contains("URL·도메인 검증") &&
+                        it.contains("자동 전송") &&
+                        it.contains("만들거나 기록하지 않습니다")
                 }
             )
             assertTrue(

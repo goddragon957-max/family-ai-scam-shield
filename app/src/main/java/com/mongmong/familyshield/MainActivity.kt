@@ -24,7 +24,8 @@ class MainActivity : Activity() {
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
         EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD,
         FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH, ACTIVE_CONTACT_EXIT_SCRIPTS,
-        MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH
+        MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH,
+        SEPARATE_CHANNEL_VERIFICATION_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -136,12 +137,159 @@ class MainActivity : Activity() {
                 Screen.ACTIVE_CONTACT_EXIT_SCRIPTS -> activeContactExitScriptsScreen()
                 Screen.MONEY_TRANSFER_PAUSE_GATE -> moneyTransferPauseGateScreen()
                 Screen.REMOTE_ACCESS_CUTOFF_COACH -> remoteAccessCutoffCoachScreen()
+                Screen.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                    separateChannelVerificationCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.separateChannelVerificationCoachScreen() {
+        val coach = SeparateChannelVerificationCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n지금 직접 할 추천 확인 행동\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.verificationSentence}"
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openSeparateChannelVerificationAction(action) }
+            } else {
+                secondaryButton(action.label) { openSeparateChannelVerificationAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 별도 경로 카드",
+            "카드는 항상 같은 순서입니다. 현재 상대가 준 연락 수단은 멈추고 상황에 맞는 별도 " +
+                "경로 종류와 기존 앱 화면만 직접 고르세요. 선택·읽음·확인 상태는 남지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            separateChannelVerificationCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 별도 경로 확인 안내 공유") {
+            shareSeparateChannelVerificationCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("진행 중 연락 종료 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.separateChannelVerificationCard(
+        card: SeparateChannelVerificationCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 할 확인 행동\n")
+                append(card.verificationSentence)
+                append("\n\n언제 쓰나요?\n")
+                append(card.whenToUse)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n사용하거나 공유하지 않을 것\n")
+                card.doNotUseOrShareBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openSeparateChannelVerificationAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openSeparateChannelVerificationAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openSeparateChannelVerificationAction(action) }
+        }
+    }
+
+    private fun openSeparateChannelVerificationAction(
+        action: SeparateChannelVerificationAction
+    ) {
+        when (action.id) {
+            SeparateChannelVerificationActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            SeparateChannelVerificationActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            SeparateChannelVerificationActionId.CHECKER -> show(Screen.CHECKER)
+            SeparateChannelVerificationActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            SeparateChannelVerificationActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            SeparateChannelVerificationActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            SeparateChannelVerificationActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            SeparateChannelVerificationActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            SeparateChannelVerificationActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            SeparateChannelVerificationActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            SeparateChannelVerificationActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            SeparateChannelVerificationActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            SeparateChannelVerificationActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            SeparateChannelVerificationActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            SeparateChannelVerificationActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            SeparateChannelVerificationActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            SeparateChannelVerificationActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareSeparateChannelVerificationCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 별도 경로 확인 안내 공유"))
     }
 
     private fun LinearLayout.remoteAccessCutoffCoachScreen() {
@@ -199,6 +347,9 @@ class MainActivity : Activity() {
         }
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
         secondaryButton("진행 중 연락 종료 문장") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
@@ -339,6 +490,9 @@ class MainActivity : Activity() {
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
         }
+        secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
         secondaryButton("화면공유·원격지시도 끊기") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -438,6 +592,9 @@ class MainActivity : Activity() {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
         primaryButton("송금 전 멈춤 확인") { show(Screen.MONEY_TRANSFER_PAUSE_GATE) }
+        primaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
         section(
             "${scripts.modeLabel} · ${scripts.recommendationTitle}",
             buildString {
@@ -1044,6 +1201,9 @@ class MainActivity : Activity() {
         }
         primaryButton("송금 전 멈춤 확인") { show(Screen.MONEY_TRANSFER_PAUSE_GATE) }
         primaryButton("지금 연락 끝내는 문장") { show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS) }
+        primaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
         secondaryButton("무엇이 노출됐는지 고르기") {
             show(Screen.EXPOSURE_IMPACT_TRIAGE)
@@ -1103,6 +1263,9 @@ class MainActivity : Activity() {
         }
         primaryButton("압박 연락을 끝내는 문장 보기") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        primaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
         section(
             mode.recommendationTitle,
@@ -1204,6 +1367,9 @@ class MainActivity : Activity() {
         }
         primaryButton("연락 중 압박을 끝내는 문장") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        primaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
         section(
             router.recommendationTitle,
@@ -1359,6 +1525,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("송금·결제 전에 멈춤 확인") {
             show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+        }
+        secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
         section(
             checklist.recommendationTitle,
@@ -1585,6 +1754,9 @@ class MainActivity : Activity() {
         }
         primaryButton("이 상황에서 연락 끝내는 문장") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        primaryButton("이 상황을 별도 경로에서 확인하기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
         secondaryButton("다음부터 붙여넣기 전 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
@@ -1818,6 +1990,9 @@ class MainActivity : Activity() {
             show(Screen.ONBOARDING)
         }
 
+        secondaryButton("값 없이 별도 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
         secondaryButton("붙여넣기 전 개인정보 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
         }
@@ -1925,6 +2100,9 @@ class MainActivity : Activity() {
             "연락처와 말할 내용은 앱에 내장되어 있으며 네트워크에서 조회하지 않습니다. " +
                 "전화 버튼은 통화를 자동으로 걸지 않고 전화 앱만 엽니다."
         )
+        secondaryButton("현재 상대와 분리된 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
 
         directory.entries.forEach { entry ->
             val heading = entry.dialNumber?.let { number -> "$number · ${entry.label}" } ?: entry.label
@@ -1962,6 +2140,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.officialReportPrepScreen() {
         title("신고용 상담 준비 카드")
         subtitle("현재 AI 보호자 분석을 개인정보 가림 단서, 추천 공식 연락처, 상담 대사와 전화 전 체크리스트로 정리합니다.")
+        secondaryButton("현재 상대와 분리된 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
 
         val analysis = currentAnalysis
         if (analysis == null) {
@@ -2016,6 +2197,9 @@ class MainActivity : Activity() {
 
         title(card.title)
         subtitle("의심 대화를 멈추고, 새로 받은 번호가 아닌 가족 안전 계획에 직접 저장한 번호로 확인하세요.")
+        secondaryButton("값 없이 별도 확인 경로부터 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
         section(
             if (analysis == null) "분석 전 콜백 루틴" else "위험 요약",
             card.riskSummary
@@ -3187,6 +3371,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
         section(
             scripts.recommendationTitle,
             buildString {
