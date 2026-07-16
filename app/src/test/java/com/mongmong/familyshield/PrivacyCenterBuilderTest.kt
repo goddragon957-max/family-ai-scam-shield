@@ -180,6 +180,11 @@ class PrivacyCenterBuilderTest {
             "안전 판정",
             "통화 여부",
             "공식 확인 상태",
+            "재연락 경계 코치",
+            "재연락 결과",
+            "재연락 상태",
+            "경계 상태",
+            "차단·음소거 상태",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -317,6 +322,13 @@ class PrivacyCenterBuilderTest {
             transientCopy.contains(
                 "확인 결과 다음 행동 보드의 카드 선택·추천·읽음·공유·확인 결과·결과 상태·" +
                     "검증 상태·안전 판정·통화 여부·공식 확인 상태·완료·체크 표시·메모·진행·이력"
+            ) && (transientCopy.contains("만들거나 기록하지 않") || transientCopy.contains("저장하지 않"))
+        )
+        assertTrue(
+            transientCopy.contains(
+                "재연락 경계 코치의 카드 선택·추천·읽음·공유·이름·담당자·재연락 결과·재연락 상태·" +
+                    "경계 상태·차단·음소거 상태·연락처·채널 값·공식 번호·앱 이름·기기 상태·" +
+                    "체크 표시·메모·진행·이력"
             ) && (transientCopy.contains("만들거나 기록하지 않") || transientCopy.contains("저장하지 않"))
         )
         assertTrue(
@@ -628,6 +640,129 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun recontactBoundaryCoachIsInventoriedAsLocalManualAndNonAutomated() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "재연락 경계 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·재연락 결과·재연락 상태·경계 상태·" +
+                "차단·음소거 상태·연락처·채널 값·공식 번호·앱 이름·기기 상태·체크 표시·메모·진행·이력"
+
+        assertTrue(transientInventory.detail.contains(featureName))
+        assertTrue(
+            transientInventory.detail.contains("${featureName}의 $nonStoredState") &&
+                transientInventory.detail.contains("만들거나 기록하지 않")
+        )
+        assertTrue(
+            persistenceStatement.contains("${featureName}의 $nonStoredState") &&
+                persistenceStatement.contains("만들거나 기록하지 않")
+        )
+
+        assertTrue(boundaryStatement.contains("로컬 전용·무상태 수동 안내"))
+        assertTrue(boundaryStatement.contains("새 Android 권한·네트워크·저장소"))
+        listOf(
+            "연락처·통화 기록·문자·메시지·통화·클립보드·알림 내용",
+            "읽거나 감시하지 않",
+            "연락처를 읽거나 쓰거나 고르지 않",
+            "전화 앱 열기",
+            "자동 다이얼",
+            "자동 발신",
+            "자동 통화",
+            "자동 통화 종료",
+            "SMS 전송·수신",
+            "받는 사람 선택",
+            "자동 전송",
+            "통화 선별·차단·음소거",
+            "문자·메시지 차단·필터링",
+            "알림 리스너·알림 모니터링",
+            "웹 탐색·지도·위치",
+            "기관 번호 조회·공식 경로 조회",
+            "전화번호 검증",
+            "URL·도메인 검증",
+            "링크 스캔",
+            "알림·알람·캘린더 일정·리마인더·스케줄러·백그라운드 작업",
+            "만들거나 예약하지 않습니다",
+            "결제·은행 기능이나 API",
+            "NFC",
+            "Android 계정 관리자",
+            "기기 관리자·접근성 서비스·VPN·사용 통계",
+            "앱·패키지 조회·설치·제거·설정 변경",
+            "기기 제어 기능을 사용하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "recontact boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+        assertTrue(
+            boundaryStatement.contains(nonStoredState) &&
+                boundaryStatement.contains("만들거나 기록하지 않습니다")
+        )
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "붙여넣은 텍스트",
+            "통화 상태·통화 기록",
+            "연락처",
+            "문자·SMS",
+            "알림",
+            "사건 기록",
+            "가족 안전 계획",
+            "공식 도움 기관 목록",
+            "확인 결과·검증 상태",
+            "재연락 결과·재연락 상태·경계 상태·차단·음소거 상태",
+            "계정·카드·은행·기기 설정",
+            "설치 앱·패키지 상태",
+            "접근성·네트워크·VPN·알림 설정",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { mutationBoundary ->
+            assertTrue(
+                "recontact mutation statement omitted $mutationBoundary",
+                mutationStatement.contains(mutationBoundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(
+            summary.contains("${featureName}의 $nonStoredState") &&
+                summary.contains("만들거나 기록하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("${featureName}는") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("통화 기록") &&
+                summary.contains("자동 다이얼") &&
+                summary.contains("통화 선별·차단·음소거") &&
+                summary.contains("알림 리스너·알림 모니터링") &&
+                summary.contains("기관 번호 조회·공식 경로 조회·전화번호 검증") &&
+                summary.contains("URL·도메인 검증·링크 스캔") &&
+                summary.contains("스케줄러·백그라운드 작업") &&
+                summary.contains("결제·은행 기능이나 API") &&
+                summary.contains("기기 제어 기능을 사용하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("${featureName} 화면") &&
+                summary.contains("재연락 결과·재연락 상태·경계 상태·차단·음소거 상태") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
     fun familyShareExplainsPrivacyPostureWithoutUserSecretsOrSensitivePatterns() {
         val rawPastedText =
             "엄마 지금 300만원을 계좌 123456789012로 보내고 OTP 654321 PIN 7788 입력 후 https://evil.example 열어"
@@ -747,6 +882,33 @@ class PrivacyCenterBuilderTest {
                 summary.contains("기관 목록") &&
                 summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
         )
+        assertTrue(
+            summary.contains("재연락 경계 코치") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("연락처·통화 기록·문자·메시지·통화·클립보드·알림 내용") &&
+                summary.contains("전화 앱 열기·자동 다이얼·자동 발신·자동 통화·자동 통화 종료") &&
+                summary.contains("통화 선별·차단·음소거") &&
+                summary.contains("알림 리스너·알림 모니터링") &&
+                summary.contains("기관 번호 조회·공식 경로 조회·전화번호 검증") &&
+                summary.contains("URL·도메인 검증·링크 스캔") &&
+                summary.contains("알림·알람·캘린더 일정·리마인더·스케줄러·백그라운드 작업") &&
+                summary.contains("결제·은행 기능이나 API") &&
+                summary.contains("기기 제어 기능을 사용하지 않습니다")
+        )
+        assertTrue(
+            summary.contains(
+                "재연락 경계 코치의 카드 선택·추천·읽음·공유·이름·담당자·재연락 결과·재연락 상태·" +
+                    "경계 상태·차단·음소거 상태·연락처·채널 값·공식 번호·앱 이름·기기 상태·" +
+                    "체크 표시·메모·진행·이력"
+            ) && summary.contains("만들거나 기록하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("재연락 경계 코치 화면") &&
+                summary.contains("통화 상태·통화 기록") &&
+                summary.contains("문자·SMS·알림") &&
+                summary.contains("재연락 결과·재연락 상태·경계 상태·차단·음소거 상태") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
 
         listOf(
             rawPastedText,
@@ -851,6 +1013,12 @@ class PrivacyCenterBuilderTest {
             "통화를 자동으로 끊습니다",
             "통화를 차단합니다",
             "통화를 선별합니다",
+            "통화를 음소거합니다",
+            "통화 기록을 읽습니다",
+            "문자를 차단합니다",
+            "메시지를 필터링합니다",
+            "알림을 모니터링합니다",
+            "알림을 자동으로 차단합니다",
             "문자에 자동으로 답장합니다",
             "받는 사람을 자동으로 선택합니다",
             "송금을 자동으로 실행합니다",
@@ -880,6 +1048,11 @@ class PrivacyCenterBuilderTest {
             "기관을 자동 조회합니다",
             "번호를 자동 검증합니다",
             "링크를 자동 검증합니다",
+            "재연락 결과를 저장합니다",
+            "재연락 상태를 저장합니다",
+            "경계 상태를 저장합니다",
+            "차단 상태를 저장합니다",
+            "음소거 상태를 저장합니다",
             "환급을 보장합니다",
             "금융 결과를 보장합니다",
             "100%"
@@ -952,6 +1125,26 @@ class PrivacyCenterBuilderTest {
                         it.contains("자동으로 끊거나 차단하지 않") &&
                         it.contains("기기를 청소하지 않") &&
                         it.contains("피해 복구를 자동 수행하지 않습니다")
+                }
+            )
+            assertTrue(
+                center.noCollectionStatements.any {
+                    it.startsWith("재연락 경계 코치는") &&
+                        it.contains("로컬 전용·무상태 수동") &&
+                        it.contains("연락처·통화 기록·문자·메시지·통화·클립보드·알림 내용") &&
+                        it.contains("연락처를 읽거나 쓰거나 고르지 않") &&
+                        it.contains("자동 다이얼") &&
+                        it.contains("SMS 전송·수신") &&
+                        it.contains("통화 선별·차단·음소거") &&
+                        it.contains("알림 리스너·알림 모니터링") &&
+                        it.contains("기관 번호 조회·공식 경로 조회·전화번호 검증") &&
+                        it.contains("URL·도메인 검증·링크 스캔") &&
+                        it.contains("스케줄러·백그라운드 작업") &&
+                        it.contains("결제·은행 기능이나 API") &&
+                        it.contains("기기 제어 기능을 사용하지 않습니다") &&
+                        it.contains("재연락 결과·재연락 상태·경계 상태·차단·음소거 상태") &&
+                        it.contains("체크 표시") &&
+                        it.contains("만들거나 기록하지 않습니다")
                 }
             )
             assertTrue(center.privacyNotes.any { it.contains("들어오는 것만으로") && it.contains("삭제되지는 않습니다") })
