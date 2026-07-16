@@ -1797,6 +1797,250 @@ class PrivacyPostureRegressionTest {
         assertFalse(triageShareHelper.contains("SmsManager"))
     }
 
+    @Test
+    fun trustedHelperReviewIsPureStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/TrustedHelperReviewMode.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val resultScreen = activitySource
+            .substringAfter("private fun LinearLayout.result()")
+            .substringBefore("private fun LinearLayout.incidentLog")
+        val handoffScreen = activitySource
+            .substringAfter("private fun LinearLayout.trustedHelperHandoffScreen")
+            .substringBefore("private fun openTrustedHelperAction")
+        val reviewScreen = activitySource
+            .substringAfter("private fun LinearLayout.trustedHelperReviewModeScreen")
+            .substringBefore("private fun LinearLayout.trustedHelperReviewCard")
+        val reviewCardRenderer = activitySource
+            .substringAfter("private fun LinearLayout.trustedHelperReviewCard")
+            .substringBefore("private fun openTrustedHelperReviewAction")
+        val reviewActionRouter = activitySource
+            .substringAfter("private fun openTrustedHelperReviewAction")
+            .substringBefore("private fun shareTrustedHelperReview")
+        val reviewShareHelper = activitySource
+            .substringAfter("private fun shareTrustedHelperReview")
+            .substringBefore("private fun LinearLayout.trustedHelperHandoffScreen")
+        val normalizedHomeScreen = homeScreen.replace(Regex("\\s+"), " ")
+        val normalizedResultScreen = resultScreen.replace(Regex("\\s+"), " ")
+        val normalizedHandoffScreen = handoffScreen.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = reviewActionRouter.replace(Regex("\\s+"), " ")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.trustedHelperReviewCard",
+            "private fun openTrustedHelperReviewAction",
+            "private fun shareTrustedHelperReview",
+            "private fun LinearLayout.trustedHelperHandoffScreen"
+        ).forEach { marker ->
+            assertTrue("trusted helper review source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+        assertFalse(modelSource.contains("SafetyPlan"))
+        assertFalse(modelSource.contains("SafetyPlanStore"))
+
+        assertTrue(activitySource.contains("TRUSTED_HELPER_REVIEW"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.TRUSTED_HELPER_REVIEW -> trustedHelperReviewModeScreen()"
+            )
+        )
+        assertTrue(
+            normalizedHomeScreen.contains(
+                "secondaryButton(\"보호자와 함께 안전 검토\") { " +
+                    "show(Screen.TRUSTED_HELPER_REVIEW) }"
+            )
+        )
+        assertTrue(
+            normalizedResultScreen.contains(
+                "secondaryButton(\"이 신호로 보호자 검토 시작\") { " +
+                    "show(Screen.TRUSTED_HELPER_REVIEW) }"
+            )
+        )
+        assertTrue(
+            normalizedHandoffScreen.contains(
+                "secondaryButton(\"보호자와 함께 안전 검토\") { " +
+                    "show(Screen.TRUSTED_HELPER_REVIEW) }"
+            )
+        )
+        val homeHandoffIndex = homeScreen.indexOf("보호자 도움 요청 카드")
+        val homeReviewIndex = homeScreen.indexOf("보호자와 함께 안전 검토")
+        assertTrue(homeHandoffIndex >= 0)
+        assertTrue(homeReviewIndex > homeHandoffIndex)
+        val resultExposureIndex = resultScreen.indexOf("이 신호로 노출 가능성 확인")
+        val resultReviewIndex = resultScreen.indexOf("이 신호로 보호자 검토 시작")
+        assertTrue(resultExposureIndex >= 0)
+        assertTrue(resultReviewIndex > resultExposureIndex)
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:trustedHelperReview|helperReview|reviewMode)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex("KEY_\\w*(?:TRUSTED_HELPER_REVIEW|HELPER_REVIEW)\\w*")
+                .containsMatchIn(activitySource)
+        )
+
+        assertTrue(reviewScreen.contains("TrustedHelperReviewModeBuilder.build("))
+        assertTrue(reviewScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            reviewScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(reviewScreen.contains("title(review.title)"))
+        assertTrue(reviewScreen.contains("subtitle(review.intro)"))
+        assertTrue(reviewScreen.contains("review.recommendationTitle"))
+        assertTrue(reviewScreen.contains("review.recommendationExplanation"))
+        assertTrue(reviewScreen.contains("review.recommendedActions"))
+        assertTrue(reviewScreen.contains("review.privacySafetyNotes"))
+        assertTrue(
+            reviewScreen.contains(
+                "shareTrustedHelperReview(review.familyShareSummary)"
+            )
+        )
+        assertTrue(
+            reviewScreen.contains(
+                "primaryButton(\"가족에게 보호자 검토 요약 공유\")"
+            )
+        )
+        assertTrue(reviewScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")"))
+        assertTrue(reviewScreen.contains("secondaryButton(\"홈으로\")"))
+        val recommendedRenderIndex = reviewScreen.indexOf("review.recommendedCards.forEach")
+        val remainingRenderIndex =
+            reviewScreen.indexOf("val remainingCards = review.cards.filterNot")
+        val remainingRenderLoopIndex = reviewScreen.indexOf("remainingCards.forEach")
+        assertTrue(recommendedRenderIndex >= 0)
+        assertTrue(remainingRenderIndex > recommendedRenderIndex)
+        assertTrue(remainingRenderLoopIndex > remainingRenderIndex)
+        assertEquals(
+            1,
+            Regex("review\\.recommendedCards\\.forEach")
+                .findAll(reviewScreen)
+                .count()
+        )
+        assertEquals(
+            1,
+            Regex("remainingCards\\.forEach")
+                .findAll(reviewScreen)
+                .count()
+        )
+
+        listOf(
+            "card.stage",
+            "card.category",
+            "card.title",
+            "card.helperRole",
+            "card.safeQuestion",
+            "card.whatNotToAsk",
+            "card.firstSafeMove",
+            "card.priority",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("trusted helper review UI omitted $field", reviewCardRenderer.contains(field))
+        }
+
+        val statelessUiSource = reviewScreen + reviewCardRenderer + reviewActionRouter
+        assertFalse(statelessUiSource.contains("analysis.input"))
+        assertFalse(statelessUiSource.contains("IncidentPreviewRedactor"))
+        assertFalse(statelessUiSource.contains("plan.safeWord"))
+        assertFalse(statelessUiSource.contains("plan.callbackScript"))
+        assertFalse(statelessUiSource.contains("plan.contacts"))
+        assertFalse(statelessUiSource.contains("incidents.add("))
+        assertFalse(statelessUiSource.contains("incidents.clear("))
+        assertFalse(statelessUiSource.contains("prefs.edit("))
+        assertFalse(statelessUiSource.contains("safetyPlan.save("))
+        assertFalse(statelessUiSource.contains("CheckBox("))
+        assertFalse(statelessUiSource.contains("EditText("))
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+        assertFalse(statelessUiSource.contains("selectedHelperReview"))
+        assertFalse(statelessUiSource.contains("selectedReviewCard"))
+        assertFalse(statelessUiSource.contains(".save("))
+        assertFalse(statelessUiSource.contains("putString("))
+        assertFalse(statelessUiSource.contains("putBoolean("))
+
+        listOf(
+            "TrustedHelperReviewActionId.QUICK_STOP -> show(Screen.QUICK_STOP)",
+            "TrustedHelperReviewActionId.EXPOSURE_IMPACT_TRIAGE -> " +
+                "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "TrustedHelperReviewActionId.CHECKER -> show(Screen.CHECKER)",
+            "TrustedHelperReviewActionId.ANALYSIS_RESULT -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "TrustedHelperReviewActionId.RISK_SIGNAL_EXPLAINERS -> " +
+                "show(Screen.RISK_SIGNAL_EXPLAINERS)",
+            "TrustedHelperReviewActionId.FAMILY_CALLBACK_CARD -> " +
+                "openFamilyCallbackCard(currentAnalysis)",
+            "TrustedHelperReviewActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)",
+            "TrustedHelperReviewActionId.FAMILY_ALERT_MESSAGES -> " +
+                "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TrustedHelperReviewActionId.TRUSTED_HELPER_HANDOFF -> " +
+                "show(Screen.TRUSTED_HELPER_HANDOFF)",
+            "TrustedHelperReviewActionId.FAMILY_READINESS_ROADMAP -> " +
+                "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "TrustedHelperReviewActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()",
+            "TrustedHelperReviewActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)",
+            "TrustedHelperReviewActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)",
+            "TrustedHelperReviewActionId.EVIDENCE_KIT -> openEvidenceKit(null)",
+            "TrustedHelperReviewActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                "openHelpDirectory(Screen.TRUSTED_HELPER_REVIEW)",
+            "TrustedHelperReviewActionId.REPORT_PREP -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "TrustedHelperReviewActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)",
+            "TrustedHelperReviewActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)"
+        ).forEach { route ->
+            assertTrue("trusted helper review route omitted: $route", normalizedActionRouter.contains(route))
+        }
+        assertFalse(reviewActionRouter.contains("dial("))
+        assertFalse(reviewActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(reviewActionRouter.contains("Intent.ACTION_CALL"))
+        assertFalse(reviewActionRouter.contains("Intent.ACTION_SEND"))
+
+        val shareArguments = Regex("shareTrustedHelperReview\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("review.familyShareSummary"), shareArguments)
+        assertTrue(reviewShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(reviewShareHelper.contains("type = \"text/plain\""))
+        assertTrue(reviewShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(reviewShareHelper.contains("Intent.createChooser"))
+        assertTrue(reviewShareHelper.contains("가족에게 보호자 검토 요약 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(reviewShareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(reviewShareHelper).count())
+        assertFalse(reviewShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(reviewShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(reviewShareHelper.contains("ClipData"))
+        assertFalse(reviewShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(reviewShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(reviewShareHelper.contains("ScamAnalysis"))
+        assertFalse(reviewShareHelper.contains("currentAnalysis"))
+        assertFalse(reviewShareHelper.contains("analysis.input"))
+        assertFalse(reviewShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(reviewShareHelper.contains("SafetyPlan"))
+        assertFalse(reviewShareHelper.contains("incidents"))
+        assertFalse(reviewShareHelper.contains("ContactsContract"))
+        assertFalse(reviewShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile

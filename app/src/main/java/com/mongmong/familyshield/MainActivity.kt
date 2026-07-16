@@ -21,7 +21,7 @@ class MainActivity : Activity() {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
-        SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
+        TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
         EXPOSURE_IMPACT_TRIAGE
     }
 
@@ -122,6 +122,7 @@ class MainActivity : Activity() {
                 Screen.QUICK_STOP -> quickStopModeScreen()
                 Screen.RECOVERY_PLAN -> recoveryPlan24hScreen()
                 Screen.TRUSTED_HELPER_HANDOFF -> trustedHelperHandoffScreen()
+                Screen.TRUSTED_HELPER_REVIEW -> trustedHelperReviewModeScreen()
                 Screen.SAFE_CALL_SCRIPTS -> safeVerificationCallScriptsScreen()
                 Screen.RISK_SIGNAL_EXPLAINERS -> riskSignalExplainerScreen()
                 Screen.FAMILY_READINESS_ROADMAP -> familyReadinessRoadmapScreen()
@@ -176,6 +177,7 @@ class MainActivity : Activity() {
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         secondaryButton("보호자 도움 요청 카드") { show(Screen.TRUSTED_HELPER_HANDOFF) }
+        secondaryButton("보호자와 함께 안전 검토") { show(Screen.TRUSTED_HELPER_REVIEW) }
         secondaryButton("안전 확인 전화 스크립트") { show(Screen.SAFE_CALL_SCRIPTS) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
@@ -653,6 +655,9 @@ class MainActivity : Activity() {
         secondaryButton("탐지 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
         secondaryButton("이 신호로 노출 가능성 확인") {
             show(Screen.EXPOSURE_IMPACT_TRIAGE)
+        }
+        secondaryButton("이 신호로 보호자 검토 시작") {
+            show(Screen.TRUSTED_HELPER_REVIEW)
         }
         secondaryButton("이 신호로 가족 연습하기") { openDrill() }
         secondaryButton("이 상황 기준 준비 로드맵") { show(Screen.FAMILY_READINESS_ROADMAP) }
@@ -1593,6 +1598,149 @@ class MainActivity : Activity() {
         section("AI 보호자 방지 루틴", body)
     }
 
+    private fun LinearLayout.trustedHelperReviewModeScreen() {
+        val review = TrustedHelperReviewModeBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = review.recommendedCardIds.toSet()
+
+        title(review.title)
+        subtitle(review.intro)
+        section(
+            review.recommendationTitle,
+            buildString {
+                append(review.recommendationExplanation)
+                append("\n\n먼저 함께 볼 검토 카드\n")
+                append(
+                    review.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.title} · ${card.stage.label} · ${card.priority.label}"
+                    }
+                )
+                append("\n\n분석 신호만으로 실제 노출이나 본인 확인이 끝났다고 단정하지 마세요.")
+            }
+        )
+        review.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openTrustedHelperReviewAction(action) }
+            } else {
+                secondaryButton(action.label) { openTrustedHelperReviewAction(action) }
+            }
+        }
+
+        section(
+            "추천 보호자 검토 카드",
+            "현재 로컬 분석 신호와 값 없는 가족 준비 수준에 맞춘 순서입니다. 질문에는 실제 값 대신 종류만 답하고, 답변이나 메모는 저장되지 않습니다."
+        )
+        review.recommendedCards.forEach { card ->
+            trustedHelperReviewCard(card, recommended = true)
+        }
+
+        val remainingCards = review.cards.filterNot { card -> card.id in recommendedIds }
+        if (remainingCards.isNotEmpty()) {
+            section(
+                "나머지 보호자 검토 카드",
+                "추천과 관계없이 필요한 단계를 함께 살펴보세요. 카드 선택·읽음·진행 상태는 저장되지 않습니다."
+            )
+            remainingCards.forEach { card ->
+                trustedHelperReviewCard(card, recommended = false)
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            review.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 보호자 검토 요약 공유") {
+            shareTrustedHelperReview(review.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.trustedHelperReviewCard(
+        card: TrustedHelperReviewCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.title)
+            append(" · ")
+            append(card.stage.label)
+            append(" · ")
+            append(card.category.label)
+            append(" · ")
+            append(card.priority.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("보호자 역할\n")
+                append(card.helperRole)
+                append("\n\n안전하게 물을 질문\n")
+                append(card.safeQuestion)
+                append("\n\n묻거나 적지 마세요\n")
+                card.whatNotToAsk.forEach { note -> append("• ").append(note).append('\n') }
+                append("\n첫 안전 행동\n")
+                append(card.firstSafeMove)
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openTrustedHelperReviewAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openTrustedHelperReviewAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openTrustedHelperReviewAction(action) }
+        }
+    }
+
+    private fun openTrustedHelperReviewAction(action: TrustedHelperReviewAction) {
+        when (action.id) {
+            TrustedHelperReviewActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            TrustedHelperReviewActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            TrustedHelperReviewActionId.CHECKER -> show(Screen.CHECKER)
+            TrustedHelperReviewActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            TrustedHelperReviewActionId.RISK_SIGNAL_EXPLAINERS ->
+                show(Screen.RISK_SIGNAL_EXPLAINERS)
+            TrustedHelperReviewActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            TrustedHelperReviewActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            TrustedHelperReviewActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            TrustedHelperReviewActionId.TRUSTED_HELPER_HANDOFF ->
+                show(Screen.TRUSTED_HELPER_HANDOFF)
+            TrustedHelperReviewActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            TrustedHelperReviewActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            TrustedHelperReviewActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            TrustedHelperReviewActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            TrustedHelperReviewActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            TrustedHelperReviewActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.TRUSTED_HELPER_REVIEW)
+            TrustedHelperReviewActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            TrustedHelperReviewActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            TrustedHelperReviewActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun shareTrustedHelperReview(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 보호자 검토 요약 공유"))
+    }
+
     private fun LinearLayout.trustedHelperHandoffScreen() {
         val card = TrustedHelperHandoffBuilder.build(
             analysis = currentAnalysis,
@@ -1652,6 +1800,9 @@ class MainActivity : Activity() {
             "개인정보·안전 안내",
             card.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
         )
+        secondaryButton("보호자와 함께 안전 검토") {
+            show(Screen.TRUSTED_HELPER_REVIEW)
+        }
         primaryButton("보호자에게 도움 요청 공유") {
             shareTrustedHelperHandoff(card.handoffShareMessage)
         }

@@ -160,6 +160,11 @@ class PrivacyCenterBuilderTest {
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
+            "보호자 안전 검토",
+            "보호자 질문",
+            "답변",
+            "메모",
+            "보호자 검토 이력",
             "가족 콜백 카드",
             "상담 준비 카드",
             "체크리스트",
@@ -189,6 +194,12 @@ class PrivacyCenterBuilderTest {
         assertTrue(
             transientCopy.contains(
                 "노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력"
+            )
+        )
+        assertTrue(
+            transientCopy.contains(
+                "보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·" +
+                    "공유·보호자 검토 이력"
             )
         )
         assertTrue(
