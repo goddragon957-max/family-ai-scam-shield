@@ -47,6 +47,26 @@ The result screen also shows a short, ordered "지금부터 3분" checklist tail
 
 The important checklist lines are included in the safe family report (`SafetyReportBuilder`) without ever including the original pasted text.
 
+## Incident Response Center (긴급 대응 센터)
+
+홈 화면과 분석 결과 화면의 "이미 피해가 의심돼요 / 긴급 대응 센터" 버튼으로 들어갈 수 있는
+화면입니다. 이미 아래 상황 중 하나가 벌어진 사용자를 위한 것으로, 원문 문자/통화 내용을
+입력받거나 저장하지 않고 상황 선택만으로 동작합니다:
+
+- 이미 돈을 보냈거나 상품권/코인을 전달함
+- 앱을 설치했거나 원격제어·화면공유를 허용함
+- 계좌·비밀번호·인증번호(OTP)·신분증 정보를 알려줌
+- 링크만 눌렀고 돈이나 정보는 아직 주지 않음
+
+상황을 고르면 `IncidentResponseBuilder`가 결정적으로 생성한 대응 단계(은행 지급정지/카드 잠금,
+원격제어 앱 삭제 후 안전한 기기에서 비밀번호 변경, 증거 보관 방법 등)와 112(경찰)/182(보이스피싱
+통합신고)/1332(금융감독원) 연락처를 보여줍니다. 연락처는 기존 안전 계획과 같은 방식으로
+`ACTION_DIAL`만 사용하며, `CALL_PHONE` 권한을 요청하지 않습니다.
+
+"가족에게 대응 요약 공유" 버튼은 `IncidentResponseReportBuilder`가 만든 요약을 공유합니다. 이
+요약에는 선택한 상황과 대응 단계, 연락처만 포함되며, 사용자가 붙여넣은 원문 텍스트는 애초에 이
+화면에 입력되지 않으므로 요약에도 포함되지 않습니다.
+
 ## Analyzer Signals
 
 The local analyzer scores these signals:

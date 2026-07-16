@@ -17,13 +17,14 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
-    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN }
+    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
     private val safetyPlan by lazy { SafetyPlanStore(this) }
     private var currentAnalysis: ScamAnalysis? = null
     private var pendingSharedText: String? = null
+    private var selectedIncidentSituation: IncidentSituation? = null
 
     private val defaultCallbackScript =
         "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
@@ -95,6 +96,7 @@ class MainActivity : Activity() {
                 Screen.RESULT -> result()
                 Screen.LOG -> incidentLog()
                 Screen.PLAN -> safetyPlanScreen()
+                Screen.RESPONSE_CENTER -> responseCenter()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -138,6 +140,7 @@ class MainActivity : Activity() {
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
+        secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/182 또는 은행 지급정지")
@@ -185,6 +188,7 @@ class MainActivity : Activity() {
         section("권장 행동", analysis.summary)
         familyPlanSection()
         section("긴급 대응", "이미 돈을 보냈다면 즉시 은행 지급정지, 112 또는 182 신고, 계정 비밀번호 변경, 원격제어 앱 삭제를 진행하세요.")
+        secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
         primaryButton("사건 기록에 저장") {
             incidents.add(analysis)
@@ -215,6 +219,37 @@ class MainActivity : Activity() {
             }
         }
         primaryButton("새 검사") { show(Screen.CHECKER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openResponseCenter() {
+        selectedIncidentSituation = null
+        show(Screen.RESPONSE_CENTER)
+    }
+
+    private fun LinearLayout.responseCenter() {
+        title("긴급 대응 센터")
+        subtitle("이미 벌어진 상황과 가장 가까운 항목을 고르면 지금 해야 할 행동과 도움 연락처를 보여줍니다.")
+        section("개인정보 보호", "이 화면은 원문 문자나 통화 내용을 저장하지 않습니다. 선택한 상황과 대응 단계만 사용됩니다.")
+
+        IncidentSituation.entries.forEach { situation ->
+            secondaryButton(situation.label) {
+                selectedIncidentSituation = situation
+                show(Screen.RESPONSE_CENTER)
+            }
+        }
+
+        val situation = selectedIncidentSituation
+        if (situation != null) {
+            val plan = IncidentResponseBuilder.build(situation)
+            val body = plan.steps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
+            section(plan.title, body)
+            plan.emergencyContacts.forEach { contact ->
+                secondaryButton("${contact.label} 전화 연결 (${contact.number})") { dial(contact.number) }
+            }
+            primaryButton("가족에게 대응 요약 공유") { shareIncidentResponse(plan) }
+        }
+
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -336,6 +371,16 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, report)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 안전 리포트 공유"))
+    }
+
+    private fun shareIncidentResponse(plan: IncidentResponsePlan) {
+        val report = IncidentResponseReportBuilder.build(plan)
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 긴급 대응 요약")
+            putExtra(Intent.EXTRA_TEXT, report)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 대응 요약 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {
