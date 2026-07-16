@@ -17,7 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
-    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER }
+    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, DRILL }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
@@ -25,6 +25,7 @@ class MainActivity : Activity() {
     private var currentAnalysis: ScamAnalysis? = null
     private var pendingSharedText: String? = null
     private var selectedIncidentSituation: IncidentSituation? = null
+    private var selectedDrillScenario: DrillScenario? = null
 
     private val defaultCallbackScript =
         "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
@@ -97,6 +98,7 @@ class MainActivity : Activity() {
                 Screen.LOG -> incidentLog()
                 Screen.PLAN -> safetyPlanScreen()
                 Screen.RESPONSE_CENTER -> responseCenter()
+                Screen.DRILL -> drillScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -143,6 +145,7 @@ class MainActivity : Activity() {
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
+        secondaryButton("가족 안전 연습 / 3분 훈련") { openDrill() }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/182 또는 은행 지급정지")
     }
 
@@ -248,6 +251,50 @@ class MainActivity : Activity() {
                 secondaryButton("${contact.label} 전화 연결 (${contact.number})") { dial(contact.number) }
             }
             primaryButton("가족에게 대응 요약 공유") { shareIncidentResponse(plan) }
+        }
+
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openDrill() {
+        selectedDrillScenario = null
+        show(Screen.DRILL)
+    }
+
+    private fun LinearLayout.drillScreen() {
+        title("가족 안전 연습 · 3분 훈련")
+        subtitle("실제 사건이 아닌 앱에 내장된 가상 시나리오로, 위급한 순간에 쓸 안전단어 질문과 콜백 루틴을 미리 연습합니다.")
+        section("개인정보 보호", "훈련은 내장된 가상 시나리오만 사용합니다. 연습 내용이나 결과를 저장하거나 전송하지 않습니다.")
+
+        val plan = safetyPlan.load()
+        if (plan.safeWord.isNotBlank()) {
+            section("우리 가족 연습 질문", "훈련 중 상대 역할에게 이렇게 물어보세요: “${plan.safeWord}”\n답이 어색하면 요구를 거절하고 저장된 번호로 콜백하는 것까지 연습하세요.")
+        } else {
+            section("안전단어가 아직 없어요", "가족 안전 계획에 안전단어를 저장하면 훈련에서 우리 가족만의 질문으로 연습할 수 있습니다.")
+            primaryButton("가족 안전 계획 만들기") { show(Screen.PLAN) }
+        }
+
+        section("연습 방법", SafetyDrillBuilder.FICTION_NOTICE + "\n가족 한 명이 아래 시나리오의 가상 대사를 읽어주고, 다른 가족이 대응을 연습하세요.")
+
+        DrillScenario.entries.forEach { scenario ->
+            secondaryButton(scenario.label) {
+                selectedDrillScenario = scenario
+                show(Screen.DRILL)
+            }
+        }
+
+        val scenario = selectedDrillScenario
+        if (scenario != null) {
+            val drill = SafetyDrillBuilder.build(scenario)
+            section(drill.title, drill.fictionalScript)
+            section(
+                "이렇게 말하고 행동하세요",
+                drill.responseSteps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
+            )
+            section(
+                "통과 체크리스트",
+                drill.passChecklist.joinToString("\n") { "• $it" }
+            )
         }
 
         secondaryButton("홈으로") { show(Screen.HOME) }
