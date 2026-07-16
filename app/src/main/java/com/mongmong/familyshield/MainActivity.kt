@@ -21,7 +21,7 @@ class MainActivity : Activity() {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
-        SAFE_CALL_SCRIPTS
+        SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -123,6 +123,7 @@ class MainActivity : Activity() {
                 Screen.RECOVERY_PLAN -> recoveryPlan24hScreen()
                 Screen.TRUSTED_HELPER_HANDOFF -> trustedHelperHandoffScreen()
                 Screen.SAFE_CALL_SCRIPTS -> safeVerificationCallScriptsScreen()
+                Screen.RISK_SIGNAL_EXPLAINERS -> riskSignalExplainerScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -175,6 +176,7 @@ class MainActivity : Activity() {
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
+        secondaryButton("위험 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
         secondaryButton("가족 콜백 루틴 확인") { openFamilyCallbackCard(null) }
         secondaryButton("신고용 상담 준비 카드") { show(Screen.REPORT_PREP) }
         secondaryButton("샘플로 AI 분석 연습") { openSampleLibrary() }
@@ -643,6 +645,7 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        secondaryButton("탐지 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
         actionPlanSection(analysis)
         aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
@@ -1657,6 +1660,148 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+    private fun LinearLayout.riskSignalExplainerScreen() {
+        val explainer = RiskSignalExplainerBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = explainer.recommendedSignalIds.toSet()
+
+        title(explainer.title)
+        subtitle(explainer.intro)
+        section(
+            explainer.recommendationTitle,
+            buildString {
+                append(explainer.recommendationExplanation)
+                append("\n\n먼저 볼 설명 카드\n")
+                append(
+                    explainer.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.label} · ${card.category.label} · ${card.urgency.label}"
+                    }
+                )
+            }
+        )
+        explainer.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openRiskSignalExplainerAction(action) }
+            } else {
+                secondaryButton(action.label) { openRiskSignalExplainerAction(action) }
+            }
+        }
+
+        section(
+            "추천 신호 자세히",
+            "현재 상황과 가까운 카드를 먼저 보여드립니다. 추천은 로컬 규칙의 참고 안내이며 사기 여부를 확정하지 않습니다."
+        )
+        explainer.recommendedCards.forEach { card ->
+            riskSignalExplainerCard(card, recommended = true)
+        }
+
+        val remainingCards = explainer.cards.filterNot { card -> card.id in recommendedIds }
+        if (remainingCards.isNotEmpty()) {
+            section(
+                "그 밖의 분류별 위험 신호",
+                "추천되지 않은 신호도 궁금하면 살펴보세요. 카드를 본 기록이나 선택은 저장되지 않습니다."
+            )
+            RiskSignalCategory.entries
+                .sortedBy { category -> category.displayOrder }
+                .forEach { category ->
+                    val categoryCards = remainingCards.filter { card -> card.category == category }
+                    if (categoryCards.isNotEmpty()) {
+                        section(
+                            "분류 · ${category.label}",
+                            categoryCards.joinToString("\n") { card -> "• ${card.label}" }
+                        )
+                        categoryCards.forEach { card ->
+                            riskSignalExplainerCard(card, recommended = false)
+                        }
+                    }
+                }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            explainer.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 위험 신호 설명 공유") {
+            shareRiskSignalExplainerSummary(explainer.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.riskSignalExplainerCard(
+        card: RiskSignalExplainerCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.label)
+            append(" · ")
+            append(card.category.label)
+            append(" · ")
+            append(card.urgency.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("왜 의심하나요?\n")
+                append(card.whySuspicious)
+                append("\n\n상대가 노리는 행동\n")
+                append(card.scamPressureGoal)
+                append("\n\n지금 안전하게 할 일\n")
+                append(card.immediateSafeMove)
+                append("\n\n가족과 이야기해 보기\n")
+                append(card.familyDiscussionPrompt)
+            }
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openRiskSignalExplainerAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openRiskSignalExplainerAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openRiskSignalExplainerAction(action) }
+        }
+    }
+
+    private fun openRiskSignalExplainerAction(action: RiskSignalExplainerAction) {
+        when (action.id) {
+            RiskSignalExplainerActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            RiskSignalExplainerActionId.CHECKER -> show(Screen.CHECKER)
+            RiskSignalExplainerActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            RiskSignalExplainerActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            RiskSignalExplainerActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            RiskSignalExplainerActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            RiskSignalExplainerActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            RiskSignalExplainerActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            RiskSignalExplainerActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.RISK_SIGNAL_EXPLAINERS)
+            RiskSignalExplainerActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            RiskSignalExplainerActionId.TRUSTED_HELPER_HANDOFF ->
+                show(Screen.TRUSTED_HELPER_HANDOFF)
+            RiskSignalExplainerActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            RiskSignalExplainerActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+        }
+    }
+
+    private fun shareRiskSignalExplainerSummary(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 위험 신호 설명 공유"))
+    }
 
     private fun LinearLayout.safeVerificationCallScriptsScreen() {
         val scripts = SafeVerificationCallScriptsBuilder.build(

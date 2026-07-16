@@ -11,21 +11,45 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 5. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
 6. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
 7. 로컬 규칙 기반 AI 보호자 분석
-8. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-9. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
-10. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-11. 상황별 신고·상담 연락처와 말할 내용 확인
-12. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
-13. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
-14. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
-15. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
-16. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
-17. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
-18. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
+8. 위험 신호 설명 카드에서 일치한 신호가 왜 의심스러운지, 흔한 압박 목표와 즉시 할 안전 행동을 원문 없이 확인
+9. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
+10. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+11. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+12. 상황별 신고·상담 연락처와 말할 내용 확인
+13. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+14. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
+15. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
+16. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
+17. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
+18. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
+19. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
 
 ## Share Entry
 
 The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plain`). A user can share a suspicious Kakao/SMS/memo text into the app; after consent, the checker opens with the shared text pre-filled. This does not add SMS, contact, call, microphone, or internet permissions.
+
+## Risk Signal Explainer Cards (위험 신호 설명 카드)
+
+홈의 "위험 신호 설명 보기"와 현재 분석 결과의 "탐지 신호 설명 보기"에서 로컬 분석 규칙과 일치한
+신호가 왜 주의 대상인지 차분히 확인할 수 있습니다. `RiskSignalExplainerBuilder`는 현재
+`ScamAnalysis?`의 위험도·탐지 신호와 비밀 값이 없는 `FamilyReadiness`만 사용해 같은 입력에 항상
+같은 카드와 추천 순서를 만듭니다. 모든 현재 `ScamSignal`을 긴급·송금·기관 압박, 링크·스미싱,
+계정·인증 비밀정보, 앱 설치·원격제어, 가족 사칭·목소리·번호 변경, 금융 미끼, 상품권·기프티콘·
+가상자산 범주로 설명하며, 분석이나 일치 신호가 없을 때도 송금·인증정보·링크·가족 사칭의 보수적인
+기본 안내를 보여줍니다. 각 카드는 의심스러운 이유, 상대가 유도하려는 행동, 즉시 할 안전 행동,
+가족과 나눌 확인 질문과 기존 안전 화면으로 이동하는 버튼을 제공합니다.
+
+이 설명은 사용자가 직접 넣은 텍스트에서 일치한 로컬 결정 규칙을 이해하기 위한 교육용 안내입니다.
+원격 AI 분석이나 공식 기관의 확정 판정이 아니며, 붙여넣은 원문이나 개인정보를 화면에서 다시
+재생하지 않습니다. 화면은 새 Android 권한이나 네트워크를 사용하지 않고 문자·메시지·통화·연락처를
+읽거나 감시하지 않으며, 메시지를 자동으로 보내지 않습니다. 선택한 신호, 읽음·진행 상태, 공유
+이력을 저장하지 않고 화면을 열거나 버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다.
+
+"가족에게 위험 신호 설명 공유"는 사용자가 직접 눌렀을 때만 Android `ACTION_SEND`의 `text/plain`
+공유 화면을 열고 `RiskSignalExplainerBuilder`가 만든 `RiskSignalExplainer.familyShareSummary`만
+전달합니다. 공유문은 신호·범주·기존 행동 이름과 일반 안전 행동만 포함하며 붙여넣은 원문,
+개인정보 가림 단서, 안전 질문·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·
+신분정보 값을 포함하지 않습니다.
 
 ## Quick Stop Mode (긴급 멈춤 모드)
 
@@ -551,6 +575,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Risk Signal Explainer Cards is deterministic, local-only educational guidance based only on matched local signals, not remote AI or an official judgment; it adds no permissions or network use, reads or monitors no contacts/messages/calls, auto-sends nothing, stores no signal selection/read/progress/share history, never mutates incident logs, and its user-triggered text share passes only the builder-produced safe summary of signal/category/action labels and generic safety moves.
 - Quick Stop Mode is deterministic, local-only, stateless manual first-response guidance; it reads no contacts, auto-sends nothing, stores no button/check/share state, never mutates incident logs automatically, shares only its builder-produced generic route summary, and adds no Android permissions.
 - The 24-Hour Recovery Plan is deterministic, local-only, stateless manual time-window guidance (지금~15분/1시간 안/오늘 안/이번 주); it adds no permissions, reads no contacts, auto-sends nothing, stores no checklist/progress state, never mutates incident logs unless the user explicitly uses existing save/delete screens, and its user-triggered text share contains only window/action labels excluding pasted text, redacted clues, safety-plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.

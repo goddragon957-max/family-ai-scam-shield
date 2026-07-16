@@ -1034,6 +1034,140 @@ class PrivacyPostureRegressionTest {
         assertFalse(safeScriptsShareHelper.contains("SmsManager"))
     }
 
+    @Test
+    fun riskSignalExplainersArePureStatelessDelegateToExistingFlowsAndShareOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/RiskSignalExplainer.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val resultScreen = activitySource
+            .substringAfter("private fun LinearLayout.result()")
+            .substringBefore("private fun LinearLayout.incidentLog")
+        val explainerScreen = activitySource
+            .substringAfter("private fun LinearLayout.riskSignalExplainerScreen")
+            .substringBefore("private fun openRiskSignalExplainerAction")
+        val explainerActionRouter = activitySource
+            .substringAfter("private fun openRiskSignalExplainerAction")
+            .substringBefore("private fun shareRiskSignalExplainerSummary")
+        val explainerShareHelper = activitySource
+            .substringAfter("private fun shareRiskSignalExplainerSummary")
+            .substringBefore("private fun LinearLayout.safeVerificationCallScriptsScreen")
+        val normalizedActionRouter = explainerActionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+
+        assertTrue(activitySource.contains("RISK_SIGNAL_EXPLAINERS"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.RISK_SIGNAL_EXPLAINERS -> riskSignalExplainerScreen()"
+            )
+        )
+        assertTrue(
+            homeScreen.contains(
+                "secondaryButton(\"위험 신호 설명 보기\") { show(Screen.RISK_SIGNAL_EXPLAINERS) }"
+            )
+        )
+        assertTrue(
+            resultScreen.contains(
+                "secondaryButton(\"탐지 신호 설명 보기\") { show(Screen.RISK_SIGNAL_EXPLAINERS) }"
+            )
+        )
+
+        assertTrue(explainerScreen.contains("RiskSignalExplainerBuilder.build("))
+        assertTrue(explainerScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            explainerScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(explainerScreen.contains("explainer.recommendedCards"))
+        assertTrue(explainerScreen.contains("explainer.cards"))
+        assertTrue(explainerScreen.contains("explainer.privacySafetyNotes"))
+        assertTrue(
+            explainerScreen.contains(
+                "shareRiskSignalExplainerSummary(explainer.familyShareSummary)"
+            )
+        )
+        assertTrue(explainerScreen.contains("primaryButton(\"가족에게 위험 신호 설명 공유\")"))
+        assertTrue(explainerScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")"))
+        assertTrue(explainerScreen.contains("secondaryButton(\"홈으로\")"))
+        assertFalse(explainerScreen.contains("analysis.input"))
+        assertFalse(explainerScreen.contains("IncidentPreviewRedactor"))
+        assertFalse(explainerScreen.contains("incidents.add("))
+        assertFalse(explainerScreen.contains("incidents.clear("))
+        assertFalse(explainerScreen.contains("prefs.edit("))
+        assertFalse(explainerScreen.contains("safetyPlan.save("))
+        assertFalse(explainerScreen.contains("CheckBox("))
+        assertFalse(explainerScreen.contains("EditText("))
+        assertFalse(explainerScreen.contains("currentAnalysis ="))
+        assertFalse(explainerScreen.contains(".save("))
+        assertFalse(explainerScreen.contains("putString("))
+        assertFalse(explainerScreen.contains("putBoolean("))
+
+        listOf(
+            "RiskSignalExplainerActionId.QUICK_STOP -> show(Screen.QUICK_STOP)",
+            "RiskSignalExplainerActionId.CHECKER -> show(Screen.CHECKER)",
+            "RiskSignalExplainerActionId.ANALYSIS_RESULT -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "RiskSignalExplainerActionId.FAMILY_CALLBACK_CARD -> " +
+                "openFamilyCallbackCard(currentAnalysis)",
+            "RiskSignalExplainerActionId.SAFETY_PLAN -> show(Screen.PLAN)",
+            "RiskSignalExplainerActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)",
+            "RiskSignalExplainerActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)",
+            "RiskSignalExplainerActionId.EVIDENCE_KIT -> openEvidenceKit(null)",
+            "RiskSignalExplainerActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                "openHelpDirectory(Screen.RISK_SIGNAL_EXPLAINERS)",
+            "RiskSignalExplainerActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)",
+            "RiskSignalExplainerActionId.TRUSTED_HELPER_HANDOFF -> " +
+                "show(Screen.TRUSTED_HELPER_HANDOFF)",
+            "RiskSignalExplainerActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)",
+            "RiskSignalExplainerActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)"
+        ).forEach { route ->
+            assertTrue("risk signal explainer route omitted: $route", normalizedActionRouter.contains(route))
+        }
+        assertFalse(explainerActionRouter.contains("dial("))
+        assertFalse(explainerActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(explainerActionRouter.contains("Intent.ACTION_CALL"))
+
+        val explainerShareArguments = Regex("shareRiskSignalExplainerSummary\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("explainer.familyShareSummary"), explainerShareArguments)
+        assertTrue(explainerShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(explainerShareHelper.contains("type = \"text/plain\""))
+        assertTrue(explainerShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(explainerShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(explainerShareHelper)
+                .count()
+        )
+        assertFalse(explainerShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(explainerShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(explainerShareHelper.contains("ClipData"))
+        assertFalse(explainerShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(explainerShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(explainerShareHelper.contains("ScamAnalysis"))
+        assertFalse(explainerShareHelper.contains("currentAnalysis"))
+        assertFalse(explainerShareHelper.contains("analysis.input"))
+        assertFalse(explainerShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(explainerShareHelper.contains("SafetyPlan"))
+        assertFalse(explainerShareHelper.contains("incidents"))
+        assertFalse(explainerShareHelper.contains("ContactsContract"))
+        assertFalse(explainerShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile
