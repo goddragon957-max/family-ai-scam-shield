@@ -23,7 +23,7 @@ class MainActivity : Activity() {
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
         EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD,
-        FAMILY_CALM_DEBRIEF_AGENDA
+        FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -131,12 +131,150 @@ class MainActivity : Activity() {
                 Screen.FOLLOW_UP_CHECK_IN_PLANNER -> followUpCheckInPlannerScreen()
                 Screen.FAMILY_RESPONSE_ROLE_BOARD -> familyResponseRoleBoardScreen()
                 Screen.FAMILY_CALM_DEBRIEF_AGENDA -> familyCalmDebriefAgendaScreen()
+                Screen.SAFE_PASTE_PRIVACY_COACH -> safePastePrivacyCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.safePastePrivacyCoachScreen() {
+        val coach = SafePastePrivacyCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = if (incidents.hasSavedIncidents()) 1 else 0
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            coach.modeLabel,
+            "이 코치 화면은 의심 내용을 받거나 읽지 않고 자동으로 바꾸지 않습니다. " +
+                "아래 순서를 먼저 읽고, 붙여넣기 전 사용자가 직접 필요한 부분만 가리세요."
+        )
+        section(
+            coach.recommendationTitle,
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 확인할 가리기 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.displayOrder}. ${card.title}"
+                    }
+                )
+                append("\n\n먼저 이어갈 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openSafePastePrivacyCoachAction(action) }
+            } else {
+                secondaryButton(action.label) { openSafePastePrivacyCoachAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 가리기 체크리스트",
+            "카드는 항상 같은 순서로 표시됩니다. 추천 표시는 현재 로컬 위험 신호, 값 없는 가족 준비 수준, 저장 사건 유무만 반영하며 읽음이나 진행 상태를 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            safePastePrivacyCoachCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·안전 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 개인정보 가리기 안내 공유") {
+            shareSafePastePrivacyCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("의심 내용 검사로") { show(Screen.CHECKER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.safePastePrivacyCoachCard(
+        card: SafePastePrivacyCoachCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("왜 필요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n직접 가리는 방법\n")
+                append(card.howToMaskManually)
+                append("\n\n붙여넣거나 공유하지 마세요\n")
+                card.whatNotToPasteOrShare.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openSafePastePrivacyCoachAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openSafePastePrivacyCoachAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openSafePastePrivacyCoachAction(action) }
+        }
+    }
+
+    private fun openSafePastePrivacyCoachAction(action: SafePastePrivacyCoachAction) {
+        when (action.id) {
+            SafePastePrivacyCoachActionId.CHECKER -> show(Screen.CHECKER)
+            SafePastePrivacyCoachActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            SafePastePrivacyCoachActionId.SAMPLE_LIBRARY -> openSampleLibrary()
+            SafePastePrivacyCoachActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            SafePastePrivacyCoachActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            SafePastePrivacyCoachActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            SafePastePrivacyCoachActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            SafePastePrivacyCoachActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            SafePastePrivacyCoachActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            SafePastePrivacyCoachActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            SafePastePrivacyCoachActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            SafePastePrivacyCoachActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            SafePastePrivacyCoachActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            SafePastePrivacyCoachActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.SAFE_PASTE_PRIVACY_COACH)
+            SafePastePrivacyCoachActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            SafePastePrivacyCoachActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareSafePastePrivacyCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 개인정보 가리기 안내 공유"))
     }
 
     private fun LinearLayout.familyCalmDebriefAgendaScreen() {
@@ -489,6 +627,9 @@ class MainActivity : Activity() {
         secondaryButton("안전 확인 전화 스크립트") { show(Screen.SAFE_CALL_SCRIPTS) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("붙여넣기 전 개인정보 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("위험 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
@@ -640,6 +781,9 @@ class MainActivity : Activity() {
             "개인정보·안전 안내",
             router.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
         )
+        secondaryButton("붙여넣기 전 개인정보 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
         primaryButton("가족에게 안전 흐름 요약 공유") {
             shareSafetyFlowRouter(router.familyShareSummary)
         }
@@ -923,6 +1067,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.checker() {
         title("AI 보호자 분석")
         subtitle("문자, 카카오톡, 통화 녹취를 직접 붙여넣으세요. 민감정보는 지우고 검사해도 됩니다.")
+        secondaryButton("붙여넣기 전 개인정보 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
         val sharedText = pendingSharedText.orEmpty()
         if (sharedText.isNotBlank()) {
             section("공유된 내용 불러옴", "카카오톡/SMS/메모에서 공유한 텍스트를 아래 입력칸에 넣었습니다. 민감정보는 지우고 분석해도 됩니다.")
@@ -966,6 +1113,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        secondaryButton("다음부터 붙여넣기 전 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
         secondaryButton("탐지 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
         secondaryButton("이 신호로 노출 가능성 확인") {
             show(Screen.EXPOSURE_IMPACT_TRIAGE)
@@ -1195,6 +1345,9 @@ class MainActivity : Activity() {
             show(Screen.ONBOARDING)
         }
 
+        secondaryButton("붙여넣기 전 개인정보 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
         primaryButton("가족에게 개인정보 요약 공유") {
             sharePrivacySummary(privacyCenter.familyShareSummary)
         }

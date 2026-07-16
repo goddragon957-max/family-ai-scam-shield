@@ -157,6 +157,9 @@ class PrivacyCenterBuilderTest {
             "긴급 멈춤 모드",
             "버튼 선택",
             "안전 흐름 선택",
+            "안전 붙여넣기 개인정보 코치",
+            "가림 이력",
+            "클립보드",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -252,6 +255,28 @@ class PrivacyCenterBuilderTest {
                 transientCopy.contains("사건 기록을 추가·수정·삭제하지 않습니다")
         )
         assertTrue(
+            transientCopy.contains("안전 붙여넣기 개인정보 코치") &&
+                transientCopy.contains("로컬 전용·무상태 수동 안내") &&
+                transientCopy.contains("새 Android 권한·네트워크") &&
+                transientCopy.contains("클립보드") &&
+                transientCopy.contains("읽거나 감시하지 않") &&
+                transientCopy.contains("자동 가림·교정·검사·삭제") &&
+                transientCopy.contains("자동 전송하지 않")
+        )
+        assertTrue(
+            transientCopy.contains("카드 선택·진행·읽음·공유·가림 이력·체크 상태·메모") &&
+                transientCopy.contains("저장하지 않습니다")
+        )
+        assertTrue(
+            transientCopy.contains("안전 붙여넣기 개인정보 코치 화면") &&
+                transientCopy.contains("카드·경로·공유 버튼") &&
+                transientCopy.contains("붙여넣은 텍스트나 사건 기록을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            transientCopy.contains("알림·알람·캘린더 일정·리마인더·백그라운드 작업") &&
+                transientCopy.contains("만들거나 예약하지 않습니다")
+        )
+        assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
         )
     }
@@ -306,6 +331,24 @@ class PrivacyCenterBuilderTest {
         assertTrue(
             summary.contains("안건·경로·공유 버튼") &&
                 summary.contains("사건 기록을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("안전 붙여넣기 개인정보 코치") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("새 Android 권한·네트워크") &&
+                summary.contains("클립보드") &&
+                summary.contains("읽거나 감시·저장·변경하지 않") &&
+                summary.contains("자동 가림·교정·검사·삭제") &&
+                summary.contains("자동 전송을 하지 않")
+        )
+        assertTrue(
+            summary.contains("카드 선택·진행·읽음·공유·가림 이력·체크 상태·메모") &&
+                summary.contains("영구 저장하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("안전 붙여넣기 개인정보 코치 화면") &&
+                summary.contains("카드·경로·공유 버튼") &&
+                summary.contains("붙여넣은 텍스트나 사건 기록을 추가·수정·삭제하지 않습니다")
         )
 
         listOf(
@@ -401,6 +444,12 @@ class PrivacyCenterBuilderTest {
             "반드시 회수됩니다",
             "자동으로 삭제합니다",
             "자동 삭제합니다",
+            "클립보드를 읽습니다",
+            "붙여넣은 원문을 자동으로 가립니다",
+            "자동으로 가림 처리합니다",
+            "자동으로 교정합니다",
+            "자동으로 검사합니다",
+            "자동 스캔합니다",
             "100%"
         )
 
@@ -414,6 +463,14 @@ class PrivacyCenterBuilderTest {
             }
             assertTrue(center.noCollectionStatements.any { it.contains("자동으로 읽거나 감시하지 않습니다") })
             assertTrue(center.noCollectionStatements.any { it.contains("앱 자체 서버") && it.contains("전송하지 않") })
+            assertTrue(
+                center.noCollectionStatements.any {
+                    it.contains("안전 붙여넣기 개인정보 코치") &&
+                        it.contains("로컬 전용·무상태 수동") &&
+                        it.contains("클립보드") &&
+                        it.contains("자동 가림·교정·검사·삭제를 하지 않습니다")
+                }
+            )
             assertTrue(center.privacyNotes.any { it.contains("들어오는 것만으로") && it.contains("삭제되지는 않습니다") })
             assertTrue(center.privacyNotes.any { it.contains("보장하지 않습니다") })
         }

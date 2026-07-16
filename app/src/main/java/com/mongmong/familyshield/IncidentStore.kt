@@ -48,12 +48,16 @@ class IncidentStore(context: Context) {
             .sortedByDescending { it.timestamp }
     }
 
-    fun count(): Int = prefs.getString("items", null)
-        .orEmpty()
-        .lineSequence()
-        .filter { it.isNotBlank() }
-        .mapNotNull(::decode)
-        .count()
+    fun count(): Int {
+        val saved = prefs.getString("items", null).orEmpty()
+        return saved.lineSequence().count { line ->
+            line.isNotBlank() && line.count { character -> character == '|' } == 4
+        }
+    }
+
+    fun hasSavedIncidents(): Boolean {
+        return prefs.contains("items")
+    }
 
     fun clear() {
         prefs.edit().remove("items").apply()

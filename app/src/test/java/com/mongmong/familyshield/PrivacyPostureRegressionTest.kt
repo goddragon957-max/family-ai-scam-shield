@@ -2916,6 +2916,424 @@ class PrivacyPostureRegressionTest {
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
+    @Test
+    fun safePastePrivacyCoachIsPureStatelessManualDoesNotTouchClipboardAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafePastePrivacyCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.checker()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.privacyCenterScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.safePastePrivacyCoachCard",
+            "private fun openSafePastePrivacyCoachAction",
+            "private fun shareSafePastePrivacyCoach"
+        ).forEach { marker ->
+            assertTrue("safe-paste source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val homeScreen = functionBlock(activitySource, "private fun LinearLayout.home()")
+        val checkerScreen = functionBlock(activitySource, "private fun LinearLayout.checker()")
+        val resultScreen = functionBlock(activitySource, "private fun LinearLayout.result()")
+        val privacyCenterScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        val flowRouterScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safetyFlowRouterScreen"
+        )
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safePastePrivacyCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safePastePrivacyCoachCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openSafePastePrivacyCoachAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareSafePastePrivacyCoach"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "doAfterTextChanged",
+            "EditText",
+            "setText(",
+            "input.text",
+            "ScamAnalyzer",
+            "Regex(",
+            "replace("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "safe-paste model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score)")
+                .containsMatchIn(modelSource)
+        )
+
+        assertTrue(activitySource.contains("SAFE_PASTE_PRIVACY_COACH"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.SAFE_PASTE_PRIVACY_COACH -> safePastePrivacyCoachScreen()"
+            )
+        )
+        listOf(
+            homeScreen,
+            checkerScreen,
+            resultScreen,
+            privacyCenterScreen,
+            flowRouterScreen
+        ).forEachIndexed { index, entryScreen ->
+            assertTrue(
+                "safe-paste entry route missing at index $index",
+                entryScreen.contains("show(Screen.SAFE_PASTE_PRIVACY_COACH)")
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:safePaste|pasteCoach|masking|redaction|clipboard|" +
+                    "selectedCoach|coachProgress|coachHistory|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:SAFE_PASTE|PASTE_COACH|MASKING|REDACTION|CLIPBOARD|" +
+                    "SELECTED_COACH|COACH_PROGRESS|COACH_HISTORY|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(coachScreen.contains("SafePastePrivacyCoachBuilder.build("))
+        assertTrue(coachScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            coachScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(
+            coachScreen.contains(
+                "incidentCount = if (incidents.hasSavedIncidents()) 1 else 0"
+            )
+        )
+        assertFalse(coachScreen.contains("incidents.load("))
+        val incidentPresenceHelper = functionBlock(
+            incidentStoreSource,
+            "fun hasSavedIncidents()"
+        )
+        assertTrue(incidentPresenceHelper.contains("prefs.contains(\"items\")"))
+        listOf(
+            "getString",
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "incident presence read stored content: $forbiddenIncidentRead",
+                incidentPresenceHelper.contains(forbiddenIncidentRead)
+            )
+        }
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "incident count decoded stored content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes"
+        ).forEach { renderedField ->
+            assertTrue("safe-paste UI omitted $renderedField", coachScreen.contains(renderedField))
+        }
+        assertTrue(
+            coachScreen.contains(
+                "shareSafePastePrivacyCoach(coach.familyShareSummary)"
+            )
+        )
+        assertTrue(coachScreen.contains("primaryButton(\"가족에게 개인정보 가리기 안내 공유\")"))
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+
+        assertEquals(
+            1,
+            Regex("coach\\.cards\\.forEach")
+                .findAll(coachScreen)
+                .count()
+        )
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.whyItMatters",
+            "card.howToMaskManually",
+            "card.whatNotToPasteOrShare",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("safe-paste card UI omitted $field", cardRenderer.contains(field))
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "setText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "doAfterTextChanged",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "selectedCoach",
+            "coachProgress",
+            "coachHistory",
+            "checkmark",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "replace(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenStateOrTransformation ->
+            assertFalse(
+                "safe-paste UI used forbidden state/value/transformation: $forbiddenStateOrTransformation",
+                statelessUiSource.contains(forbiddenStateOrTransformation, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+        assertFalse(Regex("\\.text\\s*=").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAMPLE_LIBRARY" to "openSampleLibrary()",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.SAFE_PASTE_PRIVACY_COACH)",
+            "INCIDENT_TIMELINE_BRIEFING" to "show(Screen.TIMELINE_BRIEFING)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "safe-paste route omitted action: $actionId",
+                normalizedActionRouter.contains("SafePastePrivacyCoachActionId.$actionId ->")
+            )
+            assertTrue(
+                "safe-paste route omitted destination for $actionId: $destination",
+                normalizedActionRouter.contains(destination)
+            )
+        }
+        assertFalse(actionRouter.contains("dial("))
+        assertFalse(actionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(actionRouter.contains("Intent.ACTION_CALL"))
+
+        val shareArguments = Regex("shareSafePastePrivacyCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("개인정보 가리기 안내 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "safe-paste share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        listOf(
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "doAfterTextChanged",
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ForegroundService",
+            "BroadcastReceiver"
+        ).forEach { forbiddenApi ->
+            assertFalse(
+                "safe-paste used forbidden API: $forbiddenApi",
+                activitySource.contains(forbiddenApi) || modelSource.contains(forbiddenApi)
+            )
+        }
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "doAfterTextChanged",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttpClient",
+            "Retrofit",
+            "ktor.client"
+        ).forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
     private fun functionBlock(source: String, marker: String): String {
         val start = source.indexOf(marker)
         require(start >= 0) { "Source marker missing: $marker" }
@@ -2934,14 +3352,20 @@ class PrivacyPostureRegressionTest {
         error("Closing brace missing after: $marker")
     }
 
-    private fun readProjectFile(relativePath: String): String {
+    private fun findProjectPath(relativePath: String): File {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile
         while (true) {
             val candidate = File(directory, relativePath)
-            if (candidate.isFile) return candidate.readText()
+            if (candidate.exists()) return candidate
             directory = directory.parentFile
-                ?: error("Could not find project file from $userDirectory: $relativePath")
+                ?: error("Could not find project path from $userDirectory: $relativePath")
         }
+    }
+
+    private fun readProjectFile(relativePath: String): String {
+        val file = findProjectPath(relativePath)
+        require(file.isFile) { "Project path is not a file: ${file.path}" }
+        return file.readText()
     }
 }
