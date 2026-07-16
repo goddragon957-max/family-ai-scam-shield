@@ -35,6 +35,7 @@ class SafetyDrillBuilderTest {
         assertTrue(drill.fictionalScript.contains("화면공유"))
         assertTrue(drill.responseSteps.any { it.contains("거절") })
         assertTrue(drill.responseSteps.any { it.contains("끊습니다") })
+        assertTrue(drill.responseSteps.any { it.contains("앱 정보") && it.contains("안전하게 남긴") })
         assertTrue(drill.passChecklist.any { it.contains("화면공유") && it.contains("거절") })
     }
 

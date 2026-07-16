@@ -19,7 +19,7 @@ object ActionPlanBuilder {
                     ScamSignal.GIFTICON_PIN in signals ||
                     ScamSignal.SAFE_ACCOUNT_FRAUD in signals
                 ) {
-                    steps += "이미 송금·상품권 전달을 했다면 은행 지급정지와 112 또는 182 신고를 바로 진행하세요."
+                    steps += "이미 송금·상품권 전달을 했다면 은행 지급정지와 112 또는 1394 신고를 바로 진행하세요."
                 }
             }
             RiskLevel.MEDIUM -> {

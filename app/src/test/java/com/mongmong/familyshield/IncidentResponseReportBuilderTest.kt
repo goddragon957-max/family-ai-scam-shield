@@ -16,7 +16,7 @@ class IncidentResponseReportBuilderTest {
         assertTrue(report.contains(plan.situation.label))
         assertTrue(report.contains("긴급 대응"))
         assertTrue(report.contains("112"))
-        assertTrue(report.contains("182"))
+        assertTrue(report.contains("1394"))
         assertTrue(report.contains("1332"))
         assertTrue(report.contains("원문 메시지나 대화 내용은 개인정보 보호를 위해 포함하지 않았습니다"))
         assertFalse(report.contains(rawScamText))

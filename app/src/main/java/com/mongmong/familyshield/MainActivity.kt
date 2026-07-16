@@ -17,7 +17,9 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
-    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, DRILL, SAMPLES }
+    private enum class Screen {
+        ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES
+    }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
@@ -25,6 +27,7 @@ class MainActivity : Activity() {
     private var currentAnalysis: ScamAnalysis? = null
     private var pendingSharedText: String? = null
     private var selectedIncidentSituation: IncidentSituation? = null
+    private var selectedEvidenceSituation: IncidentSituation? = null
     private var selectedDrillScenario: DrillScenario? = null
     private var selectedSampleCategory: ScamSampleCategory? = null
 
@@ -32,7 +35,7 @@ class MainActivity : Activity() {
         "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
             "2. 안전 확인 질문을 물어보고 답을 확인합니다.\n" +
             "3. 답이 어색하면 송금, 앱 설치, 인증번호 제공을 거부합니다.\n" +
-            "4. 필요하면 112 또는 182에 신고합니다."
+            "4. 필요하면 112 또는 1394에 신고합니다."
 
     companion object {
         private const val KEY_PENDING_SHARED_TEXT = "pending_shared_text"
@@ -99,6 +102,7 @@ class MainActivity : Activity() {
                 Screen.LOG -> incidentLog()
                 Screen.PLAN -> safetyPlanScreen()
                 Screen.RESPONSE_CENTER -> responseCenter()
+                Screen.EVIDENCE -> evidencePreservationScreen()
                 Screen.DRILL -> drillScreen()
                 Screen.SAMPLES -> sampleLibraryScreen()
             }
@@ -147,8 +151,9 @@ class MainActivity : Activity() {
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("샘플로 AI 분석 연습") { openSampleLibrary() }
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
+        secondaryButton("증거 보존 체크리스트") { openEvidenceKit(null) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
-        section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/182 또는 은행 지급정지")
+        section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/1394 또는 은행 지급정지")
     }
 
     private fun LinearLayout.checker() {
@@ -192,7 +197,11 @@ class MainActivity : Activity() {
         aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
         familyPlanSection()
-        section("긴급 대응", "이미 돈을 보냈다면 즉시 은행 지급정지, 112 또는 182 신고, 계정 비밀번호 변경, 원격제어 앱 삭제를 진행하세요.")
+        section(
+            "긴급 대응",
+            "이미 돈을 보냈다면 즉시 은행 지급정지와 112 또는 1394 신고를 진행하세요. 원격제어를 허용했다면 " +
+                "먼저 연결을 끊고 앱 정보를 안전하게 남긴 뒤, 다른 안전한 기기에서 계정을 보호하세요."
+        )
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
         primaryButton("사건 기록에 저장") {
@@ -255,7 +264,58 @@ class MainActivity : Activity() {
             primaryButton("가족에게 대응 요약 공유") { shareIncidentResponse(plan) }
         }
 
+        secondaryButton(
+            if (situation == null) "증거 보존 체크리스트 열기" else "이 상황의 증거 보존 체크리스트"
+        ) { openEvidenceKit(situation) }
         secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openEvidenceKit(situation: IncidentSituation?) {
+        selectedEvidenceSituation = situation
+        show(Screen.EVIDENCE)
+    }
+
+    private fun LinearLayout.evidencePreservationScreen() {
+        title("증거 보존 체크리스트")
+        subtitle("상황에 맞는 항목을 골라, 메시지나 앱을 지우기 전에 직접 보관할 내용을 차분히 확인하세요.")
+        section(
+            "수동·로컬 안내",
+            "이 화면은 증거를 자동으로 캡처하거나 업로드하지 않습니다. 선택 내용과 완료 상태도 저장하지 않으며, " +
+                "법적 효력을 보장하는 안내가 아닙니다. 계정·자금 보호가 급하면 증거 정리보다 연결 차단과 지급정지를 먼저 하세요."
+        )
+
+        secondaryButton(evidenceOptionLabel(null)) {
+            selectedEvidenceSituation = null
+            show(Screen.EVIDENCE)
+        }
+        IncidentSituation.entries.forEach { situation ->
+            secondaryButton(evidenceOptionLabel(situation)) {
+                selectedEvidenceSituation = situation
+                show(Screen.EVIDENCE)
+            }
+        }
+
+        val kit = EvidencePreservationKitBuilder.build(selectedEvidenceSituation)
+        section(
+            kit.title,
+            kit.checklistItems.mapIndexed { index, item -> "${index + 1}. $item" }.joinToString("\n")
+        )
+        section("주의할 점", kit.cautions.joinToString("\n") { "• $it" })
+        if (kit.officialReportPrepNotes.isNotEmpty()) {
+            section("신고·상담 전에 준비", kit.officialReportPrepNotes.joinToString("\n") { "• $it" })
+        }
+        section("가족에게 보낼 안전 요약", kit.familyShareSummary)
+        primaryButton("가족에게 증거 보존 요약 공유") { shareEvidenceKit(kit) }
+        secondaryButton("긴급 대응 센터로") {
+            selectedIncidentSituation = selectedEvidenceSituation
+            show(Screen.RESPONSE_CENTER)
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun evidenceOptionLabel(situation: IncidentSituation?): String {
+        val label = situation?.label ?: EvidencePreservationKitBuilder.GENERIC_SITUATION_LABEL
+        return if (selectedEvidenceSituation == situation) "✓ $label" else label
     }
 
     private fun LinearLayout.readinessSection() {
@@ -488,6 +548,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, report)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 대응 요약 공유"))
+    }
+
+    private fun shareEvidenceKit(kit: EvidencePreservationKit) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 증거 보존 확인")
+            putExtra(Intent.EXTRA_TEXT, kit.familyShareSummary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 증거 보존 요약 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {

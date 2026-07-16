@@ -11,15 +11,19 @@ class IncidentResponseBuilderTest {
         assertTrue(plan.steps.any { it.contains("지급정지") })
         assertTrue(plan.steps.any { it.contains("카드") })
         assertTrue(plan.emergencyContacts.any { it.number == "112" })
-        assertTrue(plan.emergencyContacts.any { it.number == "182" })
+        assertTrue(plan.emergencyContacts.any { it.number == "1394" })
         assertTrue(plan.emergencyContacts.any { it.number == "1332" })
     }
 
     @Test
     fun appInstalledPlanCoversUninstallAndPasswordChangeFromSafeDevice() {
         val plan = IncidentResponseBuilder.build(IncidentSituation.APP_INSTALLED)
+        val preserveAndDeleteStep = plan.steps.first { it.contains("삭제") }
 
         assertTrue(plan.steps.any { it.contains("삭제") })
+        assertTrue(plan.steps.first().contains("연결을 끊"))
+        assertTrue(preserveAndDeleteStep.contains("캡처"))
+        assertTrue(preserveAndDeleteStep.indexOf("캡처") < preserveAndDeleteStep.indexOf("삭제"))
         assertTrue(plan.steps.any { it.contains("비밀번호") && it.contains("안전한 기기") })
         assertTrue(plan.emergencyContacts.any { it.number == "112" })
     }
@@ -28,7 +32,7 @@ class IncidentResponseBuilderTest {
     fun credentialsSharedPlanCoversPasswordAndOtpReset() {
         val plan = IncidentResponseBuilder.build(IncidentSituation.CREDENTIALS_SHARED)
 
-        assertTrue(plan.steps.any { it.contains("비밀번호") })
+        assertTrue(plan.steps.any { it.contains("비밀번호") && it.contains("다른 안전한 기기") })
         assertTrue(plan.steps.any { it.contains("OTP") || it.contains("보안카드") })
         assertTrue(plan.emergencyContacts.any { it.number == "1332" })
     }
@@ -36,10 +40,14 @@ class IncidentResponseBuilderTest {
     @Test
     fun linkOpenedPlanStaysCalmWhenNoPaymentOrInfoSharedYet() {
         val plan = IncidentResponseBuilder.build(IncidentSituation.LINK_OPENED)
+        val preserveAndDeleteStep = plan.steps.first { it.contains("삭제") }
 
         assertTrue(plan.steps.any { it.contains("삭제") })
-        assertTrue(plan.steps.any { it.contains("비밀번호") })
-        assertTrue(plan.steps.any { it.contains("182") })
+        assertTrue(preserveAndDeleteStep.contains("먼저") && preserveAndDeleteStep.contains("연결을 끊"))
+        assertTrue(preserveAndDeleteStep.contains("캡처"))
+        assertTrue(preserveAndDeleteStep.indexOf("캡처") < preserveAndDeleteStep.indexOf("삭제"))
+        assertTrue(plan.steps.any { it.contains("비밀번호") && it.contains("다른 안전한 기기") })
+        assertTrue(plan.steps.any { it.contains("1394") })
     }
 
     @Test
@@ -48,7 +56,7 @@ class IncidentResponseBuilderTest {
             val plan = IncidentResponseBuilder.build(situation)
             assertTrue(plan.emergencyContacts.size == 3)
             assertTrue(plan.emergencyContacts.any { it.number == "112" })
-            assertTrue(plan.emergencyContacts.any { it.number == "182" })
+            assertTrue(plan.emergencyContacts.any { it.number == "1394" })
             assertTrue(plan.emergencyContacts.any { it.number == "1332" })
         }
     }

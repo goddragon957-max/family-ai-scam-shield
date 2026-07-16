@@ -59,13 +59,34 @@ The important checklist lines are included in the safe family report (`SafetyRep
 - 링크만 눌렀고 돈이나 정보는 아직 주지 않음
 
 상황을 고르면 `IncidentResponseBuilder`가 결정적으로 생성한 대응 단계(은행 지급정지/카드 잠금,
-원격제어 앱 삭제 후 안전한 기기에서 비밀번호 변경, 증거 보관 방법 등)와 112(경찰)/182(보이스피싱
-통합신고)/1332(금융감독원) 연락처를 보여줍니다. 연락처는 기존 안전 계획과 같은 방식으로
+원격 연결 차단 후 앱 정보 보존·제거와 안전한 기기에서 비밀번호 변경, 증거 보관 방법 등)와
+112(경찰)/1394(보이스피싱 통합신고)/1332(금융감독원) 연락처를 보여줍니다. 연락처는 기존
+안전 계획과 같은 방식으로
 `ACTION_DIAL`만 사용하며, `CALL_PHONE` 권한을 요청하지 않습니다.
 
 "가족에게 대응 요약 공유" 버튼은 `IncidentResponseReportBuilder`가 만든 요약을 공유합니다. 이
 요약에는 선택한 상황과 대응 단계, 연락처만 포함되며, 사용자가 붙여넣은 원문 텍스트는 애초에 이
 화면에 입력되지 않으므로 요약에도 포함되지 않습니다.
+
+## Evidence Preservation Kit (증거 보존 체크리스트)
+
+홈 화면의 "증거 보존 체크리스트" 또는 긴급 대응 센터의 상황별 CTA로 들어가는 수동 안내
+화면입니다. 아직 상황을 잘 모르겠는 일반 모드와 긴급 대응 센터의 네 가지 상황(송금·상품권·코인
+전달, 원격제어·화면공유 허용, 계정·인증정보 공유, 의심 링크 클릭)을 모두 제공합니다. 긴급 대응
+센터에서 상황을 고른 뒤 열면 같은 상황의 체크리스트가 먼저 표시됩니다.
+
+`EvidencePreservationKitBuilder`는 선택한 상황만으로 다음 내용을 결정적으로 만듭니다:
+
+- 거래·수취 정보, 발신번호, 메시지·통화 시각 등 직접 남길 화면의 순서
+- 휴대전화 전원과 원문 기록을 유지하고 성급한 삭제·초기화를 피하기 위한 주의사항
+- 원격 연결을 먼저 끊고 다른 안전한 기기에서 계정을 보호하는 순서
+- 은행·경찰 상담 시각과 지급정지·신고 접수번호를 정리하는 메모
+- 붙여넣은 원문과 실제 계좌·비밀번호·OTP·상품권 PIN을 제외한 가족 공유 요약
+
+이 키트는 앱이 증거를 자동으로 캡처, 수집 또는 업로드하는 기능이 아니라 기기 안에 내장된
+체크리스트 안내입니다. 상황 선택이나 체크 완료 상태를 저장하지 않으며, 법적 효력을 보장하지
+않습니다. 가족 공유는 Android `ACTION_SEND`의 `text/plain`을 사용하고 새 권한을 요청하지
+않습니다.
 
 ## Family Safety Drill (가족 안전 연습 / 3분 훈련)
 
@@ -198,6 +219,7 @@ run and result.
 
 - No server and no network analysis.
 - No automatic SMS/call monitoring.
+- No automatic evidence capture or upload; the evidence kit is static local guidance and stores no selection or completion state.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.
 - Android backup is disabled (`android:allowBackup="false"`) so local incident/safety-plan data is not included in platform cloud backup.
 - The user must paste suspicious text manually.
