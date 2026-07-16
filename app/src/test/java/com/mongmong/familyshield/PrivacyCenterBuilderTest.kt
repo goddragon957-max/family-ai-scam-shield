@@ -174,6 +174,12 @@ class PrivacyCenterBuilderTest {
             "확인 상태",
             "채널 값",
             "공식 번호",
+            "확인 결과 다음 행동 보드",
+            "결과 상태",
+            "검증 상태",
+            "안전 판정",
+            "통화 여부",
+            "공식 확인 상태",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -306,6 +312,12 @@ class PrivacyCenterBuilderTest {
                 "화면공유·원격지시 끊기 코치의 카드 선택·추천·읽음·공유·체크·메모·원격 접근 상태·" +
                     "앱 목록·패키지 이름·기기 상태·진행·이력"
             ) && transientCopy.contains("저장하지 않")
+        )
+        assertTrue(
+            transientCopy.contains(
+                "확인 결과 다음 행동 보드의 카드 선택·추천·읽음·공유·확인 결과·결과 상태·" +
+                    "검증 상태·안전 판정·통화 여부·공식 확인 상태·완료·체크 표시·메모·진행·이력"
+            ) && (transientCopy.contains("만들거나 기록하지 않") || transientCopy.contains("저장하지 않"))
         )
         assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
@@ -507,6 +519,111 @@ class PrivacyCenterBuilderTest {
                 mutationStatement.contains("카드·경로·공유 버튼") &&
                 mutationStatement.contains("기관 목록") &&
                 mutationStatement.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
+    fun verificationOutcomeNextStepsBoardIsInventoriedAsManualValueFreeAndNonAutomated() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains("확인 결과 다음 행동 보드")
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith("확인 결과 다음 행동 보드")
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("확인 결과 다음 행동 보드는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("확인 결과 다음 행동 보드 화면")
+        }
+
+        assertTrue(transientInventory.detail.contains("확인 결과 다음 행동 보드"))
+        assertTrue(boundaryStatement.contains("로컬 전용·무상태 수동 안내"))
+        assertTrue(boundaryStatement.contains("새 Android 권한·네트워크·저장소"))
+        assertTrue(boundaryStatement.contains("결과 값을 입력받거나 저장하지 않"))
+        assertTrue(
+            boundaryStatement.contains("사람·번호·링크·기관·채널·안전 상태") &&
+                boundaryStatement.contains("검증하거나 확정하지 않습니다")
+        )
+        assertTrue(
+            boundaryStatement.contains("연락처·문자·메시지·통화·클립보드") &&
+                boundaryStatement.contains("읽거나 감시하지 않") &&
+                boundaryStatement.contains("연락처를 읽거나 쓰거나 고르지 않")
+        )
+        listOf(
+            "전화 앱 열기",
+            "자동 다이얼",
+            "자동 발신",
+            "자동 통화",
+            "통화 종료",
+            "SMS",
+            "받는 사람 선택",
+            "자동 전송",
+            "웹 탐색",
+            "지도·위치",
+            "기관 번호 조회",
+            "공식 경로 조회",
+            "전화번호 검증",
+            "URL·도메인 검증",
+            "링크 스캔",
+            "알림·알람·일정",
+            "스케줄러",
+            "백그라운드 작업",
+            "결제·은행 기능",
+            "기기 제어 기능"
+        ).forEach { boundary ->
+            assertTrue(
+                "verification-outcome boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·확인 결과·결과 상태·검증 상태·안전 판정·통화 여부·" +
+                "공식 확인 상태·완료·체크 표시·메모·진행·이력"
+        assertTrue(
+            transientInventory.detail.contains(nonStoredState) &&
+                transientInventory.detail.contains("만들거나 기록하지 않")
+        )
+        assertTrue(
+            persistenceStatement.contains("확인 결과 다음 행동 보드의 $nonStoredState") &&
+                persistenceStatement.contains("만들거나 기록하지 않")
+        )
+        assertTrue(
+            mutationStatement.contains("카드·경로·공유 버튼") &&
+                mutationStatement.contains("붙여넣은 텍스트") &&
+                mutationStatement.contains("통화 상태") &&
+                mutationStatement.contains("연락처") &&
+                mutationStatement.contains("사건 기록") &&
+                mutationStatement.contains("가족 안전 계획") &&
+                mutationStatement.contains("공식 도움 기관 목록") &&
+                mutationStatement.contains("확인 결과·결과 상태·검증 상태·안전 상태") &&
+                mutationStatement.contains("계정·카드·은행·기기 설정") &&
+                mutationStatement.contains("설치 앱·패키지 상태") &&
+                mutationStatement.contains("접근성·네트워크·VPN·알림 설정") &&
+                mutationStatement.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("확인 결과 다음 행동 보드의 $nonStoredState"))
+        assertTrue(
+            summary.contains("확인 결과 다음 행동 보드는") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("결과 값을 입력받거나 저장하지 않") &&
+                summary.contains("공식 경로 조회·전화번호 검증") &&
+                summary.contains("URL·도메인 검증·링크 스캔") &&
+                summary.contains("결제·은행·기기 제어")
+        )
+        assertTrue(
+            summary.contains("확인 결과 다음 행동 보드 화면") &&
+                summary.contains("공식 도움 기관 목록") &&
+                summary.contains("확인 결과·결과 상태·검증 상태·안전 상태") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
         )
     }
 

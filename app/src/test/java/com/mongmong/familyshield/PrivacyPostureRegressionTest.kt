@@ -5337,6 +5337,647 @@ class PrivacyPostureRegressionTest {
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
+    @Test
+    fun verificationOutcomeNextStepsBoardIsPureStatelessAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/VerificationOutcomeNextStepsBoard.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.helpDirectoryScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        listOf(
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsCard",
+            "private fun openVerificationOutcomeNextStepsAction",
+            "private fun shareVerificationOutcomeNextStepsBoard"
+        ).forEach { marker ->
+            assertTrue(
+                "verification-outcome source marker missing: $marker",
+                activitySource.contains(marker)
+            )
+        }
+
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.mapIndexed { index, marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "verification-outcome entry must have one exact show-only button at index $index",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "openHelpDirectory",
+            "openEvidenceKit",
+            "openFamilyCallbackCard",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "verification-outcome entry button used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        val boardScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.verificationOutcomeNextStepsCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openVerificationOutcomeNextStepsAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareVerificationOutcomeNextStepsBoard"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertTrue(
+            Regex("analysis\\s*\\?\\.\\s*riskLevel").containsMatchIn(modelSource)
+        )
+        assertTrue(
+            Regex("analysis\\s*\\?\\.\\s*matchedSignals").containsMatchIn(modelSource)
+        )
+        assertTrue(Regex("readiness\\s*\\.\\s*level").containsMatchIn(modelSource))
+        assertTrue(
+            Regex("incidentCount\\s*\\.\\s*coerceAtLeast\\(0\\)")
+                .containsMatchIn(modelSource)
+        )
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ScamAnalyzer",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "dialNumber",
+            "contact.number",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "ANDROID_ID",
+            "Build.SERIAL",
+            "AdvertisingIdClient",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "verification-outcome model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score|actionPlan|summary)")
+                .containsMatchIn(modelSource)
+        )
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                "verification-outcome model embedded official number: $exactOfficialNumber",
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        assertTrue(activitySource.contains("VERIFICATION_OUTCOME_NEXT_STEPS_BOARD"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->"
+            )
+        )
+        assertTrue(activitySource.contains("verificationOutcomeNextStepsBoardScreen()"))
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:verificationOutcome|outcomeStatus|verified|" +
+                    "officialNumber|channelValue|cardProgress|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:VERIFICATION_OUTCOME|OUTCOME_STATUS|VERIFIED|OFFICIAL_NUMBER|" +
+                    "CHANNEL_VALUE|CARD_PROGRESS|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(boardScreen.contains("VerificationOutcomeNextStepsBoardBuilder.build("))
+        assertTrue(boardScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            boardScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(boardScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(boardScreen.contains("incidents.load("))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "verification-outcome incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(board.title)",
+            "subtitle(board.intro)",
+            "board.modeLabel",
+            "board.recommendationTitle",
+            "board.recommendationExplanation",
+            "board.recommendedCards",
+            "board.recommendedActions",
+            "board.cards",
+            "board.privacySafetyNotes",
+            "shareVerificationOutcomeNextStepsBoard(board.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "verification-outcome UI omitted $renderedField",
+                boardScreen.contains(renderedField)
+            )
+        }
+        assertTrue(
+            boardScreen.contains("primaryButton(\"가족에게 값 없는 결과별 다음 단계 공유\")")
+        )
+        assertTrue(boardScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("board\\.cards\\.forEach").findAll(boardScreen).count())
+        assertTrue(boardScreen.contains("recommended = card.id in recommendedIds"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.outcomeCondition",
+            "card.nextStepSentence",
+            "card.whyItMatters",
+            "card.doNotRecordOrShareBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue(
+                "verification-outcome card UI omitted $field",
+                cardRenderer.contains(field)
+            )
+        }
+
+        val statelessUiSource = boardScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "openFamilyCallbackCard",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "verification-outcome UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)",
+            "RECOVERY_PLAN" to "show(Screen.RECOVERY_PLAN)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "verification-outcome route omitted branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "VerificationOutcomeNextStepsActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            21,
+            Regex("VerificationOutcomeNextStepsActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        listOf(
+            "dial(",
+            "openFamilyCallbackCard",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "verification-outcome router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareVerificationOutcomeNextStepsBoard\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("board.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 결과별 다음 단계 공유"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "verification-outcome share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        val sliceSource = boardScreen + cardRenderer + actionRouter + shareHelper + modelSource
+        val forbiddenSliceApis = listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Intent.ACTION_DELETE",
+            "ACTION_UNINSTALL_PACKAGE",
+            "ACTION_INSTALL_PACKAGE",
+            "REQUEST_INSTALL_PACKAGES",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "Settings.",
+            "ANDROID_ID",
+            "Build.SERIAL",
+            "AdvertisingIdClient",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "queryIntentActivities",
+            "getPackageInfo",
+            "getApplicationInfo",
+            "canRequestPackageInstalls",
+            "installPackage",
+            "setApplicationEnabledSetting",
+            "clearApplicationUserData",
+            "AppOpsManager",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "Patterns.PHONE",
+            "PhoneNumberUtils",
+            "URLUtil",
+            "InetAddress",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ACTION_PICK",
+            "ACTION_GET_CONTENT",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "verification-outcome slice used forbidden API/source: $forbiddenSliceApi",
+                sliceSource.contains(forbiddenSliceApi)
+            )
+        }
+
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        val legacyProductionTokens = setOf(
+            "Intent.ACTION_DIAL",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        )
+        val forbiddenProductionTokens = forbiddenSliceApis
+            .filterNot { token -> token in legacyProductionTokens } + listOf(
+            "OkHttpClient",
+            "android.telecom",
+            "android.telephony"
+        )
+        forbiddenProductionTokens.distinct().forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "RECORD_AUDIO",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
     private fun functionBlock(source: String, marker: String): String {
         val start = source.indexOf(marker)
         require(start >= 0) { "Source marker missing: $marker" }
