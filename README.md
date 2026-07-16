@@ -19,6 +19,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 13. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
 14. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
 15. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
+16. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
 
 ## Share Entry
 
@@ -49,6 +50,37 @@ Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"
 전달합니다. 공유문에는 일반 멈춤 안내와 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서,
 안전 질문·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값을 넣지
 않습니다.
+
+## 24-Hour Recovery Plan (24시간 수습 계획)
+
+홈의 "24시간 수습 계획"에서 긴급 멈춤 이후 다음 한 시간, 오늘, 이번 주에 무엇을 할지 시간대별로
+차분히 확인할 수 있습니다. `RecoveryPlan24hBuilder`는 현재 `ScamAnalysis?`의 위험도·탐지 신호와
+값 없는 `FamilyReadiness`만 사용해 같은 입력에 항상 같은 시간대 순서와 추천을 만듭니다. 시간대는
+"지금~15분", "1시간 안", "오늘 안", "이번 주" 네 가지로 고정되어 있으며 각 시간대에는 목적, 할 일
+체크리스트, 하지 말아야 할 일, 기존 화면으로 이동하는 주요·보조 버튼이 함께 표시됩니다.
+
+분석이 없으면 지금~15분과 이번 주 시간대를 먼저 추천해 멈춤·직접 검사·가족 콜백과 예방·점검을
+안내합니다. 고위험이거나 송금·인증정보·안전계좌·상품권·가상자산 신호가 있으면 네 시간대를 모두
+추천해 긴급 대응·계정 잠금·증거 보존·공식 도움까지 이어가도록 안내합니다. 원격제어·앱 설치 신호도
+네 시간대를 모두 추천해 연결 차단과 계정·기기 잠금·증거 보존을 안내합니다. 링크·스미싱 신호는
+지금~15분·오늘 안·이번 주를 추천해 링크를 다시 열지 않는 확인과 증거 보존·가족 경고·공식 도움을
+안내합니다. 가족·딥페이크·번호 변경 신호는 지금~15분·1시간 안·이번 주를 추천해 가족 콜백과 가족
+경고를 이르게 안내합니다. 이번 주 시간대는 항상 추천 목록에 남아 예방·준비도 점검을 계속 안내
+합니다.
+
+각 시간대의 버튼은 기존 긴급 멈춤 모드, 의심 내용 검사/현재 결과, 가족 콜백 확인 카드, 안전 흐름
+길잡이, 긴급 대응 센터, 계정·기기 잠금 체크리스트, 증거 보존 체크리스트, 신고·상담 연락처, 가족
+경고 메시지 팩, 가족 안전 계획, 사건 타임라인 요약, 개인정보 센터로 이동할 뿐이며, 공식 도움·증거
+보존·계정 보호 문구를 이 화면에 다시 구현하지 않습니다.
+
+이 화면은 로컬 전용·무상태 수동 안내입니다. 시간대별 체크 상태나 선택을 저장하지 않고, 화면을
+열거나 버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다. 문자·통화·연락처를 읽거나
+감시하지 않고, 받는 사람을 고르거나 메시지를 자동 전송하지 않으며, 계좌·카드를 자동으로
+지급정지하거나 악성 앱을 자동으로 제거하지 않고, 계정을 자동으로 잠그거나 피해금 회수·법적 결과를
+보장하지 않습니다. "가족에게 수습 계획 공유"는 사용자가 직접 눌렀을 때만 `ACTION_SEND`의
+`text/plain` 공유 화면을 열고 빌더가 만든 `RecoveryPlan24h.familyShareSummary`만 전달합니다.
+공유문에는 시간대 이름과 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서, 안전 질문·콜백
+내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값은 넣지 않습니다.
 
 ## Safety Flow Router (안전 흐름 길잡이)
 
@@ -452,6 +484,7 @@ run and result.
 
 - No server and no network analysis.
 - Quick Stop Mode is deterministic, local-only, stateless manual first-response guidance; it reads no contacts, auto-sends nothing, stores no button/check/share state, never mutates incident logs automatically, shares only its builder-produced generic route summary, and adds no Android permissions.
+- The 24-Hour Recovery Plan is deterministic, local-only, stateless manual time-window guidance (지금~15분/1시간 안/오늘 안/이번 주); it adds no permissions, reads no contacts, auto-sends nothing, stores no checklist/progress state, never mutates incident logs unless the user explicitly uses existing save/delete screens, and its user-triggered text share contains only window/action labels excluding pasted text, redacted clues, safety-plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.
 - The Account & Device Lockdown Checklist is deterministic, local-only, stateless manual guidance; it does not change device or account settings, mutate incident logs, or add permissions, and its user-triggered text share contains only static section/action labels rather than analysis or safety-plan values.
 - The Family Alert Message Pack is deterministic, local-only, and stateless; it uses analysis signals and secret-free readiness only, reads no contacts, never auto-sends, stores no template selection or share history, never mutates incident logs, and shares only builder-produced privacy-safe text without adding network use or Android permissions.

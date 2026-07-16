@@ -20,7 +20,7 @@ class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
-        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP
+        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -119,6 +119,7 @@ class MainActivity : Activity() {
                 Screen.ACCOUNT_LOCKDOWN -> accountLockdownChecklistScreen()
                 Screen.FAMILY_ALERT_MESSAGES -> familyAlertMessagePackScreen()
                 Screen.QUICK_STOP -> quickStopModeScreen()
+                Screen.RECOVERY_PLAN -> recoveryPlan24hScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -162,6 +163,7 @@ class MainActivity : Activity() {
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
+        secondaryButton("24시간 수습 계획") { show(Screen.RECOVERY_PLAN) }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
@@ -500,6 +502,93 @@ class MainActivity : Activity() {
             AccountLockdownActionId.REPORT_PREP ->
                 show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
             AccountLockdownActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
+        }
+    }
+
+    private fun LinearLayout.recoveryPlan24hScreen() {
+        val plan = RecoveryPlan24hBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = plan.recommendedWindowIds.toSet()
+
+        title(plan.title)
+        subtitle(plan.intro)
+        section(
+            plan.recommendationTitle,
+            buildString {
+                append(plan.recommendationExplanation)
+                append("\n\n")
+                append(
+                    plan.recommendedWindows.joinToString("\n") { window ->
+                        "• ${window.label} · ${window.urgency.label}"
+                    }
+                )
+            }
+        )
+
+        plan.windows.forEach { window ->
+            val recommended = window.id in recommendedIds
+            val heading = buildString {
+                if (recommended) append("추천 · ")
+                append(window.label)
+                append(" · ")
+                append(window.urgency.label)
+            }
+            section(
+                heading,
+                buildString {
+                    append(window.purpose)
+                    append("\n\n할 일\n")
+                    window.checklistSteps.forEachIndexed { index, step ->
+                        append(index + 1).append(". ").append(step).append('\n')
+                    }
+                    append("\n하지 마세요\n")
+                    window.doNotDoNotes.forEach { note -> append("• ").append(note).append('\n') }
+                }.trim()
+            )
+            if (recommended) {
+                primaryButton(window.primaryActionLabel) { openRecoveryPlanAction(window.primaryAction) }
+            } else {
+                secondaryButton(window.primaryActionLabel) { openRecoveryPlanAction(window.primaryAction) }
+            }
+            window.secondaryActions.forEach { action ->
+                secondaryButton(action.label) { openRecoveryPlanAction(action) }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            plan.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 수습 계획 공유") {
+            shareRecoveryPlanSummary(plan.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openRecoveryPlanAction(action: RecoveryAction) {
+        when (action.id) {
+            RecoveryActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            RecoveryActionId.FAMILY_CALLBACK_CARD -> openFamilyCallbackCard(currentAnalysis)
+            RecoveryActionId.CHECKER -> show(Screen.CHECKER)
+            RecoveryActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            RecoveryActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            RecoveryActionId.RESPONSE_CENTER -> openResponseCenter()
+            RecoveryActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)
+            RecoveryActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            RecoveryActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            RecoveryActionId.OFFICIAL_HELP_DIRECTORY -> openHelpDirectory(Screen.RECOVERY_PLAN)
+            RecoveryActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            RecoveryActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
+            RecoveryActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            RecoveryActionId.TIMELINE_BRIEFING -> show(Screen.TIMELINE_BRIEFING)
+            RecoveryActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
         }
     }
 
@@ -1329,6 +1418,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 개인정보 요약 공유"))
+    }
+
+    private fun shareRecoveryPlanSummary(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 24시간 수습 계획")
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 수습 계획 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {

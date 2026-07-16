@@ -490,6 +490,185 @@ class PrivacyPostureRegressionTest {
         assertFalse(alertShareHelper.contains("SmsManager"))
     }
 
+    @Test
+    fun recoveryPlanIsStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/RecoveryPlan24h.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val recoveryPlanScreen = activitySource
+            .substringAfter("private fun LinearLayout.recoveryPlan24hScreen")
+            .substringBefore("private fun openRecoveryPlanAction")
+        val recoveryPlanActionRouter = activitySource
+            .substringAfter("private fun openRecoveryPlanAction")
+            .substringBefore("private fun LinearLayout.checker")
+        val recoveryPlanShareHelper = activitySource
+            .substringAfter("private fun shareRecoveryPlanSummary")
+            .substringBefore("private fun LinearLayout.riskCard")
+        val normalizedActionRouter = recoveryPlanActionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+
+        assertTrue(activitySource.contains("RECOVERY_PLAN"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.RECOVERY_PLAN -> recoveryPlan24hScreen()"
+            )
+        )
+        assertTrue(
+            homeScreen.contains(
+                "secondaryButton(\"24시간 수습 계획\") { show(Screen.RECOVERY_PLAN) }"
+            )
+        )
+
+        assertTrue(recoveryPlanScreen.contains("RecoveryPlan24hBuilder.build("))
+        assertTrue(recoveryPlanScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            recoveryPlanScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(recoveryPlanScreen.contains("plan.recommendedWindows"))
+        assertTrue(recoveryPlanScreen.contains("plan.windows"))
+        assertTrue(
+            recoveryPlanScreen.contains(
+                "shareRecoveryPlanSummary(plan.familyShareSummary)"
+            )
+        )
+        assertTrue(recoveryPlanScreen.contains("primaryButton(\"가족에게 수습 계획 공유\")"))
+        assertTrue(recoveryPlanScreen.contains("secondaryButton(\"홈으로\")"))
+        assertFalse(recoveryPlanScreen.contains("analysis.input"))
+        assertFalse(recoveryPlanScreen.contains("IncidentPreviewRedactor"))
+        assertFalse(recoveryPlanScreen.contains("incidents.add("))
+        assertFalse(recoveryPlanScreen.contains("incidents.clear("))
+        assertFalse(recoveryPlanScreen.contains("prefs.edit("))
+        assertFalse(recoveryPlanScreen.contains("safetyPlan.save("))
+        assertFalse(recoveryPlanScreen.contains("CheckBox("))
+        assertFalse(recoveryPlanScreen.contains("EditText("))
+        assertFalse(recoveryPlanScreen.contains("currentAnalysis ="))
+        assertFalse(recoveryPlanScreen.contains(".save("))
+        assertFalse(recoveryPlanScreen.contains("putString("))
+        assertFalse(recoveryPlanScreen.contains("putBoolean("))
+
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.QUICK_STOP -> show(Screen.QUICK_STOP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.FAMILY_CALLBACK_CARD -> " +
+                    "openFamilyCallbackCard(currentAnalysis)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.CHECKER -> show(Screen.CHECKER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.ANALYSIS_RESULT -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.RESPONSE_CENTER -> openResponseCenter()"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.EVIDENCE_KIT -> openEvidenceKit(null)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                    "openHelpDirectory(Screen.RECOVERY_PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.REPORT_PREP -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.NEW_ANALYSIS -> show(Screen.CHECKER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.SAFETY_PLAN -> show(Screen.PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.TIMELINE_BRIEFING -> show(Screen.TIMELINE_BRIEFING)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "RecoveryActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)"
+            )
+        )
+        assertFalse(recoveryPlanActionRouter.contains("dial("))
+        assertFalse(recoveryPlanActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(recoveryPlanActionRouter.contains("Intent.ACTION_CALL"))
+
+        val recoveryPlanShareArguments = Regex("shareRecoveryPlanSummary\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("plan.familyShareSummary"), recoveryPlanShareArguments)
+        assertTrue(recoveryPlanShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(recoveryPlanShareHelper.contains("type = \"text/plain\""))
+        assertTrue(recoveryPlanShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(recoveryPlanShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(recoveryPlanShareHelper)
+                .count()
+        )
+        assertFalse(recoveryPlanShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(recoveryPlanShareHelper.contains("ClipData"))
+        assertFalse(recoveryPlanShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(recoveryPlanShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(recoveryPlanShareHelper.contains("ScamAnalysis"))
+        assertFalse(recoveryPlanShareHelper.contains("currentAnalysis"))
+        assertFalse(recoveryPlanShareHelper.contains("analysis.input"))
+        assertFalse(recoveryPlanShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(recoveryPlanShareHelper.contains("SafetyPlan"))
+        assertFalse(recoveryPlanShareHelper.contains("incidents"))
+        assertFalse(recoveryPlanShareHelper.contains("ContactsContract"))
+        assertFalse(recoveryPlanShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile
