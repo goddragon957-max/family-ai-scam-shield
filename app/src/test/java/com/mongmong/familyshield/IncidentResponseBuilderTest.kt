@@ -1,5 +1,6 @@
 package com.mongmong.familyshield
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -52,8 +53,13 @@ class IncidentResponseBuilderTest {
 
     @Test
     fun everySituationProducesTheSameCommonEmergencyContacts() {
+        val expectedContacts = OfficialHelpDirectoryBuilder.build().entries.mapNotNull { entry ->
+            entry.dialNumber?.let { number -> EmergencyContact(entry.label, number) }
+        }
+
         IncidentSituation.entries.forEach { situation ->
             val plan = IncidentResponseBuilder.build(situation)
+            assertEquals(expectedContacts, plan.emergencyContacts)
             assertTrue(plan.emergencyContacts.size == 3)
             assertTrue(plan.emergencyContacts.any { it.number == "112" })
             assertTrue(plan.emergencyContacts.any { it.number == "1394" })

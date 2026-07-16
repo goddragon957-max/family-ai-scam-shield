@@ -9,7 +9,8 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 3. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
 4. 로컬 규칙 기반 AI 보호자 분석
 5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-6. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+6. 상황별 신고·상담 연락처와 말할 내용 확인
+7. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 
 ## Share Entry
 
@@ -67,6 +68,27 @@ The important checklist lines are included in the safe family report (`SafetyRep
 "가족에게 대응 요약 공유" 버튼은 `IncidentResponseReportBuilder`가 만든 요약을 공유합니다. 이
 요약에는 선택한 상황과 대응 단계, 연락처만 포함되며, 사용자가 붙여넣은 원문 텍스트는 애초에 이
 화면에 입력되지 않으므로 요약에도 포함되지 않습니다.
+
+## Official Help Directory (신고·상담 연락처)
+
+홈, AI 분석 결과, 긴급 대응 센터, 증거 보존 체크리스트에서 열 수 있는 로컬 안내 화면입니다.
+`OfficialHelpDirectoryBuilder`가 다음 항목을 고정된 순서로 결정적으로 제공합니다:
+
+- 112 경찰 긴급 신고
+- 1394 보이스피싱 통합신고·상담
+- 1332 금융감독원
+- 은행·카드사 공식 대표번호 확인 안내
+
+각 항목에는 언제 사용할지, 상담원에게 말할 내용, 원문·OTP·PIN 등을 가족 채팅에 공유하지 않기
+위한 안전 메모가 들어 있습니다. 112, 1394, 1332 버튼은 Android `ACTION_DIAL`로 전화 앱만
+열고 사용자가 직접 통화를 시작합니다. `CALL_PHONE` 권한은 요청하지 않습니다. 은행·카드사
+항목에는 임의 번호나 전화 버튼을 넣지 않고, 공식 앱·카드 뒷면·주소를 직접 입력한 공식
+웹사이트에서 대표번호를 확인하도록 안내합니다.
+
+연락처와 스크립트는 앱에 정적으로 내장된 로컬 안내이므로 인터넷이나 네트워크 조회를 사용하지
+않습니다. "가족에게 신고 연락처 공유"는 Android `ACTION_SEND`의 `text/plain`만 사용하며,
+공식 번호와 말할 내용 체크리스트만 포함하고 사용자가 붙여넣은 원문 텍스트나 실제 계좌 전체
+번호, 비밀번호, OTP, 상품권 PIN은 포함하지 않습니다.
 
 ## Evidence Preservation Kit (증거 보존 체크리스트)
 
@@ -226,6 +248,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- The Official Help Directory uses static on-device guidance and performs no network lookup.
 - No automatic SMS/call monitoring.
 - No automatic evidence capture or upload; the evidence kit is static local guidance and stores no selection or completion state.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.

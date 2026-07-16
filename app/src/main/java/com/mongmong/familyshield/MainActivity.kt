@@ -18,7 +18,8 @@ import android.widget.Toast
 
 class MainActivity : Activity() {
     private enum class Screen {
-        ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES
+        ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
+        HELP_DIRECTORY
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -30,6 +31,7 @@ class MainActivity : Activity() {
     private var selectedEvidenceSituation: IncidentSituation? = null
     private var selectedDrillScenario: DrillScenario? = null
     private var selectedSampleCategory: ScamSampleCategory? = null
+    private var helpDirectoryReturnScreen = Screen.HOME
 
     private val defaultCallbackScript =
         "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
@@ -105,6 +107,7 @@ class MainActivity : Activity() {
                 Screen.EVIDENCE -> evidencePreservationScreen()
                 Screen.DRILL -> drillScreen()
                 Screen.SAMPLES -> sampleLibraryScreen()
+                Screen.HELP_DIRECTORY -> helpDirectoryScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -151,6 +154,7 @@ class MainActivity : Activity() {
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("샘플로 AI 분석 연습") { openSampleLibrary() }
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
+        secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.HOME) }
         secondaryButton("증거 보존 체크리스트") { openEvidenceKit(null) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/1394 또는 은행 지급정지")
@@ -203,6 +207,7 @@ class MainActivity : Activity() {
                 "먼저 연결을 끊고 앱 정보를 안전하게 남긴 뒤, 다른 안전한 기기에서 계정을 보호하세요."
         )
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
+        secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.RESULT) }
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
         primaryButton("사건 기록에 저장") {
             incidents.add(analysis)
@@ -262,11 +267,12 @@ class MainActivity : Activity() {
             val body = plan.steps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
             section(plan.title, body)
             plan.emergencyContacts.forEach { contact ->
-                secondaryButton("${contact.label} 전화 연결 (${contact.number})") { dial(contact.number) }
+                secondaryButton("${contact.number} ${contact.label} 전화 앱에서 열기") { dial(contact.number) }
             }
             primaryButton("가족에게 대응 요약 공유") { shareIncidentResponse(plan) }
         }
 
+        secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.RESPONSE_CENTER) }
         secondaryButton(
             if (situation == null) "증거 보존 체크리스트 열기" else "이 상황의 증거 보존 체크리스트"
         ) { openEvidenceKit(situation) }
@@ -307,6 +313,7 @@ class MainActivity : Activity() {
         if (kit.officialReportPrepNotes.isNotEmpty()) {
             section("신고·상담 전에 준비", kit.officialReportPrepNotes.joinToString("\n") { "• $it" })
         }
+        secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.EVIDENCE) }
         section("가족에게 보낼 안전 요약", kit.familyShareSummary)
         primaryButton("가족에게 증거 보존 요약 공유") { shareEvidenceKit(kit) }
         secondaryButton("긴급 대응 센터로") {
@@ -319,6 +326,51 @@ class MainActivity : Activity() {
     private fun evidenceOptionLabel(situation: IncidentSituation?): String {
         val label = situation?.label ?: EvidencePreservationKitBuilder.GENERIC_SITUATION_LABEL
         return if (selectedEvidenceSituation == situation) "✓ $label" else label
+    }
+
+    private fun openHelpDirectory(returnTo: Screen) {
+        helpDirectoryReturnScreen = returnTo
+        show(Screen.HELP_DIRECTORY)
+    }
+
+    private fun LinearLayout.helpDirectoryScreen() {
+        val directory = OfficialHelpDirectoryBuilder.build()
+        title(directory.title)
+        subtitle(directory.intro)
+        section(
+            "로컬·수동 안내",
+            "연락처와 말할 내용은 앱에 내장되어 있으며 네트워크에서 조회하지 않습니다. " +
+                "전화 버튼은 통화를 자동으로 걸지 않고 전화 앱만 엽니다."
+        )
+
+        directory.entries.forEach { entry ->
+            val heading = entry.dialNumber?.let { number -> "$number · ${entry.label}" } ?: entry.label
+            val body = buildString {
+                append("언제 사용하나요?\n")
+                append(entry.whenToUse)
+                append("\n\n이렇게 말하세요\n")
+                entry.whatToSay.forEachIndexed { index, script ->
+                    append(index + 1).append(". ").append(script).append('\n')
+                }
+                append("\n안전 메모\n")
+                entry.safetyNotes.forEach { note -> append("• ").append(note).append('\n') }
+            }.trim()
+            section(heading, body)
+            entry.dialNumber?.let { number ->
+                secondaryButton("$number ${entry.label} 전화 앱에서 열기") { dial(number) }
+            }
+        }
+
+        section(
+            "공유 전 확인",
+            "가족 공유 요약에는 공식 연락처와 말할 내용만 들어갑니다. 붙여넣은 원문, 계좌 전체 번호, " +
+                "비밀번호, 인증번호(OTP), 상품권 PIN은 넣지 않습니다."
+        )
+        primaryButton("가족에게 신고 연락처 공유") { shareHelpDirectory(directory) }
+        if (helpDirectoryReturnScreen != Screen.HOME) {
+            secondaryButton("이전 화면으로") { show(helpDirectoryReturnScreen) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
     private fun LinearLayout.readinessSection() {
@@ -562,6 +614,15 @@ class MainActivity : Activity() {
         startActivity(Intent.createChooser(shareIntent, "가족에게 증거 보존 요약 공유"))
     }
 
+    private fun shareHelpDirectory(directory: OfficialHelpDirectory) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 신고·상담 연락처")
+            putExtra(Intent.EXTRA_TEXT, directory.familyShareSummary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 신고 연락처 공유"))
+    }
+
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {
         val matched = if (analysis.matchedSignals.isEmpty()) {
             "강한 위험 신호 없음"
@@ -647,11 +708,17 @@ class MainActivity : Activity() {
     }
 
     private fun LinearLayout.primaryButton(label: String, onClick: () -> Unit) {
-        addView(button(label, 0xFF0F766E.toInt(), Color.WHITE, onClick), LinearLayout.LayoutParams(match, dp(52)).withMargins(bottom = dp(10)))
+        val action = button(label, 0xFF0F766E.toInt(), Color.WHITE, onClick).apply {
+            minimumHeight = dp(52)
+        }
+        addView(action, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(10)))
     }
 
     private fun LinearLayout.secondaryButton(label: String, onClick: () -> Unit) {
-        addView(button(label, Color.WHITE, 0xFF0F766E.toInt(), onClick), LinearLayout.LayoutParams(match, dp(48)).withMargins(bottom = dp(10)))
+        val action = button(label, Color.WHITE, 0xFF0F766E.toInt(), onClick).apply {
+            minimumHeight = dp(48)
+        }
+        addView(action, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(10)))
     }
 
     private fun button(label: String, bg: Int, fg: Int, onClick: () -> Unit): Button =
@@ -660,6 +727,7 @@ class MainActivity : Activity() {
             textSize = 16f
             setTextColor(fg)
             setBackgroundColor(bg)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
             setOnClickListener { onClick() }
         }
 

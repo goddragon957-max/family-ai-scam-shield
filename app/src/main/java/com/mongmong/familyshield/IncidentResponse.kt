@@ -17,11 +17,9 @@ data class IncidentResponsePlan(
 )
 
 object IncidentResponseBuilder {
-    private val commonContacts = listOf(
-        EmergencyContact("경찰 신고", "112"),
-        EmergencyContact("보이스피싱 통합신고", "1394"),
-        EmergencyContact("금융감독원", "1332")
-    )
+    private val commonContacts = OfficialHelpDirectoryBuilder.build().entries.mapNotNull { entry ->
+        entry.dialNumber?.let { number -> EmergencyContact(entry.label, number) }
+    }
 
     fun build(situation: IncidentSituation): IncidentResponsePlan {
         val steps = mutableListOf<String>()
