@@ -854,6 +854,186 @@ class PrivacyPostureRegressionTest {
         assertFalse(handoffShareHelper.contains("SmsManager"))
     }
 
+    @Test
+    fun safeCallScriptsIsStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafeVerificationCallScripts.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val safeScriptsScreen = activitySource
+            .substringAfter("private fun LinearLayout.safeVerificationCallScriptsScreen")
+            .substringBefore("private fun openSafeCallScriptAction")
+        val safeScriptsActionRouter = activitySource
+            .substringAfter("private fun openSafeCallScriptAction")
+            .substringBefore("private fun shareSafeCallScriptsSummary")
+        val safeScriptsShareHelper = activitySource
+            .substringAfter("private fun shareSafeCallScriptsSummary")
+            .substringBefore("private val match")
+        val normalizedActionRouter = safeScriptsActionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+
+        assertTrue(activitySource.contains("SAFE_CALL_SCRIPTS"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.SAFE_CALL_SCRIPTS -> safeVerificationCallScriptsScreen()"
+            )
+        )
+        assertTrue(
+            homeScreen.contains(
+                "secondaryButton(\"안전 확인 전화 스크립트\") { show(Screen.SAFE_CALL_SCRIPTS) }"
+            )
+        )
+
+        assertTrue(safeScriptsScreen.contains("SafeVerificationCallScriptsBuilder.build("))
+        assertTrue(safeScriptsScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            safeScriptsScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(safeScriptsScreen.contains("scripts.recommendedCards"))
+        assertTrue(safeScriptsScreen.contains("scripts.cards"))
+        assertTrue(
+            safeScriptsScreen.contains(
+                "shareSafeCallScriptsSummary(scripts.familyShareSummary)"
+            )
+        )
+        assertTrue(safeScriptsScreen.contains("primaryButton(\"가족에게 전화 스크립트 공유\")"))
+        assertTrue(safeScriptsScreen.contains("secondaryButton(\"홈으로\")"))
+        assertFalse(safeScriptsScreen.contains("analysis.input"))
+        assertFalse(safeScriptsScreen.contains("IncidentPreviewRedactor"))
+        assertFalse(safeScriptsScreen.contains("incidents.add("))
+        assertFalse(safeScriptsScreen.contains("incidents.clear("))
+        assertFalse(safeScriptsScreen.contains("prefs.edit("))
+        assertFalse(safeScriptsScreen.contains("safetyPlan.save("))
+        assertFalse(safeScriptsScreen.contains("CheckBox("))
+        assertFalse(safeScriptsScreen.contains("EditText("))
+        assertFalse(safeScriptsScreen.contains("currentAnalysis ="))
+        assertFalse(safeScriptsScreen.contains(".save("))
+        assertFalse(safeScriptsScreen.contains("putString("))
+        assertFalse(safeScriptsScreen.contains("putBoolean("))
+
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.QUICK_STOP -> show(Screen.QUICK_STOP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.FAMILY_CALLBACK_CARD -> " +
+                    "openFamilyCallbackCard(currentAnalysis)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.CHECKER -> show(Screen.CHECKER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.ANALYSIS_RESULT -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.SAFETY_PLAN -> show(Screen.PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.TRUSTED_HELPER_HANDOFF -> show(Screen.TRUSTED_HELPER_HANDOFF)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.RESPONSE_CENTER -> openResponseCenter()"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.EVIDENCE_KIT -> openEvidenceKit(null)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                    "openHelpDirectory(Screen.SAFE_CALL_SCRIPTS)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.REPORT_PREP -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "SafeCallScriptActionId.NEW_ANALYSIS -> show(Screen.CHECKER)"
+            )
+        )
+        assertFalse(safeScriptsActionRouter.contains("dial("))
+        assertFalse(safeScriptsActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(safeScriptsActionRouter.contains("Intent.ACTION_CALL"))
+
+        val safeScriptsShareArguments = Regex("shareSafeCallScriptsSummary\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("scripts.familyShareSummary"), safeScriptsShareArguments)
+        assertTrue(safeScriptsShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(safeScriptsShareHelper.contains("type = \"text/plain\""))
+        assertTrue(safeScriptsShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(safeScriptsShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(safeScriptsShareHelper)
+                .count()
+        )
+        assertFalse(safeScriptsShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(safeScriptsShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(safeScriptsShareHelper.contains("ClipData"))
+        assertFalse(safeScriptsShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(safeScriptsShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(safeScriptsShareHelper.contains("ScamAnalysis"))
+        assertFalse(safeScriptsShareHelper.contains("currentAnalysis"))
+        assertFalse(safeScriptsShareHelper.contains("analysis.input"))
+        assertFalse(safeScriptsShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(safeScriptsShareHelper.contains("SafetyPlan"))
+        assertFalse(safeScriptsShareHelper.contains("incidents"))
+        assertFalse(safeScriptsShareHelper.contains("ContactsContract"))
+        assertFalse(safeScriptsShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile

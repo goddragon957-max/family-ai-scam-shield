@@ -21,6 +21,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 15. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
 16. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
 17. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
+18. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
 
 ## Share Entry
 
@@ -113,6 +114,41 @@ Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"
 요약과 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서, 안전 질문·콜백 내용·연락처 값,
 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값은 넣지 않고, 도우미가 이런 비밀 정보에
 접근하도록 하지 않습니다.
+
+## Safe Verification Call Scripts (안전 확인 전화 스크립트)
+
+홈의 "안전 확인 전화 스크립트"는 사용자가 직접 전화를 걸기 전에 무엇을 물어보고 무엇을 절대
+말하지 않을지 정리하는 로컬 전용·무상태 안내입니다. `SafeVerificationCallScriptsBuilder`는 현재
+`ScamAnalysis?`의 탐지 신호와 값 없는 `FamilyReadiness`만 사용해 같은 입력에 항상 같은 전화
+스크립트 순서와 추천을 만듭니다. 스크립트는 가족 기존 번호 확인 전화, 은행·카드사 확인 전화,
+1394/112/1332 상담 전화, 통신사·계정 지원 확인 전화, 기기·원격제어 점검 도움 전화, 증거·신고
+준비 전화, 예방 점검 전화 7종이며 각 카드에는 누구에게 거는지, 언제 거는지, 먼저 할 말, 물어볼
+질문, 절대 말하지 말아야 할 내용, 기존 화면으로 이동하는 주요·보조 버튼이 함께 표시됩니다.
+
+분석이 없으면 가족 기존 번호 확인 전화와 예방 점검 전화를 기본으로 추천합니다. 가족·딥페이크·번호
+변경 신호는 가족 기존 번호 확인 전화를 가장 먼저 추천하고, 송금·인증정보·안전계좌·상품권·가상자산
+신호는 은행·카드사 확인 전화와 1394/112/1332 상담 전화를 추천합니다. 원격제어·앱 설치 신호는
+기기·원격제어 점검 도움 전화와 증거·신고 준비 전화를 추천하고, 링크·스미싱 신호는 증거·신고 준비
+전화와 1394/112/1332 상담 전화를 추천합니다. 가족 준비도가 낮거나 진행 중이면 가족 기존 번호
+확인 전화를 항상 함께 추천합니다. 각 카드의 버튼은 기존 가족 콜백 확인 카드, 가족 안전 계획,
+보호자 도움 요청 카드, 24시간 수습 계획, 안전 흐름 길잡이, 긴급 대응 센터, 계정·기기 잠금
+체크리스트, 증거 보존 체크리스트, 신고·상담 연락처, 신고용 상담 준비 카드, 가족 경고 메시지 팩,
+의심 내용 검사/현재 결과로 이동할 뿐이며 이 화면에 연락처·증거·계정 보호 문구를 새로 구현하지
+않습니다.
+
+이 화면은 어떤 스크립트를 봤는지, 통화 여부나 진행 상황을 저장하지 않으며 화면을 열거나 버튼을
+누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다. 문자·통화·연락처를 자동으로 읽거나
+감시하지 않고, 전화를 대신 걸거나 메시지를 자동으로 보내지 않으며, 이 화면 자체에는 전화 버튼이
+없고 전화가 필요하면 기존 화면의 `ACTION_DIAL` 연결만 엽니다. 모든 스크립트는 전화로 인증번호·
+비밀번호·계좌 전체 번호·안전단어·콜백 내용을 말하지 말라고 안내하며, 확인된 공식 절차에서 꼭
+필요한 경우가 아니라면 알려주지 않아도 되고 이 앱은 이런 값을 수집하거나 화면에 표시하지
+않습니다. "가족에게 전화 스크립트 공유"는 사용자가 직접 눌렀을 때만 `ACTION_SEND`의 `text/plain`
+공유 화면을 열고 빌더가 만든 `SafeVerificationCallScripts.familyShareSummary`만 전달합니다.
+공유문에는 일반 전화 스크립트 이름과 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서, 안전
+질문·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값은 넣지 않습니다. 이
+화면은 전화·문자를 자동으로 차단하거나 악성 앱을 자동으로 제거하지 않으며, 계좌를 자동으로
+지급정지하거나 피해금 회수·법률 자문을 보장하지 않고, 새 Android 권한이나 네트워크 호출을
+사용하지 않습니다.
 
 ## Safety Flow Router (안전 흐름 길잡이)
 
@@ -527,6 +563,7 @@ run and result.
 - The Official Help Directory uses static on-device guidance and performs no network lookup.
 - The Official Report Prep Card is derived only from the current local analysis, redacts its on-screen clue, omits all pasted-text excerpts from sharing, is not stored, and never mutates incident logs automatically.
 - The Family Callback Verification Card is derived transiently from the current local analysis and manually saved safety plan, uses a privacy-redacted on-screen clue, is not stored, never mutates incident logs, and shares no raw/clue/safe-question/callback-script/contact-number secrets.
+- Safe Verification Call Scripts is deterministic, local-only, stateless manual guidance for what to say on manual calls (family existing number, bank/card, 1394/112/1332, carrier/account support, device/remote-control help, evidence/report prep, weekly prevention check-in); it adds no phone-related buttons of its own (routing instead to existing `ACTION_DIAL` screens), reads no contacts, auto-dials/sends nothing, stores no script/call selection, never mutates incident logs, and its user-triggered text share contains only script/action labels excluding pasted text, redacted clues, safety-plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - No automatic SMS/call monitoring.
 - No automatic evidence capture or upload; the evidence kit is static local guidance and stores no selection or completion state.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.

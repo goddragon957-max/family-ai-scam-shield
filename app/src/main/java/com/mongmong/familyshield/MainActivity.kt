@@ -20,7 +20,8 @@ class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
-        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF
+        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
+        SAFE_CALL_SCRIPTS
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -121,6 +122,7 @@ class MainActivity : Activity() {
                 Screen.QUICK_STOP -> quickStopModeScreen()
                 Screen.RECOVERY_PLAN -> recoveryPlan24hScreen()
                 Screen.TRUSTED_HELPER_HANDOFF -> trustedHelperHandoffScreen()
+                Screen.SAFE_CALL_SCRIPTS -> safeVerificationCallScriptsScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -168,6 +170,7 @@ class MainActivity : Activity() {
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         secondaryButton("보호자 도움 요청 카드") { show(Screen.TRUSTED_HELPER_HANDOFF) }
+        secondaryButton("안전 확인 전화 스크립트") { show(Screen.SAFE_CALL_SCRIPTS) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
@@ -1654,6 +1657,106 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+    private fun LinearLayout.safeVerificationCallScriptsScreen() {
+        val scripts = SafeVerificationCallScriptsBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = scripts.recommendedScriptIds.toSet()
+
+        title(scripts.title)
+        subtitle(scripts.intro)
+        section(
+            scripts.recommendationTitle,
+            buildString {
+                append(scripts.recommendationExplanation)
+                append("\n\n")
+                append(
+                    scripts.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.label} · ${card.urgency.label}"
+                    }
+                )
+            }
+        )
+
+        scripts.cards.forEach { card ->
+            val recommended = card.id in recommendedIds
+            val heading = buildString {
+                if (recommended) append("추천 · ")
+                append(card.label)
+                append(" · ")
+                append(card.urgency.label)
+            }
+            section(
+                heading,
+                buildString {
+                    append("누구에게 거나요\n")
+                    append(card.whoToCall)
+                    append("\n\n언제 거나요\n")
+                    append(card.whenToUse)
+                    append("\n\n먼저 이렇게 말하세요\n")
+                    append(card.openingScript)
+                    append("\n\n물어볼 내용\n")
+                    card.questionsToAsk.forEachIndexed { index, question ->
+                        append(index + 1).append(". ").append(question).append('\n')
+                    }
+                    append("\n절대 말하지 마세요\n")
+                    card.neverSayNotes.forEach { note -> append("• ").append(note).append('\n') }
+                }.trim()
+            )
+            if (recommended) {
+                primaryButton(card.primaryAction.label) { openSafeCallScriptAction(card.primaryAction) }
+            } else {
+                secondaryButton(card.primaryAction.label) { openSafeCallScriptAction(card.primaryAction) }
+            }
+            card.secondaryActions.forEach { action ->
+                secondaryButton(action.label) { openSafeCallScriptAction(action) }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            scripts.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 전화 스크립트 공유") {
+            shareSafeCallScriptsSummary(scripts.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openSafeCallScriptAction(action: SafeCallScriptAction) {
+        when (action.id) {
+            SafeCallScriptActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            SafeCallScriptActionId.CHECKER -> show(Screen.CHECKER)
+            SafeCallScriptActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            SafeCallScriptActionId.FAMILY_CALLBACK_CARD -> openFamilyCallbackCard(currentAnalysis)
+            SafeCallScriptActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            SafeCallScriptActionId.TRUSTED_HELPER_HANDOFF -> show(Screen.TRUSTED_HELPER_HANDOFF)
+            SafeCallScriptActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            SafeCallScriptActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            SafeCallScriptActionId.RESPONSE_CENTER -> openResponseCenter()
+            SafeCallScriptActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            SafeCallScriptActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            SafeCallScriptActionId.OFFICIAL_HELP_DIRECTORY -> openHelpDirectory(Screen.SAFE_CALL_SCRIPTS)
+            SafeCallScriptActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            SafeCallScriptActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)
+            SafeCallScriptActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
+        }
+    }
+
+    private fun shareSafeCallScriptsSummary(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 전화 스크립트 공유"))
+    }
 
     private val match = LinearLayout.LayoutParams.MATCH_PARENT
     private val wrap = LinearLayout.LayoutParams.WRAP_CONTENT
