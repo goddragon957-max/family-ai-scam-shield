@@ -20,7 +20,7 @@ class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
-        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES
+        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -118,6 +118,7 @@ class MainActivity : Activity() {
                 Screen.TIMELINE_BRIEFING -> incidentTimelineBriefingScreen()
                 Screen.ACCOUNT_LOCKDOWN -> accountLockdownChecklistScreen()
                 Screen.FAMILY_ALERT_MESSAGES -> familyAlertMessagePackScreen()
+                Screen.QUICK_STOP -> quickStopModeScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -159,6 +160,7 @@ class MainActivity : Activity() {
     private fun LinearLayout.home() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
@@ -175,6 +177,102 @@ class MainActivity : Activity() {
         secondaryButton("사건 타임라인 요약") { show(Screen.TIMELINE_BRIEFING) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/1394 또는 은행 지급정지")
+    }
+
+    private fun LinearLayout.quickStopModeScreen() {
+        val mode = QuickStopModeBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = mode.recommendedCardIds.toSet()
+
+        title(mode.title)
+        subtitle(mode.intro)
+        section(
+            mode.stopScriptTitle,
+            mode.stopScriptSteps.joinToString("\n") { step ->
+                "${step.displayOrder}. ${step.instruction}"
+            }
+        )
+        section(
+            mode.recommendationTitle,
+            buildString {
+                append(mode.recommendationExplanation)
+                append("\n\n추천 행동 카드\n")
+                append(
+                    mode.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.label} · ${card.urgency.label}"
+                    }
+                )
+            }
+        )
+        mode.recommendedCards.forEach { card ->
+            primaryButton("추천 · ${card.primaryAction.label}") {
+                openQuickStopAction(card.primaryAction)
+            }
+        }
+
+        section(
+            "모든 행동 카드",
+            "추천 표시와 관계없이 본인 상황에 해당하는 버튼만 직접 고르세요. 선택은 저장되지 않습니다."
+        )
+        mode.cards.forEach { card ->
+            val recommended = card.id in recommendedIds
+            val heading = buildString {
+                if (recommended) append("추천 · ")
+                append(card.label)
+                append(" · ")
+                append(card.urgency.label)
+            }
+            section(
+                heading,
+                buildString {
+                    append(card.explanation)
+                    append("\n\n안전 메모\n")
+                    append(card.safetyNotes.joinToString("\n") { note -> "• $note" })
+                }
+            )
+            if (recommended) {
+                primaryButton(card.primaryAction.label) {
+                    openQuickStopAction(card.primaryAction)
+                }
+            } else {
+                secondaryButton(card.primaryAction.label) {
+                    openQuickStopAction(card.primaryAction)
+                }
+            }
+            card.secondaryActions.forEach { action ->
+                secondaryButton(action.label) { openQuickStopAction(action) }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            mode.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 멈춤 안내 공유") {
+            shareQuickStopSummary(mode.familyShareSummary)
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openQuickStopAction(action: QuickStopAction) {
+        when (action.id) {
+            QuickStopActionId.STOP_SCRIPT -> show(Screen.QUICK_STOP)
+            QuickStopActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            QuickStopActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            QuickStopActionId.CHECKER -> show(Screen.CHECKER)
+            QuickStopActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            QuickStopActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            QuickStopActionId.RESPONSE_CENTER -> openResponseCenter()
+            QuickStopActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            QuickStopActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.QUICK_STOP)
+            QuickStopActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            QuickStopActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)
+        }
     }
 
     private fun LinearLayout.safetyFlowRouterScreen() {
@@ -1123,6 +1221,14 @@ class MainActivity : Activity() {
 
     private fun dial(number: String) {
         startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(number)}")))
+    }
+
+    private fun shareQuickStopSummary(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 멈춤 안내 공유"))
     }
 
     private fun shareSafetyReport(analysis: ScamAnalysis) {

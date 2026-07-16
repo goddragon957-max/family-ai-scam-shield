@@ -154,6 +154,8 @@ class PrivacyCenterBuilderTest {
         }
 
         listOf(
+            "긴급 멈춤 모드",
+            "버튼 선택",
             "안전 흐름 선택",
             "가족 콜백 카드",
             "상담 준비 카드",

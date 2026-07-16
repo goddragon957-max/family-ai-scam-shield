@@ -37,6 +37,169 @@ class PrivacyPostureRegressionTest {
     }
 
     @Test
+    fun quickStopIsPureStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/QuickStopMode.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val quickStopScreen = activitySource
+            .substringAfter("private fun LinearLayout.quickStopModeScreen")
+            .substringBefore("private fun openQuickStopAction")
+        val quickStopActionRouter = activitySource
+            .substringAfter("private fun openQuickStopAction")
+            .substringBefore("private fun LinearLayout.safetyFlowRouterScreen")
+        val quickStopShareHelper = activitySource
+            .substringAfter("private fun shareQuickStopSummary")
+            .substringBefore("private fun shareSafetyReport")
+        val normalizedActionRouter = quickStopActionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+
+        assertTrue(activitySource.contains("QUICK_STOP"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.QUICK_STOP -> quickStopModeScreen()"
+            )
+        )
+        assertTrue(
+            homeScreen.contains(
+                "primaryButton(\"긴급 멈춤 모드\") { show(Screen.QUICK_STOP) }"
+            )
+        )
+        assertTrue(
+            homeScreen.indexOf("긴급 멈춤 모드") in 0 until
+                homeScreen.indexOf("지금 뭐부터 할지 고르기")
+        )
+
+        assertTrue(quickStopScreen.contains("QuickStopModeBuilder.build("))
+        assertTrue(quickStopScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            quickStopScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(quickStopScreen.contains("mode.recommendedCards"))
+        assertTrue(quickStopScreen.contains("mode.cards"))
+        assertTrue(
+            quickStopScreen.contains(
+                "shareQuickStopSummary(mode.familyShareSummary)"
+            )
+        )
+        assertTrue(quickStopScreen.contains("primaryButton(\"가족에게 멈춤 안내 공유\")"))
+        assertTrue(quickStopScreen.contains("secondaryButton(\"홈으로\")"))
+        assertFalse(quickStopScreen.contains("analysis.input"))
+        assertFalse(quickStopScreen.contains("IncidentPreviewRedactor"))
+        assertFalse(quickStopScreen.contains("incidents.add("))
+        assertFalse(quickStopScreen.contains("incidents.clear("))
+        assertFalse(quickStopScreen.contains("prefs.edit("))
+        assertFalse(quickStopScreen.contains("safetyPlan.save("))
+        assertFalse(quickStopScreen.contains("CheckBox("))
+        assertFalse(quickStopScreen.contains("EditText("))
+        assertFalse(quickStopScreen.contains("currentAnalysis ="))
+        assertFalse(quickStopScreen.contains(".save("))
+        assertFalse(quickStopScreen.contains("putString("))
+        assertFalse(quickStopScreen.contains("putBoolean("))
+
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.STOP_SCRIPT -> show(Screen.QUICK_STOP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.FAMILY_CALLBACK_CARD -> " +
+                    "openFamilyCallbackCard(currentAnalysis)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.SAFETY_PLAN -> show(Screen.PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.CHECKER -> show(Screen.CHECKER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.ANALYSIS_RESULT -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.RESPONSE_CENTER -> openResponseCenter()"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                    "openHelpDirectory(Screen.QUICK_STOP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.EVIDENCE_KIT -> openEvidenceKit(null)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "QuickStopActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)"
+            )
+        )
+        assertFalse(quickStopActionRouter.contains("dial("))
+        assertFalse(quickStopActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(quickStopActionRouter.contains("Intent.ACTION_CALL"))
+
+        val quickStopShareArguments = Regex("shareQuickStopSummary\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("mode.familyShareSummary"), quickStopShareArguments)
+        assertTrue(quickStopShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(quickStopShareHelper.contains("type = \"text/plain\""))
+        assertTrue(quickStopShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(quickStopShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(quickStopShareHelper)
+                .count()
+        )
+        assertFalse(quickStopShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(quickStopShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(quickStopShareHelper.contains("ClipData"))
+        assertFalse(quickStopShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(quickStopShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(quickStopShareHelper.contains("ScamAnalysis"))
+        assertFalse(quickStopShareHelper.contains("currentAnalysis"))
+        assertFalse(quickStopShareHelper.contains("analysis.input"))
+        assertFalse(quickStopShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(quickStopShareHelper.contains("SafetyPlan"))
+        assertFalse(quickStopShareHelper.contains("incidents"))
+        assertFalse(quickStopShareHelper.contains("ContactsContract"))
+        assertFalse(quickStopShareHelper.contains("SmsManager"))
+    }
+
+    @Test
     fun privacySharePassesOnlyBuilderSummaryThroughTextSend() {
         val activitySource = readProjectFile(
             "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"

@@ -6,22 +6,49 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 
 1. 명시적 동의 온보딩
 2. 홈 대시보드
-3. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
-4. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
-5. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
-6. 로컬 규칙 기반 AI 보호자 분석
-7. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-8. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
-9. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-10. 상황별 신고·상담 연락처와 말할 내용 확인
-11. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
-12. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
-13. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
-14. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
+3. 긴급 멈춤 모드에서 대화 중단 → 돈·정보·앱 금지 → 평소 신뢰 경로 확인의 3단계부터 실행
+4. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
+5. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
+6. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
+7. 로컬 규칙 기반 AI 보호자 분석
+8. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
+9. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+10. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+11. 상황별 신고·상담 연락처와 말할 내용 확인
+12. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+13. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
+14. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
+15. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
 
 ## Share Entry
 
 The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plain`). A user can share a suspicious Kakao/SMS/memo text into the app; after consent, the checker opens with the shared text pre-filled. This does not add SMS, contact, call, microphone, or internet permissions.
+
+## Quick Stop Mode (긴급 멈춤 모드)
+
+홈 맨 위의 "긴급 멈춤 모드"는 겁이 나거나 판단하기 어려운 순간을 위한 수동 첫 대응 화면입니다.
+먼저 대화를 멈추고, 확인 전에는 돈·개인정보·인증번호를 주거나 앱을 설치하지 않으며, 상대가
+알려준 새 번호나 링크가 아닌 평소 가족 번호 또는 공식 경로로 직접 확인하는 3단계를 크게
+보여줍니다. `QuickStopModeBuilder`는 현재 `ScamAnalysis?`의 위험도·탐지 신호와 값 없는
+`FamilyReadiness`만 사용해 같은 입력에 항상 같은 추천 카드 순서를 만듭니다.
+
+추천과 모든 행동 카드는 기존 가족 콜백 확인 카드·가족 안전 계획·의심 내용 검사/현재 결과·안전
+흐름 길잡이·긴급 대응 센터·계정/기기 잠금 체크리스트·증거 보존 체크리스트·신고/상담 연락처·
+가족 경고 메시지 팩으로 이동합니다. 공식 도움, 증거 보존, 계정 보호 문구를 새 화면에 다시
+구현하지 않습니다. 분석이 없으면 멈춤, 직접 검사, 가족 콜백을 먼저 안내하고, 송금·인증정보·
+원격제어·안전계좌 같은 고위험 신호에는 긴급 대응·증거·공식 도움을, 가족/딥페이크/번호 변경
+신호에는 가족 콜백을 앞에, 링크/스미싱 신호에는 현재 분석·증거·가족 경고·공식 도움을
+결정적으로 추천합니다. 준비도가 낮으면 가족 콜백 카드에서 안전 계획을 시작하거나 보완하도록
+차분히 안내합니다.
+
+이 화면은 로컬 전용·무상태 수동 안내입니다. 버튼 선택, 공유 이력, 체크 상태를 저장하지 않고
+화면을 열거나 버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다. 문자·통화·연락처를
+읽거나 감시하지 않고, 받는 사람을 고르거나 메시지를 자동 전송하지 않으며, 네트워크 호출이나 새
+Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"는 사용자가 직접 눌렀을 때만
+`ACTION_SEND`의 `text/plain` 공유 화면을 열고 빌더가 만든 `QuickStopMode.familyShareSummary`만
+전달합니다. 공유문에는 일반 멈춤 안내와 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서,
+안전 질문·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값을 넣지
+않습니다.
 
 ## Safety Flow Router (안전 흐름 길잡이)
 
@@ -101,7 +128,7 @@ Android 권한을 사용하지 않습니다. 계정 복구, 사기 차단, 피�
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -424,6 +451,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Quick Stop Mode is deterministic, local-only, stateless manual first-response guidance; it reads no contacts, auto-sends nothing, stores no button/check/share state, never mutates incident logs automatically, shares only its builder-produced generic route summary, and adds no Android permissions.
 - The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.
 - The Account & Device Lockdown Checklist is deterministic, local-only, stateless manual guidance; it does not change device or account settings, mutate incident logs, or add permissions, and its user-triggered text share contains only static section/action labels rather than analysis or safety-plan values.
 - The Family Alert Message Pack is deterministic, local-only, and stateless; it uses analysis signals and secret-free readiness only, reads no contacts, never auto-sends, stores no template selection or share history, never mutates incident logs, and shares only builder-produced privacy-safe text without adding network use or Android permissions.
