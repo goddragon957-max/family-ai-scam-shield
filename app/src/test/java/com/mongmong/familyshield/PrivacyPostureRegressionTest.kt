@@ -669,6 +669,191 @@ class PrivacyPostureRegressionTest {
         assertFalse(recoveryPlanShareHelper.contains("SmsManager"))
     }
 
+    @Test
+    fun trustedHelperHandoffIsStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderMessage() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/TrustedHelperHandoffCard.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val handoffScreen = activitySource
+            .substringAfter("private fun LinearLayout.trustedHelperHandoffScreen")
+            .substringBefore("private fun openTrustedHelperAction")
+        val handoffActionRouter = activitySource
+            .substringAfter("private fun openTrustedHelperAction")
+            .substringBefore("private fun shareTrustedHelperHandoff")
+        val handoffShareHelper = activitySource
+            .substringAfter("private fun shareTrustedHelperHandoff")
+            .substringBefore("private fun LinearLayout.title")
+        val normalizedActionRouter = handoffActionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+
+        assertTrue(activitySource.contains("TRUSTED_HELPER_HANDOFF"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.TRUSTED_HELPER_HANDOFF -> trustedHelperHandoffScreen()"
+            )
+        )
+        assertTrue(
+            homeScreen.contains(
+                "secondaryButton(\"보호자 도움 요청 카드\") { show(Screen.TRUSTED_HELPER_HANDOFF) }"
+            )
+        )
+
+        assertTrue(handoffScreen.contains("TrustedHelperHandoffBuilder.build("))
+        assertTrue(handoffScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            handoffScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(handoffScreen.contains("card.recommendedCards"))
+        assertTrue(handoffScreen.contains("card.cards"))
+        assertTrue(
+            handoffScreen.contains(
+                "shareTrustedHelperHandoff(card.handoffShareMessage)"
+            )
+        )
+        assertTrue(handoffScreen.contains("primaryButton(\"보호자에게 도움 요청 공유\")"))
+        assertTrue(handoffScreen.contains("secondaryButton(\"홈으로\")"))
+        assertFalse(handoffScreen.contains("analysis.input"))
+        assertFalse(handoffScreen.contains("IncidentPreviewRedactor"))
+        assertFalse(handoffScreen.contains("incidents.add("))
+        assertFalse(handoffScreen.contains("incidents.clear("))
+        assertFalse(handoffScreen.contains("prefs.edit("))
+        assertFalse(handoffScreen.contains("safetyPlan.save("))
+        assertFalse(handoffScreen.contains("CheckBox("))
+        assertFalse(handoffScreen.contains("EditText("))
+        assertFalse(handoffScreen.contains("currentAnalysis ="))
+        assertFalse(handoffScreen.contains(".save("))
+        assertFalse(handoffScreen.contains("putString("))
+        assertFalse(handoffScreen.contains("putBoolean("))
+
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.QUICK_STOP -> show(Screen.QUICK_STOP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.FAMILY_CALLBACK_CARD -> " +
+                    "openFamilyCallbackCard(currentAnalysis)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.CHECKER -> show(Screen.CHECKER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.ANALYSIS_RESULT -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.SAFETY_PLAN -> show(Screen.PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.RESPONSE_CENTER -> openResponseCenter()"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.EVIDENCE_KIT -> openEvidenceKit(null)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                    "openHelpDirectory(Screen.TRUSTED_HELPER_HANDOFF)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.REPORT_PREP -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.NEW_ANALYSIS -> show(Screen.CHECKER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.TIMELINE_BRIEFING -> show(Screen.TIMELINE_BRIEFING)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "TrustedHelperActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)"
+            )
+        )
+        assertFalse(handoffActionRouter.contains("dial("))
+        assertFalse(handoffActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(handoffActionRouter.contains("Intent.ACTION_CALL"))
+
+        val handoffShareArguments = Regex("shareTrustedHelperHandoff\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("card.handoffShareMessage"), handoffShareArguments)
+        assertTrue(handoffShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(handoffShareHelper.contains("type = \"text/plain\""))
+        assertTrue(handoffShareHelper.contains("putExtra(Intent.EXTRA_TEXT, message)"))
+        assertTrue(handoffShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, message\\)")
+                .findAll(handoffShareHelper)
+                .count()
+        )
+        assertFalse(handoffShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(handoffShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(handoffShareHelper.contains("ClipData"))
+        assertFalse(handoffShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(handoffShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(handoffShareHelper.contains("ScamAnalysis"))
+        assertFalse(handoffShareHelper.contains("currentAnalysis"))
+        assertFalse(handoffShareHelper.contains("analysis.input"))
+        assertFalse(handoffShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(handoffShareHelper.contains("SafetyPlan"))
+        assertFalse(handoffShareHelper.contains("incidents"))
+        assertFalse(handoffShareHelper.contains("ContactsContract"))
+        assertFalse(handoffShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile

@@ -20,7 +20,7 @@ class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
-        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN
+        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -120,6 +120,7 @@ class MainActivity : Activity() {
                 Screen.FAMILY_ALERT_MESSAGES -> familyAlertMessagePackScreen()
                 Screen.QUICK_STOP -> quickStopModeScreen()
                 Screen.RECOVERY_PLAN -> recoveryPlan24hScreen()
+                Screen.TRUSTED_HELPER_HANDOFF -> trustedHelperHandoffScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -166,6 +167,7 @@ class MainActivity : Activity() {
         secondaryButton("24시간 수습 계획") { show(Screen.RECOVERY_PLAN) }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
+        secondaryButton("보호자 도움 요청 카드") { show(Screen.TRUSTED_HELPER_HANDOFF) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
@@ -1470,6 +1472,106 @@ class MainActivity : Activity() {
             append(advice.callbackPrompt)
         }.trim()
         section("AI 보호자 방지 루틴", body)
+    }
+
+    private fun LinearLayout.trustedHelperHandoffScreen() {
+        val card = TrustedHelperHandoffBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = card.recommendedCardIds.toSet()
+
+        title(card.title)
+        subtitle(card.intro)
+        section(
+            card.recommendationTitle,
+            buildString {
+                append(card.recommendationExplanation)
+                append("\n\n")
+                append(
+                    card.recommendedCards.joinToString("\n") { helper ->
+                        "• ${helper.label} · ${helper.urgency.label}"
+                    }
+                )
+            }
+        )
+
+        card.cards.forEach { helper ->
+            val recommended = helper.id in recommendedIds
+            val heading = buildString {
+                if (recommended) append("추천 · ")
+                append(helper.label)
+                append(" · ")
+                append(helper.urgency.label)
+            }
+            section(
+                heading,
+                buildString {
+                    append("도와줄 사람\n")
+                    append(helper.audience)
+                    append("\n\n왜 필요한가요?\n")
+                    append(helper.whyItMatters)
+                    append("\n\n부탁할 일\n")
+                    helper.askSteps.forEachIndexed { index, step ->
+                        append(index + 1).append(". ").append(step).append('\n')
+                    }
+                    append("\n부탁하지 마세요\n")
+                    helper.doNotAskNotes.forEach { note -> append("• ").append(note).append('\n') }
+                }.trim()
+            )
+            if (recommended) {
+                primaryButton(helper.primaryAction.label) { openTrustedHelperAction(helper.primaryAction) }
+            } else {
+                secondaryButton(helper.primaryAction.label) { openTrustedHelperAction(helper.primaryAction) }
+            }
+            helper.secondaryActions.forEach { action ->
+                secondaryButton(action.label) { openTrustedHelperAction(action) }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            card.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("보호자에게 도움 요청 공유") {
+            shareTrustedHelperHandoff(card.handoffShareMessage)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openTrustedHelperAction(action: TrustedHelperAction) {
+        when (action.id) {
+            TrustedHelperActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            TrustedHelperActionId.FAMILY_CALLBACK_CARD -> openFamilyCallbackCard(currentAnalysis)
+            TrustedHelperActionId.CHECKER -> show(Screen.CHECKER)
+            TrustedHelperActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            TrustedHelperActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            TrustedHelperActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            TrustedHelperActionId.RESPONSE_CENTER -> openResponseCenter()
+            TrustedHelperActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            TrustedHelperActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            TrustedHelperActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.TRUSTED_HELPER_HANDOFF)
+            TrustedHelperActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            TrustedHelperActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
+            TrustedHelperActionId.FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)
+            TrustedHelperActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            TrustedHelperActionId.TIMELINE_BRIEFING -> show(Screen.TIMELINE_BRIEFING)
+            TrustedHelperActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun shareTrustedHelperHandoff(message: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, message)
+        }
+        startActivity(Intent.createChooser(shareIntent, "보호자에게 도움 요청 공유"))
     }
 
     private fun LinearLayout.title(textValue: String) = addView(TextView(this@MainActivity).apply {
