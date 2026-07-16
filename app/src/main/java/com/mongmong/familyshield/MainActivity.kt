@@ -17,7 +17,7 @@ import android.widget.TextView
 import android.widget.Toast
 
 class MainActivity : Activity() {
-    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, DRILL }
+    private enum class Screen { ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, DRILL, SAMPLES }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
@@ -26,6 +26,7 @@ class MainActivity : Activity() {
     private var pendingSharedText: String? = null
     private var selectedIncidentSituation: IncidentSituation? = null
     private var selectedDrillScenario: DrillScenario? = null
+    private var selectedSampleCategory: ScamSampleCategory? = null
 
     private val defaultCallbackScript =
         "1. 전화를 끊고 저장된 가족 번호로 다시 겁니다.\n" +
@@ -99,6 +100,7 @@ class MainActivity : Activity() {
                 Screen.PLAN -> safetyPlanScreen()
                 Screen.RESPONSE_CENTER -> responseCenter()
                 Screen.DRILL -> drillScreen()
+                Screen.SAMPLES -> sampleLibraryScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -143,6 +145,7 @@ class MainActivity : Activity() {
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
+        secondaryButton("샘플로 AI 분석 연습") { openSampleLibrary() }
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/182 또는 은행 지급정지")
@@ -316,6 +319,42 @@ class MainActivity : Activity() {
                 "통과 체크리스트",
                 drill.passChecklist.joinToString("\n") { "• $it" }
             )
+        }
+
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openSampleLibrary() {
+        selectedSampleCategory = null
+        show(Screen.SAMPLES)
+    }
+
+    private fun LinearLayout.sampleLibraryScreen() {
+        title("샘플로 AI 분석 연습")
+        subtitle("실제 사기 문자가 없어도, 앱에 내장된 연습용 가상 메시지로 AI 보호자 분석을 안전하게 연습할 수 있습니다.")
+        section(
+            "개인정보 보호",
+            "샘플은 모두 앱에 내장된 연습용 가상 메시지입니다. 어떤 샘플을 골랐는지 저장하지 않으며, " +
+                "결과 화면에서 ‘사건 기록에 저장’을 직접 누르기 전에는 사건 기록에 남지 않습니다."
+        )
+        section("연습 방법", ScamSampleLibrary.FICTION_NOTICE + "\n샘플을 고르면 가상 메시지와 의심 포인트를 먼저 보여주고, 같은 내용을 AI 보호자 분석으로 확인할 수 있습니다.")
+
+        ScamSampleCategory.entries.forEach { category ->
+            secondaryButton(category.label) {
+                selectedSampleCategory = category
+                show(Screen.SAMPLES)
+            }
+        }
+
+        val category = selectedSampleCategory
+        if (category != null) {
+            val sample = ScamSampleLibrary.build(category)
+            section(sample.title, sample.sampleText)
+            section("왜 의심스러운가요?", sample.learningNote)
+            primaryButton("이 샘플로 AI 보호자 분석하기") {
+                currentAnalysis = ScamAnalyzer.analyze(sample.sampleText)
+                show(Screen.RESULT)
+            }
         }
 
         secondaryButton("홈으로") { show(Screen.HOME) }
