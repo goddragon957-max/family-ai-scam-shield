@@ -9,9 +9,10 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 3. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
 4. 로컬 규칙 기반 AI 보호자 분석
 5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-6. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-7. 상황별 신고·상담 연락처와 말할 내용 확인
-8. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+6. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+7. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+8. 상황별 신고·상담 연락처와 말할 내용 확인
+9. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 
 ## Share Entry
 
@@ -29,6 +30,28 @@ The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plai
 저장된 번호로 바로 전화(`ACTION_DIAL`, 통화 권한 요청 없음)할 수 있도록 안내합니다.
 계획이 없으면 결과 화면에 계획 생성 CTA가 표시됩니다. 모든 데이터는
 `SharedPreferences`에만 저장되며 기기 밖으로 전송되지 않습니다.
+
+## Family Callback Verification Card (가족 콜백 확인 카드)
+
+홈의 "가족 콜백 루틴 확인" 또는 AI 분석 결과의 "가족 콜백 확인 카드"에서 여는
+임시 실행 카드입니다. `FamilyCallbackCardBuilder`가 현재 `ScamAnalysis?`와 사용자가 직접
+저장한 `SafetyPlan`만 입력으로 받아 위험 요약, 가족 준비도, 안전 확인 질문, 순서가 있는 콜백
+단계, 확인 전 금지 행동을 결정적으로 만듭니다. 홈에서 열면 이전 분석을 재사용하지 않는 안전한
+빈 상태와 분석 시작 CTA를 보여주며, 계획이 부족하면 가족 안전 계획 설정을 먼저 안내합니다.
+
+분석이 있는 카드의 화면 단서는 반드시 `IncidentPreviewRedactor.buildPrivacySafeClue`를 거쳐
+전화번호, 계좌형 긴 숫자, 인증번호(OTP/PIN), 링크·도메인, 신분정보를 가립니다. 이 카드는
+`SharedPreferences`나 다른 저장소에 저장하지 않고 사건 기록을 자동으로 추가하거나 수정하지도
+않습니다. 가족 준비 상태는 별도 계산을 만들지 않고 기존 `FamilyReadinessBuilder` 결과를 그대로
+사용합니다.
+
+전화 버튼은 연락처 앱에서 읽어온 번호가 아니라 가족 안전 계획에 사용자가 수동으로 입력한
+번호가 있는 신뢰 연락처만 표시합니다. Android `ACTION_DIAL`로 전화 앱만 열고 통화를 자동으로
+시작하지 않으며 연락처나 통화 권한을 요청하지 않습니다. 공유 버튼은 Android `ACTION_SEND`의
+`text/plain`만 사용합니다. 공유문은 붙여넣은 원문과 화면의 가림 단서, 저장된 안전 질문·콜백
+스크립트·연락처 라벨, 신뢰 연락처 전체 번호, 계좌·비밀번호·OTP/PIN 값, 링크·신분정보를
+포함하지 않고 "앱에 저장된 가족 안전 질문과 연락처를 사용하세요"라는 일반 안내만 전달합니다.
+모든 카드 생성은 기기 안에서 수행되며 네트워크 업로드나 새 Android 권한을 사용하지 않습니다.
 
 ## AI Guardian Advice
 
@@ -276,6 +299,7 @@ run and result.
 - No server and no network analysis.
 - The Official Help Directory uses static on-device guidance and performs no network lookup.
 - The Official Report Prep Card is derived only from the current local analysis, redacts its on-screen clue, omits all pasted-text excerpts from sharing, is not stored, and never mutates incident logs automatically.
+- The Family Callback Verification Card is derived transiently from the current local analysis and manually saved safety plan, uses a privacy-redacted on-screen clue, is not stored, never mutates incident logs, and shares no raw/clue/safe-question/callback-script/contact-number secrets.
 - No automatic SMS/call monitoring.
 - No automatic evidence capture or upload; the evidence kit is static local guidance and stores no selection or completion state.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.

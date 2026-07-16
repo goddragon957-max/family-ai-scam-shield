@@ -19,13 +19,14 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
-        HELP_DIRECTORY, REPORT_PREP
+        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
     private val safetyPlan by lazy { SafetyPlanStore(this) }
     private var currentAnalysis: ScamAnalysis? = null
+    private var callbackCardAnalysis: ScamAnalysis? = null
     private var pendingSharedText: String? = null
     private var selectedIncidentSituation: IncidentSituation? = null
     private var selectedEvidenceSituation: IncidentSituation? = null
@@ -109,6 +110,7 @@ class MainActivity : Activity() {
                 Screen.SAMPLES -> sampleLibraryScreen()
                 Screen.HELP_DIRECTORY -> helpDirectoryScreen()
                 Screen.REPORT_PREP -> officialReportPrepScreen()
+                Screen.CALLBACK_CARD -> familyCallbackCardScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -153,6 +155,7 @@ class MainActivity : Activity() {
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
+        secondaryButton("가족 콜백 루틴 확인") { openFamilyCallbackCard(null) }
         secondaryButton("신고용 상담 준비 카드") { show(Screen.REPORT_PREP) }
         secondaryButton("샘플로 AI 분석 연습") { openSampleLibrary() }
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
@@ -212,6 +215,7 @@ class MainActivity : Activity() {
         aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
         familyPlanSection()
+        primaryButton("가족 콜백 확인 카드") { openFamilyCallbackCard(analysis) }
         section(
             "긴급 대응",
             "이미 돈을 보냈다면 즉시 은행 지급정지와 112 또는 1394 신고를 진행하세요. 원격제어를 허용했다면 " +
@@ -426,6 +430,78 @@ class MainActivity : Activity() {
 
         primaryButton("가족에게 상담 준비 카드 공유") { shareOfficialReportPrep(prep) }
         secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openFamilyCallbackCard(analysis: ScamAnalysis?) {
+        callbackCardAnalysis = analysis
+        show(Screen.CALLBACK_CARD)
+    }
+
+    private fun LinearLayout.familyCallbackCardScreen() {
+        val analysis = callbackCardAnalysis
+        val card = FamilyCallbackCardBuilder.build(analysis, safetyPlan.load())
+
+        title(card.title)
+        subtitle("의심 대화를 멈추고, 새로 받은 번호가 아닌 가족 안전 계획에 직접 저장한 번호로 확인하세요.")
+        section(
+            if (analysis == null) "분석 전 콜백 루틴" else "위험 요약",
+            card.riskSummary
+        )
+        if (analysis != null) {
+            card.redactedClue?.let { clue ->
+                section("개인정보 가림 단서", clue)
+            }
+        }
+
+        val readiness = card.readiness
+        val readinessBody = buildString {
+            readiness.checklist.forEach { item ->
+                append(if (item.done) "✔ " else "☐ ").append(item.label).append('\n')
+            }
+            append("\n다음 할 일: ").append(readiness.nextAction)
+        }
+        section(
+            "${readiness.title} (${readiness.completedCount}/${readiness.totalCount})",
+            readinessBody
+        )
+        section("가족 안전 질문", card.safeWordPrompt)
+        section(
+            "저장된 번호로 확인하는 순서",
+            card.callbackSteps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
+        )
+
+        if (card.dialableContacts.isEmpty()) {
+            section(
+                "저장된 콜백 번호 없음",
+                "의심 메시지나 통화에서 새로 알려준 번호를 믿지 말고, 가족 안전 계획에 신뢰 연락처를 직접 저장한 뒤 확인하세요."
+            )
+        } else {
+            section(
+                "저장된 신뢰 연락처",
+                "가족 안전 계획에 직접 저장한 번호만 표시합니다. 버튼을 눌러도 통화를 자동으로 걸지 않고 전화 앱만 엽니다."
+            )
+            card.dialableContacts.forEach { contact ->
+                val label = contact.label.ifBlank { "저장된 가족 번호" }
+                secondaryButton("$label 전화 앱에서 열기 (${contact.number})") { dial(contact.number) }
+            }
+        }
+
+        section("확인 전에는 하지 마세요", card.guardrails.joinToString("\n") { "• $it" })
+        section("개인정보·안전 안내", card.privacySafetyNotes.joinToString("\n") { "• $it" })
+
+        if (card.needsSafetyPlanSetup) {
+            primaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
+        }
+        if (analysis == null) {
+            primaryButton("AI 보호자 분석하기") { show(Screen.CHECKER) }
+        }
+        primaryButton("가족에게 콜백 확인 요약 공유") {
+            shareFamilyCallbackCard(card.familyShareSummary)
+        }
+        if (analysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -686,6 +762,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, prep.familyShareSummary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 상담 준비 카드 공유"))
+    }
+
+    private fun shareFamilyCallbackCard(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 콜백 확인 카드")
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 콜백 확인 요약 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {
