@@ -22,7 +22,8 @@ class MainActivity : Activity() {
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
-        EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD
+        EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD,
+        FAMILY_CALM_DEBRIEF_AGENDA
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -129,12 +130,155 @@ class MainActivity : Activity() {
                 Screen.EXPOSURE_IMPACT_TRIAGE -> exposureImpactTriageScreen()
                 Screen.FOLLOW_UP_CHECK_IN_PLANNER -> followUpCheckInPlannerScreen()
                 Screen.FAMILY_RESPONSE_ROLE_BOARD -> familyResponseRoleBoardScreen()
+                Screen.FAMILY_CALM_DEBRIEF_AGENDA -> familyCalmDebriefAgendaScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.familyCalmDebriefAgendaScreen() {
+        val agenda = FamilyCalmDebriefAgendaBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = agenda.recommendedCardIds.toSet()
+
+        title(agenda.title)
+        subtitle(agenda.intro)
+        section(
+            agenda.durationLabel,
+            "타이머나 기록 없이 아래 순서를 가족이 직접 읽고, 필요한 기존 앱 경로만 골라 이어가세요."
+        )
+        section(
+            agenda.recommendationTitle,
+            buildString {
+                append(agenda.recommendationExplanation)
+                append("\n\n먼저 이야기할 안건\n")
+                append(
+                    agenda.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.title} · ${card.category.label}"
+                    }
+                )
+                append("\n\n먼저 이어갈 앱 경로\n")
+                append(
+                    agenda.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        agenda.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openFamilyCalmDebriefAction(action) }
+            } else {
+                secondaryButton(action.label) { openFamilyCalmDebriefAction(action) }
+            }
+        }
+
+        section(
+            "전체 5분 대화 순서",
+            "여섯 안건은 항상 같은 순서로 한 번씩 표시됩니다. 현재 로컬 분석 신호, 값 없는 가족 준비 수준, 저장 사건 유무에 맞는 항목만 추천으로 표시하며 대화 답변이나 진행 상태는 남지 않습니다."
+        )
+        agenda.agendaCards.forEach { card ->
+            familyCalmDebriefCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·안전 안내",
+            agenda.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 차분 대화 순서 공유") {
+            shareFamilyCalmDebriefAgenda(agenda.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.familyCalmDebriefCard(
+        card: FamilyCalmDebriefCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+            append(" · ")
+            append(card.category.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("함께 말하거나 할 일\n")
+                append(card.whatToSayOrDo)
+                append("\n\n묻거나 저장·공유하지 않을 것\n")
+                card.whatNotToAskStoreOrShare.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openFamilyCalmDebriefAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openFamilyCalmDebriefAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openFamilyCalmDebriefAction(action) }
+        }
+    }
+
+    private fun openFamilyCalmDebriefAction(action: FamilyCalmDebriefAction) {
+        when (action.id) {
+            FamilyCalmDebriefActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            FamilyCalmDebriefActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            FamilyCalmDebriefActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FamilyCalmDebriefActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FamilyCalmDebriefActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FamilyCalmDebriefActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            FamilyCalmDebriefActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            FamilyCalmDebriefActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            FamilyCalmDebriefActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            FamilyCalmDebriefActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            FamilyCalmDebriefActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            FamilyCalmDebriefActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            FamilyCalmDebriefActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            FamilyCalmDebriefActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            FamilyCalmDebriefActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            FamilyCalmDebriefActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            FamilyCalmDebriefActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            FamilyCalmDebriefActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            FamilyCalmDebriefActionId.CHECKER -> show(Screen.CHECKER)
+            FamilyCalmDebriefActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+        }
+    }
+
+    private fun shareFamilyCalmDebriefAgenda(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 차분 대화 순서 공유"))
     }
 
     private fun LinearLayout.familyResponseRoleBoardScreen() {
@@ -196,6 +340,9 @@ class MainActivity : Activity() {
             "개인정보·안전 안내",
             board.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
         )
+        secondaryButton("역할을 나눈 뒤 5분 가족 대화") {
+            show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
         primaryButton("가족에게 역할 보드 공유") {
             shareFamilyResponseRoleBoard(board.familyShareSummary)
         }
@@ -336,6 +483,9 @@ class MainActivity : Activity() {
         secondaryButton("보호자 도움 요청 카드") { show(Screen.TRUSTED_HELPER_HANDOFF) }
         secondaryButton("보호자와 함께 안전 검토") { show(Screen.TRUSTED_HELPER_REVIEW) }
         secondaryButton("가족 역할 나눠 대응하기") { show(Screen.FAMILY_RESPONSE_ROLE_BOARD) }
+        secondaryButton("5분 가족 차분 대화하기") {
+            show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
         secondaryButton("안전 확인 전화 스크립트") { show(Screen.SAFE_CALL_SCRIPTS) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
@@ -424,6 +574,9 @@ class MainActivity : Activity() {
             "개인정보·안전 안내",
             mode.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
         )
+        secondaryButton("멈춘 뒤 5분 가족 대화") {
+            show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
         primaryButton("가족에게 멈춤 안내 공유") {
             shareQuickStopSummary(mode.familyShareSummary)
         }
@@ -822,6 +975,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("이 신호로 가족 역할 나누기") {
             show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+        }
+        secondaryButton("이 신호로 5분 가족 대화하기") {
+            show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
         }
         secondaryButton("이 신호로 후속 점검 보기") {
             show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
@@ -1821,6 +1977,9 @@ class MainActivity : Activity() {
         secondaryButton("가족 역할 보드로 이어가기") {
             show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
         }
+        secondaryButton("함께 본 뒤 5분 가족 대화") {
+            show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
         primaryButton("가족에게 보호자 검토 요약 공유") {
             shareTrustedHelperReview(review.familyShareSummary)
         }
@@ -2685,6 +2844,9 @@ class MainActivity : Activity() {
         )
         secondaryButton("가족 역할 나눠 후속 대응하기") {
             show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+        }
+        secondaryButton("가족 차분 대화로 약속 정하기") {
+            show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
         }
         primaryButton("가족에게 후속 점검 공유") {
             shareFollowUpCheckInPlanner(planner.familyShareSummary)

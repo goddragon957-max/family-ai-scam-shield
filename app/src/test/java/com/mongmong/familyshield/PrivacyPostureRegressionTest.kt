@@ -2617,6 +2617,305 @@ class PrivacyPostureRegressionTest {
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
+    @Test
+    fun familyCalmDebriefAgendaIsPureStatelessManualAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/FamilyCalmDebriefAgenda.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.familyCalmDebriefCard",
+            "private fun openFamilyCalmDebriefAction",
+            "private fun shareFamilyCalmDebriefAgenda"
+        ).forEach { marker ->
+            assertTrue("family debrief source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val homeScreen = functionBlock(activitySource, "private fun LinearLayout.home()")
+        val resultScreen = functionBlock(activitySource, "private fun LinearLayout.result()")
+        val quickStopScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.quickStopModeScreen"
+        )
+        val helperReviewScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.trustedHelperReviewModeScreen"
+        )
+        val followUpScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.followUpCheckInPlannerScreen"
+        )
+        val roleBoardScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familyResponseRoleBoardScreen"
+        )
+        val agendaScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familyCalmDebriefCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openFamilyCalmDebriefAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareFamilyCalmDebriefAgenda"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction"
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "family debrief model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+
+        assertTrue(activitySource.contains("FAMILY_CALM_DEBRIEF_AGENDA"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.FAMILY_CALM_DEBRIEF_AGENDA -> familyCalmDebriefAgendaScreen()"
+            )
+        )
+        listOf(
+            homeScreen,
+            resultScreen,
+            quickStopScreen,
+            helperReviewScreen,
+            followUpScreen,
+            roleBoardScreen
+        ).forEachIndexed { index, entryScreen ->
+            assertTrue(
+                "family debrief entry route missing at index $index",
+                entryScreen.contains("show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)")
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:calmDebrief|debriefAgenda|selectedAgenda|" +
+                    "selectedDebrief|debriefProgress|debriefHistory|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:CALM_DEBRIEF|DEBRIEF_AGENDA|SELECTED_AGENDA|" +
+                    "DEBRIEF_PROGRESS|DEBRIEF_HISTORY|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(agendaScreen.contains("FamilyCalmDebriefAgendaBuilder.build("))
+        assertTrue(agendaScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            agendaScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(agendaScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(agendaScreen.contains("incidents.load("))
+        assertTrue(agendaScreen.contains("title(agenda.title)"))
+        assertTrue(agendaScreen.contains("subtitle(agenda.intro)"))
+        assertTrue(agendaScreen.contains("agenda.durationLabel"))
+        assertTrue(agendaScreen.contains("agenda.recommendationTitle"))
+        assertTrue(agendaScreen.contains("agenda.recommendationExplanation"))
+        assertTrue(agendaScreen.contains("agenda.recommendedActions"))
+        assertTrue(agendaScreen.contains("agenda.privacySafetyNotes"))
+        assertTrue(
+            agendaScreen.contains(
+                "shareFamilyCalmDebriefAgenda(agenda.familyShareSummary)"
+            )
+        )
+        assertTrue(agendaScreen.contains("primaryButton(\"가족에게 차분 대화 순서 공유\")"))
+        assertTrue(agendaScreen.contains("secondaryButton(\"홈으로\")"))
+
+        assertEquals(
+            1,
+            Regex("agenda\\.agendaCards\\.forEach")
+                .findAll(agendaScreen)
+                .count()
+        )
+        assertTrue(agendaScreen.contains("recommended = card.id in recommendedIds"))
+        assertFalse(agendaScreen.contains("remainingCards"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.category",
+            "card.whatToSayOrDo",
+            "card.whatNotToAskStoreOrShare",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("family debrief UI omitted $field", cardRenderer.contains(field))
+        }
+
+        val statelessUiSource = agendaScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "CheckBox(",
+            "EditText(",
+            "RadioButton(",
+            "Switch(",
+            "selectedAgenda",
+            "selectedDebrief",
+            "debriefProgress",
+            "debriefHistory",
+            "checkmark",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenState ->
+            assertFalse(
+                "family debrief UI used forbidden state/value: $forbiddenState",
+                statelessUiSource.contains(forbiddenState, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "RECOVERY_PLAN" to "show(Screen.RECOVERY_PLAN)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "INCIDENT_TIMELINE_BRIEFING" to "show(Screen.TIMELINE_BRIEFING)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "family debrief route omitted action: $actionId",
+                normalizedActionRouter.contains("FamilyCalmDebriefActionId.$actionId ->")
+            )
+            assertTrue(
+                "family debrief route omitted destination for $actionId: $destination",
+                normalizedActionRouter.contains(destination)
+            )
+        }
+        assertFalse(actionRouter.contains("dial("))
+        assertFalse(actionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(actionRouter.contains("Intent.ACTION_CALL"))
+
+        val shareArguments = Regex("shareFamilyCalmDebriefAgenda\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("agenda.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 차분 대화 순서 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "ContactsContract",
+            "SmsManager"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "family debrief share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        listOf(
+            "ContactsContract",
+            "SmsManager",
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ForegroundService",
+            "BroadcastReceiver"
+        ).forEach { forbiddenApi ->
+            assertFalse(
+                "family debrief used forbidden API: $forbiddenApi",
+                activitySource.contains(forbiddenApi) || modelSource.contains(forbiddenApi)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
     private fun functionBlock(source: String, marker: String): String {
         val start = source.indexOf(marker)
         require(start >= 0) { "Source marker missing: $marker" }

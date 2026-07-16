@@ -174,6 +174,10 @@ class PrivacyCenterBuilderTest {
             "역할 선택",
             "체크 표시",
             "역할 보드 이력",
+            "가족 차분 대화 안건",
+            "안건·카드 선택",
+            "대화 답변",
+            "대화 이력",
             "가족 콜백 카드",
             "상담 준비 카드",
             "체크리스트",
@@ -225,8 +229,27 @@ class PrivacyCenterBuilderTest {
         )
         assertTrue(
             transientCopy.contains(
+                "가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·" +
+                    "읽음·진행·공유·대화 이력"
+            )
+        )
+        assertTrue(
+            transientCopy.contains(
                 "가족 대응 역할 보드"
             ) && transientCopy.contains("사건 기록을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            transientCopy.contains("가족 차분 대화 안건") &&
+                transientCopy.contains("무상태 수동 안내") &&
+                transientCopy.contains("새 권한·네트워크") &&
+                transientCopy.contains("연락처") &&
+                transientCopy.contains("읽거나 감시하지 않") &&
+                transientCopy.contains("자동 전송하지 않습니다")
+        )
+        assertTrue(
+            transientCopy.contains("가족 차분 대화 안건 화면") &&
+                transientCopy.contains("안건·경로·공유 버튼") &&
+                transientCopy.contains("사건 기록을 추가·수정·삭제하지 않습니다")
         )
         assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
@@ -264,7 +287,24 @@ class PrivacyCenterBuilderTest {
             )
         )
         assertTrue(
+            summary.contains(
+                "가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·" +
+                    "읽음·진행·공유·대화 이력"
+            )
+        )
+        assertTrue(
             summary.contains("가족 대응 역할 보드") &&
+                summary.contains("사건 기록을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("가족 차분 대화 안건") &&
+                summary.contains("새 권한·네트워크") &&
+                summary.contains("무상태 수동 안내") &&
+                summary.contains("연락처·메시지·통화를 읽거나 감시하지 않") &&
+                summary.contains("자동 전송하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("안건·경로·공유 버튼") &&
                 summary.contains("사건 기록을 추가·수정·삭제하지 않습니다")
         )
 

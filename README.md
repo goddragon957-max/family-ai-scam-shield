@@ -29,6 +29,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 23. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
 24. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
 25. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
+26. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
 
 ## Share Entry
 
@@ -178,6 +179,45 @@ Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"
 행동 라벨과 비밀값 없는 일반 인계 문장만 포함하며 붙여넣은 원문, 개인정보 가림 단서, 안전 계획
 값, 가족 이름, 전체 전화번호, 계좌·비밀번호·OTP/PIN, URL/도메인, 주민등록번호와 비슷한 값을
 포함하지 않습니다.
+
+## Family Calm Debrief Agenda (가족 차분 대화 안건)
+
+홈의 "5분 가족 차분 대화하기", 현재 분석 결과의 "이 신호로 5분 가족 대화하기", 긴급 멈춤,
+가족 역할 보드, 보호자 검토와 후속 점검 화면에서 무서운 연락 뒤 가족이 누구를 탓하지 않고 짧게
+상황을 정리할 수 있습니다. `FamilyCalmDebriefAgendaBuilder`는 현재 `ScamAnalysis?`의 위험도와
+일치 신호, 실제 안전 질문·콜백 문장·연락처 값이 없는 `FamilyReadiness`의 수준, 저장 사건의
+개수에서 사건 유무만 사용해 같은 입력 범주에 항상 같은 안건과 추천 순서를 만듭니다. 분석 원문,
+개인정보 가림 단서, 안전 계획 실제 값, 사건별 내용은 읽거나 표시하지 않습니다.
+
+고정된 여섯 안건은 비난 없이 안정시키기, 돈·정보·앱 행동 멈춤 확인, 행동 종류만 말하기, 가족
+본인확인·별도 콜백 정하기, 계정·기기·증거·공식 도움 경로 고르기, 며칠 뒤 다시 확인할 약속을
+말로 정하기입니다. 각 카드는 함께 말하거나 할 일, 묻거나 저장·공유하지 않을 것, 기존 화면으로
+이동하는 주요·보조 버튼을 보여줍니다. 고위험·금융·인증·긴급 송금 신호는 계정·기기 보호·증거·
+공식 도움·후속 점검, 앱 설치·통화 유지 신호는 계정·기기·증거·보호자 검토, 링크·스미싱은 노출
+분류·증거·가족 경고·개인정보·후속 점검, 가족·목소리 합성·번호 변경은 별도 콜백·가족 경고,
+비밀 유지·기관 사칭은 멈춤·노출 분류·공식 도움을 결정적으로 추천합니다. 저장 사건이 있으면
+내용을 읽지 않고 증거·타임라인·후속 점검만 보태며, 준비가 낮거나 진행 중이면 콜백·준비 로드맵·
+안전 연습·후속 점검을 보탭니다. 분석이나 일치 신호가 없어도 괜찮다는 판정으로 부르지 않고
+멈춤·행동 종류·별도 콜백·후속 약속을 보수적으로 보여줍니다.
+
+이 기능은 채팅 감시, 작업 관리, 일기나 타이머가 아니라 가족이 옆에서 직접 읽는 로컬 전용·무상태
+수동 대화 안내입니다. 가족 이름·연락처·정확한 전화번호·비밀번호·OTP/PIN·안전 질문 답·계좌·
+카드·신분정보·원문·URL/도메인·메모를 묻거나 저장하지 않습니다. 안건·카드 선택, 대화 답변·메모,
+담당자·날짜, 체크·완료·점수·읽음·진행 상태, 공유 이력·대화 이력을 저장하지 않으며 화면을 열거나
+안건·경로·공유 버튼을 눌러도 사건 기록을 추가·수정·삭제하지 않습니다. 문자·메시지·통화·연락처·
+계정·기기를 읽거나 감시하지 않고 받는 사람을 고르거나 메시지를 자동으로 보내지 않으며, 네트워크나
+새 Android 권한을 사용하지 않습니다. 알림·알람·캘린더 일정·리마인더·작업·서비스·백그라운드
+워커를 만들거나 예약하지 않습니다.
+
+모든 행동 버튼은 기존 긴급 멈춤·노출 영향 분류·보호자 검토·검사/현재 결과·가족 콜백·안전 확인
+전화·역할 보드·가족 경고·준비 로드맵·안전 연습·후속 점검·24시간 수습·계정 잠금·증거 보존·
+공식 도움·신고 준비·사건 타임라인·안전 흐름·개인정보 센터로 이동할 뿐 관련 기능을 복제하거나
+자동 실행하지 않습니다. 링크 검사, 악성 프로그램 제거, 계정·카드 조치, 피해금 회수, 법률·금융
+결과나 안전을 보장하지 않습니다. "가족에게 차분 대화 순서 공유"는 사용자가 직접 누를 때만
+Android `ACTION_SEND`의 `text/plain` 공유 화면을 열고 빌더가 만든 `familyShareSummary`만
+전달합니다. 공유문은 일반 안건·범주와 현재 추천된 기존 앱 경로·행동 라벨만 포함하며 분석 원문, 가린 단서,
+안전 계획 값, 연락처·전화·계좌·비밀번호·OTP/PIN·URL/도메인·주민등록번호와 비슷한 값을 포함하지
+않습니다.
 
 ## Trusted Helper Handoff Card (보호자 도움 요청 카드)
 
@@ -385,7 +425,7 @@ Android 권한을 사용하지 않습니다. 계정 복구, 사기 차단, 피�
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 안전 흐름 선택, 노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·공유·보호자 검토 이력, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 안전 흐름 선택, 노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·공유·보호자 검토 이력, 후속 점검의 시점 선택·답변·메모·완료·진행·공유 이력, 가족 역할 보드의 이름·담당자·역할 선택·체크·메모·완료·진행·공유 이력, 가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·읽음·진행·공유·대화 이력, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -746,6 +786,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Family Calm Debrief Agenda is a deterministic, local-only, stateless, blame-free five-minute conversation guide—not chat monitoring, a task tracker, a diary, or a timer. It uses only current risk/signals, readiness level, and saved-incident presence; reads no pasted text, redacted clue, safety-plan value, incident body, contact/message/call/account/device; adds no permission or network use; auto-sends and schedules nothing; stores no agenda/card selection, answer, note, name, assignment, date, check/completion/score/read/progress/share/debrief history; and never mutates incidents. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic agenda/category and recommended route/action labels, excluding pasted text, clues, plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - Family Response Role Board is deterministic, local-only, value-less, stateless manual coordination through eight generic roles rather than named assignments. It creates or schedules no notifications, alarms, calendar entries, jobs, workers, background services, or reminders; adds no permissions or network use; reads or monitors no contacts/messages/calls/accounts/devices; auto-sends nothing; stores no names, assignments, role selections, checkmarks, notes, completion/score/read/progress/share/board history; and never mutates incidents. Its user-triggered text share passes only the builder-produced role/category/action labels and generic handoff sentences, excluding pasted text, redacted clues, safety-plan values, family names, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - Follow-up Check-in Planner is deterministic, local-only, stateless manual guidance for family checks after a suspicious contact and beyond the immediate response. It creates or schedules no notifications, alarms, calendar entries, jobs, workers, background services, or reminders; adds no permissions or network use; reads or monitors no contacts/messages/calls/accounts/devices; auto-sends nothing; stores no selected checkpoint, answer, note, reminder schedule, completion/check/score/read/progress/share/follow-up history; and never mutates incidents. Its user-triggered text share passes only the builder-produced checkpoint/category/action labels and generic manual steps, excluding pasted text, redacted clues, safety-plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - Trusted Helper Review Mode is deterministic, local-only, value-less, and stateless guidance for a trusted helper sitting beside the user; it asks only action/information categories, never passwords, OTP/PIN/card secrets, safe-word answers, exact contact/account/identity values, links, or raw scam text. It reads or monitors no contacts/messages/calls, auto-sends nothing, stores no selected card/helper answer/helper note/completion/check/score/read/progress/share/review history, never mutates incidents, adds no permissions or network use, and its user-triggered text share passes only builder-produced stage/category/card/action labels and generic first safe moves.
