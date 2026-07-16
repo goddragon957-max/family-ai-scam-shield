@@ -157,6 +157,9 @@ class PrivacyCenterBuilderTest {
             "긴급 멈춤 모드",
             "버튼 선택",
             "안전 흐름 선택",
+            "노출 영향 분류",
+            "노출 선택",
+            "노출 이력",
             "가족 콜백 카드",
             "상담 준비 카드",
             "체크리스트",
@@ -181,6 +184,11 @@ class PrivacyCenterBuilderTest {
         assertTrue(
             transientCopy.contains(
                 "가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력"
+            )
+        )
+        assertTrue(
+            transientCopy.contains(
+                "노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력"
             )
         )
         assertTrue(

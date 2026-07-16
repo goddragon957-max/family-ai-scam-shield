@@ -873,7 +873,7 @@ class PrivacyPostureRegressionTest {
             .substringBefore("private fun shareSafeCallScriptsSummary")
         val safeScriptsShareHelper = activitySource
             .substringAfter("private fun shareSafeCallScriptsSummary")
-            .substringBefore("private val match")
+            .substringBefore("private fun LinearLayout.exposureImpactTriageScreen")
         val normalizedActionRouter = safeScriptsActionRouter.replace(Regex("\\s+"), " ")
 
         assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
@@ -1560,6 +1560,241 @@ class PrivacyPostureRegressionTest {
         assertFalse(roadmapShareHelper.contains("incidents"))
         assertFalse(roadmapShareHelper.contains("ContactsContract"))
         assertFalse(roadmapShareHelper.contains("SmsManager"))
+    }
+
+    @Test
+    fun exposureImpactTriageIsPureStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/ExposureImpactTriage.kt"
+        )
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val resultScreen = activitySource
+            .substringAfter("private fun LinearLayout.result()")
+            .substringBefore("private fun LinearLayout.incidentLog")
+        val triageScreen = activitySource
+            .substringAfter("private fun LinearLayout.exposureImpactTriageScreen")
+            .substringBefore("private fun LinearLayout.exposureImpactTriageCard")
+        val triageCardRenderer = activitySource
+            .substringAfter("private fun LinearLayout.exposureImpactTriageCard")
+            .substringBefore("private fun openExposureImpactTriageAction")
+        val triageActionRouter = activitySource
+            .substringAfter("private fun openExposureImpactTriageAction")
+            .substringBefore("private fun shareExposureImpactTriage")
+        val triageShareHelper = activitySource
+            .substringAfter("private fun shareExposureImpactTriage")
+            .substringBefore("private val match")
+        val normalizedHomeScreen = homeScreen.replace(Regex("\\s+"), " ")
+        val normalizedResultScreen = resultScreen.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = triageActionRouter.replace(Regex("\\s+"), " ")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.incidentLog",
+            "private fun shareSafeCallScriptsSummary",
+            "private fun LinearLayout.exposureImpactTriageScreen",
+            "private fun LinearLayout.exposureImpactTriageCard",
+            "private fun openExposureImpactTriageAction",
+            "private fun shareExposureImpactTriage",
+            "private val match"
+        ).forEach { marker ->
+            assertTrue("exposure triage source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+        assertFalse(modelSource.contains("SafetyPlan"))
+        assertFalse(modelSource.contains("SafetyPlanStore"))
+
+        assertTrue(activitySource.contains("EXPOSURE_IMPACT_TRIAGE"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.EXPOSURE_IMPACT_TRIAGE -> exposureImpactTriageScreen()"
+            )
+        )
+        assertTrue(
+            normalizedHomeScreen.contains(
+                "secondaryButton(\"무엇이 노출됐는지 고르기\") { " +
+                    "show(Screen.EXPOSURE_IMPACT_TRIAGE) }"
+            )
+        )
+        assertTrue(
+            normalizedResultScreen.contains(
+                "secondaryButton(\"이 신호로 노출 가능성 확인\") { " +
+                    "show(Screen.EXPOSURE_IMPACT_TRIAGE) }"
+            )
+        )
+        assertTrue(homeScreen.indexOf("지금 뭐부터 할지 고르기") >= 0)
+        assertTrue(
+            homeScreen.indexOf("무엇이 노출됐는지 고르기") >
+                homeScreen.indexOf("지금 뭐부터 할지 고르기")
+        )
+        assertTrue(
+            homeScreen.indexOf("24시간 수습 계획") >
+                homeScreen.indexOf("무엇이 노출됐는지 고르기")
+        )
+        assertTrue(resultScreen.indexOf("탐지 신호 설명 보기") >= 0)
+        assertTrue(
+            resultScreen.indexOf("이 신호로 노출 가능성 확인") >
+                resultScreen.indexOf("탐지 신호 설명 보기")
+        )
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:exposure|impact|triage)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "(?m)^\\s*private\\s+var[^\\n]*ExposureImpact"
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex("KEY_\\w*(?:EXPOSURE|IMPACT|TRIAGE)\\w*")
+                .containsMatchIn(activitySource)
+        )
+
+        assertTrue(triageScreen.contains("ExposureImpactTriageBuilder.build("))
+        assertTrue(triageScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            triageScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(triageScreen.contains("title(triage.title)"))
+        assertTrue(triageScreen.contains("subtitle(triage.intro)"))
+        assertTrue(triageScreen.contains("triage.recommendationTitle"))
+        assertTrue(triageScreen.contains("triage.recommendationExplanation"))
+        assertTrue(triageScreen.contains("triage.recommendedActions"))
+        assertTrue(triageScreen.contains("triage.privacySafetyNotes"))
+        assertTrue(
+            triageScreen.contains(
+                "shareExposureImpactTriage(triage.familyShareSummary)"
+            )
+        )
+        assertTrue(triageScreen.contains("primaryButton(\"가족에게 노출 분류 공유\")"))
+        assertTrue(triageScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")"))
+        assertTrue(triageScreen.contains("secondaryButton(\"홈으로\")"))
+        val recommendedRenderIndex = triageScreen.indexOf("triage.recommendedCards.forEach")
+        val remainingRenderIndex =
+            triageScreen.indexOf("val remainingCards = triage.cards.filterNot")
+        assertTrue(recommendedRenderIndex >= 0)
+        assertTrue(remainingRenderIndex > recommendedRenderIndex)
+        assertEquals(
+            1,
+            Regex("triage\\.recommendedCards\\.forEach")
+                .findAll(triageScreen)
+                .count()
+        )
+
+        listOf(
+            "card.category",
+            "card.label",
+            "card.whenThisMightApply",
+            "card.firstSafeMove",
+            "card.whatToAvoid",
+            "card.officialHelpPrepNotes",
+            "card.priority",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("exposure triage UI omitted $field", triageCardRenderer.contains(field))
+        }
+
+        val statelessUiSource = triageScreen + triageCardRenderer + triageActionRouter
+        assertFalse(statelessUiSource.contains("analysis.input"))
+        assertFalse(statelessUiSource.contains("IncidentPreviewRedactor"))
+        assertFalse(statelessUiSource.contains("plan.safeWord"))
+        assertFalse(statelessUiSource.contains("plan.callbackScript"))
+        assertFalse(statelessUiSource.contains("plan.contacts"))
+        assertFalse(statelessUiSource.contains("incidents.add("))
+        assertFalse(statelessUiSource.contains("incidents.clear("))
+        assertFalse(statelessUiSource.contains("prefs.edit("))
+        assertFalse(statelessUiSource.contains("safetyPlan.save("))
+        assertFalse(statelessUiSource.contains("CheckBox("))
+        assertFalse(statelessUiSource.contains("EditText("))
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+        assertFalse(statelessUiSource.contains("selectedExposure"))
+        assertFalse(statelessUiSource.contains("selectedTriage"))
+        assertFalse(statelessUiSource.contains(".save("))
+        assertFalse(statelessUiSource.contains("putString("))
+        assertFalse(statelessUiSource.contains("putBoolean("))
+
+        listOf(
+            "ExposureImpactActionId.QUICK_STOP -> show(Screen.QUICK_STOP)",
+            "ExposureImpactActionId.CHECKER -> show(Screen.CHECKER)",
+            "ExposureImpactActionId.ANALYSIS_RESULT -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "ExposureImpactActionId.RISK_SIGNAL_EXPLAINERS -> " +
+                "show(Screen.RISK_SIGNAL_EXPLAINERS)",
+            "ExposureImpactActionId.FAMILY_CALLBACK_CARD -> " +
+                "openFamilyCallbackCard(currentAnalysis)",
+            "ExposureImpactActionId.FAMILY_READINESS_ROADMAP -> " +
+                "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "ExposureImpactActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)",
+            "ExposureImpactActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)",
+            "ExposureImpactActionId.EVIDENCE_KIT -> " +
+                "openEvidenceKit(action.evidenceSituation)",
+            "ExposureImpactActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                "openHelpDirectory(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "ExposureImpactActionId.REPORT_PREP -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "ExposureImpactActionId.RESPONSE_CENTER -> " +
+                "openResponseCenter(action.responseSituation)",
+            "ExposureImpactActionId.FAMILY_ALERT_MESSAGES -> " +
+                "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "ExposureImpactActionId.TRUSTED_HELPER_HANDOFF -> " +
+                "show(Screen.TRUSTED_HELPER_HANDOFF)",
+            "ExposureImpactActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)",
+            "ExposureImpactActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)",
+            "ExposureImpactActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)"
+        ).forEach { route ->
+            assertTrue("exposure impact route omitted: $route", normalizedActionRouter.contains(route))
+        }
+        assertFalse(triageActionRouter.contains("dial("))
+        assertFalse(triageActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(triageActionRouter.contains("Intent.ACTION_CALL"))
+        assertFalse(triageActionRouter.contains("Intent.ACTION_SEND"))
+
+        val shareArguments = Regex("shareExposureImpactTriage\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("triage.familyShareSummary"), shareArguments)
+        assertTrue(triageShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(triageShareHelper.contains("type = \"text/plain\""))
+        assertTrue(triageShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(triageShareHelper.contains("Intent.createChooser"))
+        assertTrue(triageShareHelper.contains("가족에게 노출 분류 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(triageShareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(triageShareHelper).count())
+        assertFalse(triageShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(triageShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(triageShareHelper.contains("ClipData"))
+        assertFalse(triageShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(triageShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(triageShareHelper.contains("ScamAnalysis"))
+        assertFalse(triageShareHelper.contains("currentAnalysis"))
+        assertFalse(triageShareHelper.contains("analysis.input"))
+        assertFalse(triageShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(triageShareHelper.contains("SafetyPlan"))
+        assertFalse(triageShareHelper.contains("incidents"))
+        assertFalse(triageShareHelper.contains("ContactsContract"))
+        assertFalse(triageShareHelper.contains("SmsManager"))
     }
 
     private fun readProjectFile(relativePath: String): String {

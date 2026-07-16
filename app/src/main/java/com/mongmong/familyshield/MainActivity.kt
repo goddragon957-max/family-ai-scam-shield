@@ -21,7 +21,8 @@ class MainActivity : Activity() {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
-        SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP
+        SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
+        EXPOSURE_IMPACT_TRIAGE
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -124,6 +125,7 @@ class MainActivity : Activity() {
                 Screen.SAFE_CALL_SCRIPTS -> safeVerificationCallScriptsScreen()
                 Screen.RISK_SIGNAL_EXPLAINERS -> riskSignalExplainerScreen()
                 Screen.FAMILY_READINESS_ROADMAP -> familyReadinessRoadmapScreen()
+                Screen.EXPOSURE_IMPACT_TRIAGE -> exposureImpactTriageScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -167,6 +169,9 @@ class MainActivity : Activity() {
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
+        secondaryButton("무엇이 노출됐는지 고르기") {
+            show(Screen.EXPOSURE_IMPACT_TRIAGE)
+        }
         secondaryButton("24시간 수습 계획") { show(Screen.RECOVERY_PLAN) }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
@@ -646,6 +651,9 @@ class MainActivity : Activity() {
         }
         riskCard(analysis)
         secondaryButton("탐지 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
+        secondaryButton("이 신호로 노출 가능성 확인") {
+            show(Screen.EXPOSURE_IMPACT_TRIAGE)
+        }
         secondaryButton("이 신호로 가족 연습하기") { openDrill() }
         secondaryButton("이 상황 기준 준비 로드맵") { show(Screen.FAMILY_READINESS_ROADMAP) }
         actionPlanSection(analysis)
@@ -2154,6 +2162,149 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 전화 스크립트 공유"))
+    }
+
+    private fun LinearLayout.exposureImpactTriageScreen() {
+        val triage = ExposureImpactTriageBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = triage.recommendedExposureIds.toSet()
+
+        title(triage.title)
+        subtitle(triage.intro)
+        section(
+            triage.recommendationTitle,
+            buildString {
+                append(triage.recommendationExplanation)
+                append("\n\n먼저 직접 확인할 분류\n")
+                append(
+                    triage.recommendedCards.joinToString("\n") { card ->
+                        "• ${card.label} · ${card.category.label} · ${card.priority.label}"
+                    }
+                )
+                append("\n\n분석 신호는 실제 노출을 뜻하지 않습니다. 본인이 한 행동만 직접 확인하세요.")
+            }
+        )
+        triage.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openExposureImpactTriageAction(action) }
+            } else {
+                secondaryButton(action.label) { openExposureImpactTriageAction(action) }
+            }
+        }
+
+        section(
+            "추천 노출 분류",
+            "현재 로컬 분석 신호와 값 없는 가족 준비 수준에서 확인할 가능성을 먼저 보여드립니다. 추천은 실제 행동의 증거나 확정 판정이 아닙니다."
+        )
+        triage.recommendedCards.forEach { card ->
+            exposureImpactTriageCard(card, recommended = true)
+        }
+
+        val remainingCards = triage.cards.filterNot { card -> card.id in recommendedIds }
+        if (remainingCards.isNotEmpty()) {
+            section(
+                "나머지 노출 분류",
+                "추천과 관계없이 실제로 한 행동과 가까운 항목을 직접 확인할 수 있습니다. 선택과 확인 상태는 저장되지 않습니다."
+            )
+            remainingCards.forEach { card ->
+                exposureImpactTriageCard(card, recommended = false)
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            triage.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 노출 분류 공유") {
+            shareExposureImpactTriage(triage.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.exposureImpactTriageCard(
+        card: ExposureImpactCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.label)
+            append(" · ")
+            append(card.category.label)
+            append(" · ")
+            append(card.priority.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("언제 해당될 수 있나요?\n")
+                append(card.whenThisMightApply)
+                append("\n\n첫 안전 행동\n")
+                append(card.firstSafeMove)
+                append("\n\n피해 주세요\n")
+                card.whatToAvoid.forEach { note -> append("• ").append(note).append('\n') }
+                append("\n공식 도움 전에 준비\n")
+                card.officialHelpPrepNotes.forEach { note ->
+                    append("• ").append(note).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openExposureImpactTriageAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openExposureImpactTriageAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openExposureImpactTriageAction(action) }
+        }
+    }
+
+    private fun openExposureImpactTriageAction(action: ExposureImpactAction) {
+        when (action.id) {
+            ExposureImpactActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            ExposureImpactActionId.CHECKER -> show(Screen.CHECKER)
+            ExposureImpactActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            ExposureImpactActionId.RISK_SIGNAL_EXPLAINERS ->
+                show(Screen.RISK_SIGNAL_EXPLAINERS)
+            ExposureImpactActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            ExposureImpactActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            ExposureImpactActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            ExposureImpactActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            ExposureImpactActionId.EVIDENCE_KIT ->
+                openEvidenceKit(action.evidenceSituation)
+            ExposureImpactActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.EXPOSURE_IMPACT_TRIAGE)
+            ExposureImpactActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            ExposureImpactActionId.RESPONSE_CENTER ->
+                openResponseCenter(action.responseSituation)
+            ExposureImpactActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            ExposureImpactActionId.TRUSTED_HELPER_HANDOFF ->
+                show(Screen.TRUSTED_HELPER_HANDOFF)
+            ExposureImpactActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            ExposureImpactActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            ExposureImpactActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun shareExposureImpactTriage(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 노출 분류 공유"))
     }
 
     private val match = LinearLayout.LayoutParams.MATCH_PARENT
