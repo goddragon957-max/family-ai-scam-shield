@@ -22,11 +22,12 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 16. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
 17. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
 18. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
-19. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
-20. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
-21. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
-22. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
-23. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
+19. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
+20. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
+21. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
+22. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
+23. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
+24. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
 
 ## Share Entry
 
@@ -111,6 +112,36 @@ Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"
 `text/plain` 공유 화면을 열고 빌더가 만든 `RecoveryPlan24h.familyShareSummary`만 전달합니다.
 공유문에는 시간대 이름과 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서, 안전 질문·콜백
 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값은 넣지 않습니다.
+
+## Follow-up Check-in Planner (며칠 뒤 다시 확인할 것)
+
+홈과 현재 분석 결과, 24시간 수습 계획에서 의심 연락이나 노출 가능성이 있었던 뒤 가족이 며칠 동안
+직접 다시 확인할 항목을 차분히 볼 수 있습니다. `FollowUpCheckInPlannerBuilder`는 현재
+`ScamAnalysis?`의 위험도·일치 신호, 실제 안전 질문·콜백 문장·연락처 값이 없는
+`FamilyReadiness`, 저장된 사건의 개수만 사용해 같은 입력에 항상 같은 점검 카드와 추천 순서를
+만듭니다. 사건 원문이나 개인정보 가림 단서는 읽거나 표시하지 않습니다.
+
+고정된 점검 시점은 오늘 밤 다시 안정시키기, 내일 오전 금융·계정 확인, 2~3일 기기·메신저 관찰,
+이번 주 가족 경고·콜백 점검, 이번 주 공식 접수·증거 정리, 1~2주 명세·알림 재확인, 이번 달 가족
+준비 보강, 불안 재발 시 다시 멈춤입니다. 각 카드는 목적, 가족이 직접 할 일반 확인, 하지 말아야 할
+일과 기존 긴급 멈춤·노출 영향 분류·보호자 검토·가족 콜백·안전 확인 전화·가족 경고·24시간
+수습·계정 잠금·증거 보존·공식 도움·신고 준비·사건 타임라인·준비 로드맵·안전 연습·
+안전 흐름·개인정보 센터 화면으로 이동하는 버튼을 제공합니다. 분석 신호는 피해나 안전 여부의
+증거가 아니며, 점검은 앱의 자동 감시가 아니라 가족이 해당 시점에 직접 확인하는 안내입니다.
+
+이 화면은 로컬 전용·무상태 수동 안내입니다. 새 Android 권한이나 네트워크를 사용하지 않고
+문자·메시지·통화·연락처를 읽거나 감시하지 않으며 받는 사람을 고르거나 메시지를 자동으로 보내지
+않습니다. 알림, 알람, 캘린더 일정, 백그라운드 작업·서비스·워커를 만들거나 예약하지 않습니다.
+선택한 점검 시점, 답변·메모, 알림 일정, 완료·체크 상태, 점수, 읽음·진행 상태, 공유 이력이나 후속
+점검 이력을 저장하지 않고, 화면을 열거나 버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지
+않습니다. 계좌·기기·메시지를 자동 확인하거나 악성 앱 제거, 계정·카드 정지, 피해금 회수, 법률
+결과 또는 안전을 보장하지 않습니다.
+
+"가족에게 후속 점검 공유"는 사용자가 직접 누를 때만 Android `ACTION_SEND`의 `text/plain` 공유
+화면을 열고 빌더가 만든 `familyShareSummary`만 전달합니다. 공유문은 점검 시점·범주·기존 앱 행동
+라벨과 일반적인 수동 확인 단계만 포함하며 붙여넣은 원문, 개인정보 가림 단서, 안전 질문·콜백
+내용·연락처 값, 전체 전화번호, 계좌·비밀번호·OTP/PIN, URL/도메인, 주민등록번호와 비슷한 값을
+포함하지 않습니다.
 
 ## Trusted Helper Handoff Card (보호자 도움 요청 카드)
 
@@ -679,6 +710,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Follow-up Check-in Planner is deterministic, local-only, stateless manual guidance for family checks after a suspicious contact and beyond the immediate response. It creates or schedules no notifications, alarms, calendar entries, jobs, workers, background services, or reminders; adds no permissions or network use; reads or monitors no contacts/messages/calls/accounts/devices; auto-sends nothing; stores no selected checkpoint, answer, note, reminder schedule, completion/check/score/read/progress/share/follow-up history; and never mutates incidents. Its user-triggered text share passes only the builder-produced checkpoint/category/action labels and generic manual steps, excluding pasted text, redacted clues, safety-plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - Trusted Helper Review Mode is deterministic, local-only, value-less, and stateless guidance for a trusted helper sitting beside the user; it asks only action/information categories, never passwords, OTP/PIN/card secrets, safe-word answers, exact contact/account/identity values, links, or raw scam text. It reads or monitors no contacts/messages/calls, auto-sends nothing, stores no selected card/helper answer/helper note/completion/check/score/read/progress/share/review history, never mutates incidents, adds no permissions or network use, and its user-triggered text share passes only builder-produced stage/category/card/action labels and generic first safe moves.
 - Exposure Impact Triage is deterministic, local-only, stateless, non-diagnostic mapping guidance opened from "무엇이 노출됐는지 고르기"; matched signals indicate only conditional possibilities to verify directly, never proof that exposure or harm occurred. It adds no permissions or network use, reads or monitors no contacts/messages/calls, performs no automatic monitoring, auto-sends nothing, stores no exposure selection/answer/completion/check/score/read/progress/share/exposure history, never mutates incidents, and its user-triggered text share passes only the builder-produced safe summary of exposure/category/action labels and generic first safe moves.
 - Family Readiness Roadmap is deterministic, local-only, value-less, and stateless preparation guidance based only on current risk/signals and readiness level/counts; it reads or monitors no contacts/messages/calls, auto-sends nothing, stores no card selection/completion/check/score/read/progress/share/roadmap history, never mutates incidents, adds no permissions or network use, and shares only builder-produced stages, titles, existing action labels, and generic next steps.

@@ -22,7 +22,7 @@ class MainActivity : Activity() {
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
-        EXPOSURE_IMPACT_TRIAGE
+        EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -127,6 +127,7 @@ class MainActivity : Activity() {
                 Screen.RISK_SIGNAL_EXPLAINERS -> riskSignalExplainerScreen()
                 Screen.FAMILY_READINESS_ROADMAP -> familyReadinessRoadmapScreen()
                 Screen.EXPOSURE_IMPACT_TRIAGE -> exposureImpactTriageScreen()
+                Screen.FOLLOW_UP_CHECK_IN_PLANNER -> followUpCheckInPlannerScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -174,6 +175,9 @@ class MainActivity : Activity() {
             show(Screen.EXPOSURE_IMPACT_TRIAGE)
         }
         secondaryButton("24시간 수습 계획") { show(Screen.RECOVERY_PLAN) }
+        secondaryButton("며칠 뒤 다시 확인할 것") {
+            show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+        }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         secondaryButton("보호자 도움 요청 카드") { show(Screen.TRUSTED_HELPER_HANDOFF) }
@@ -578,6 +582,9 @@ class MainActivity : Activity() {
         primaryButton("가족에게 수습 계획 공유") {
             shareRecoveryPlanSummary(plan.familyShareSummary)
         }
+        secondaryButton("며칠 뒤 후속 점검 보기") {
+            show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+        }
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
         }
@@ -658,6 +665,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("이 신호로 보호자 검토 시작") {
             show(Screen.TRUSTED_HELPER_REVIEW)
+        }
+        secondaryButton("이 신호로 후속 점검 보기") {
+            show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
         }
         secondaryButton("이 신호로 가족 연습하기") { openDrill() }
         secondaryButton("이 상황 기준 준비 로드맵") { show(Screen.FAMILY_READINESS_ROADMAP) }
@@ -2456,6 +2466,153 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 노출 분류 공유"))
+    }
+
+    private fun LinearLayout.followUpCheckInPlannerScreen() {
+        val planner = FollowUpCheckInPlannerBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = planner.recommendedCheckpointIds.toSet()
+
+        title(planner.title)
+        subtitle(planner.intro)
+        section(
+            planner.recommendationTitle,
+            buildString {
+                append(planner.recommendationExplanation)
+                append("\n\n먼저 직접 확인할 시점\n")
+                append(
+                    planner.recommendedCheckpoints.joinToString("\n") { checkpoint ->
+                        "• ${checkpoint.timeLabel} · ${checkpoint.title} · ${checkpoint.priority.label}"
+                    }
+                )
+                append("\n\n먼저 이어갈 앱 행동\n")
+                append(
+                    planner.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+
+        section(
+            "추천 후속 점검",
+            "현재 로컬 분석 신호, 값 없는 가족 준비 수준, 저장 사건 개수만으로 먼저 볼 시점을 정했습니다. " +
+                "각 항목은 가족이 해당 시점에 직접 확인하며 선택과 완료 상태는 저장되지 않습니다."
+        )
+        planner.recommendedCheckpoints.forEach { checkpoint ->
+            followUpCheckInCard(checkpoint, recommended = true)
+        }
+
+        val remainingCheckpoints = planner.checkpoints.filterNot { checkpoint ->
+            checkpoint.id in recommendedIds
+        }
+        if (remainingCheckpoints.isNotEmpty()) {
+            section(
+                "나머지 후속 점검",
+                "추천과 관계없이 필요한 시점을 직접 살펴보세요. 앱이 계정·기기·메시지를 자동으로 확인한 결과가 아닙니다."
+            )
+            remainingCheckpoints.forEach { checkpoint ->
+                followUpCheckInCard(checkpoint, recommended = false)
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            planner.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 후속 점검 공유") {
+            shareFollowUpCheckInPlanner(planner.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.followUpCheckInCard(
+        checkpoint: FollowUpCheckpoint,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(checkpoint.timeLabel)
+            append(" · ")
+            append(checkpoint.title)
+            append(" · ")
+            append(checkpoint.category.label)
+            append(" · ")
+            append(checkpoint.priority.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("점검 목적\n")
+                append(checkpoint.purpose)
+                append("\n\n직접 확인할 일\n")
+                checkpoint.manualCheckSteps.forEachIndexed { index, step ->
+                    append(index + 1).append(". ").append(step).append('\n')
+                }
+                append("\n하지 마세요\n")
+                checkpoint.whatNotToDo.forEach { note ->
+                    append("• ").append(note).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(checkpoint.primaryAction.label) {
+                openFollowUpCheckInAction(checkpoint.primaryAction)
+            }
+        } else {
+            secondaryButton(checkpoint.primaryAction.label) {
+                openFollowUpCheckInAction(checkpoint.primaryAction)
+            }
+        }
+        checkpoint.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openFollowUpCheckInAction(action) }
+        }
+    }
+
+    private fun openFollowUpCheckInAction(action: FollowUpCheckInAction) {
+        when (action.id) {
+            FollowUpCheckInActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            FollowUpCheckInActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            FollowUpCheckInActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            FollowUpCheckInActionId.CHECKER -> show(Screen.CHECKER)
+            FollowUpCheckInActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            FollowUpCheckInActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FollowUpCheckInActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            FollowUpCheckInActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            FollowUpCheckInActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            FollowUpCheckInActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            FollowUpCheckInActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            FollowUpCheckInActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            FollowUpCheckInActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FollowUpCheckInActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FollowUpCheckInActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            FollowUpCheckInActionId.REPORT_PREP -> show(Screen.REPORT_PREP)
+            FollowUpCheckInActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            FollowUpCheckInActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            FollowUpCheckInActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun shareFollowUpCheckInPlanner(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 후속 점검 공유"))
     }
 
     private val match = LinearLayout.LayoutParams.MATCH_PARENT

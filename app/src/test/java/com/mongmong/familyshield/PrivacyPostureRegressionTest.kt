@@ -18,10 +18,14 @@ class PrivacyPostureRegressionTest {
             "android.permission.READ_CALL_LOG",
             "android.permission.READ_CONTACTS",
             "android.permission.RECORD_AUDIO",
-            "android.permission.INTERNET"
+            "android.permission.INTERNET",
+            "android.permission.POST_NOTIFICATIONS",
+            "android.permission.SCHEDULE_EXACT_ALARM",
+            "android.permission.RECEIVE_BOOT_COMPLETED"
         ).forEach { permission ->
             assertFalse("manifest declared forbidden permission: $permission", manifest.contains(permission))
         }
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
@@ -1587,7 +1591,7 @@ class PrivacyPostureRegressionTest {
             .substringBefore("private fun shareExposureImpactTriage")
         val triageShareHelper = activitySource
             .substringAfter("private fun shareExposureImpactTriage")
-            .substringBefore("private val match")
+            .substringBefore("private fun LinearLayout.followUpCheckInPlannerScreen")
         val normalizedHomeScreen = homeScreen.replace(Regex("\\s+"), " ")
         val normalizedResultScreen = resultScreen.replace(Regex("\\s+"), " ")
         val normalizedActionRouter = triageActionRouter.replace(Regex("\\s+"), " ")
@@ -2039,6 +2043,282 @@ class PrivacyPostureRegressionTest {
         assertFalse(reviewShareHelper.contains("incidents"))
         assertFalse(reviewShareHelper.contains("ContactsContract"))
         assertFalse(reviewShareHelper.contains("SmsManager"))
+    }
+
+    @Test
+    fun followUpCheckInPlannerIsPureStatelessManualAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/FollowUpCheckInPlanner.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.recoveryPlan24hScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.followUpCheckInCard",
+            "private fun openFollowUpCheckInAction",
+            "private fun shareFollowUpCheckInPlanner"
+        ).forEach { marker ->
+            assertTrue("follow-up planner source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val homeScreen = activitySource
+            .substringAfter("private fun LinearLayout.home()")
+            .substringBefore("private fun LinearLayout.quickStopModeScreen")
+        val resultScreen = activitySource
+            .substringAfter("private fun LinearLayout.result()")
+            .substringBefore("private fun LinearLayout.incidentLog")
+        val recoveryScreen = activitySource
+            .substringAfter("private fun LinearLayout.recoveryPlan24hScreen")
+            .substringBefore("private fun openRecoveryPlanAction")
+        val plannerScreen = activitySource
+            .substringAfter("private fun LinearLayout.followUpCheckInPlannerScreen")
+            .substringBefore("private fun LinearLayout.followUpCheckInCard")
+        val checkpointRenderer = activitySource
+            .substringAfter("private fun LinearLayout.followUpCheckInCard")
+            .substringBefore("private fun openFollowUpCheckInAction")
+        val actionRouter = activitySource
+            .substringAfter("private fun openFollowUpCheckInAction")
+            .substringBefore("private fun shareFollowUpCheckInPlanner")
+        val shareHelper = activitySource
+            .substringAfter("private fun shareFollowUpCheckInPlanner")
+            .substringBefore("\n    private val ")
+        val normalizedHomeScreen = homeScreen.replace(Regex("\\s+"), " ")
+        val normalizedResultScreen = resultScreen.replace(Regex("\\s+"), " ")
+        val normalizedRecoveryScreen = recoveryScreen.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+        assertFalse(modelSource.contains("SafetyPlan"))
+        assertFalse(modelSource.contains("SafetyPlanStore"))
+
+        assertTrue(activitySource.contains("FOLLOW_UP_CHECK_IN_PLANNER"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.FOLLOW_UP_CHECK_IN_PLANNER -> followUpCheckInPlannerScreen()"
+            )
+        )
+        assertTrue(
+            normalizedHomeScreen.contains(
+                "secondaryButton(\"며칠 뒤 다시 확인할 것\") { " +
+                    "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER) }"
+            )
+        )
+        assertTrue(
+            normalizedResultScreen.contains(
+                "secondaryButton(\"이 신호로 후속 점검 보기\") { " +
+                    "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER) }"
+            )
+        )
+        assertTrue(
+            normalizedRecoveryScreen.contains(
+                "secondaryButton(\"며칠 뒤 후속 점검 보기\") { " +
+                    "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER) }"
+            )
+        )
+        assertTrue(homeScreen.indexOf("24시간 수습 계획") >= 0)
+        assertTrue(
+            homeScreen.indexOf("며칠 뒤 다시 확인할 것") >
+                homeScreen.indexOf("24시간 수습 계획")
+        )
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:followUp|checkIn|checkpoint|reminder)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex("KEY_\\w*(?:FOLLOW_UP|CHECK_IN|CHECKPOINT|REMINDER)\\w*")
+                .containsMatchIn(activitySource)
+        )
+
+        assertTrue(plannerScreen.contains("FollowUpCheckInPlannerBuilder.build("))
+        assertTrue(plannerScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            plannerScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(
+            plannerScreen.contains("incidentCount = incidents.load().size") ||
+                plannerScreen.contains("incidentCount = incidents.load().count()") ||
+                plannerScreen.contains("incidentCount = incidents.count()")
+        )
+        assertTrue(plannerScreen.contains("title(planner.title)"))
+        assertTrue(plannerScreen.contains("subtitle(planner.intro)"))
+        assertTrue(plannerScreen.contains("planner.recommendationTitle"))
+        assertTrue(plannerScreen.contains("planner.recommendationExplanation"))
+        assertTrue(plannerScreen.contains("planner.recommendedActions"))
+        assertTrue(plannerScreen.contains("planner.privacySafetyNotes"))
+        assertTrue(
+            plannerScreen.contains(
+                "shareFollowUpCheckInPlanner(planner.familyShareSummary)"
+            )
+        )
+        assertTrue(plannerScreen.contains("primaryButton(\"가족에게 후속 점검 공유\")"))
+        assertTrue(plannerScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")"))
+        assertTrue(plannerScreen.contains("secondaryButton(\"홈으로\")"))
+        val recommendedRenderIndex =
+            plannerScreen.indexOf("planner.recommendedCheckpoints.forEach")
+        val remainingFilterIndex =
+            plannerScreen.indexOf("val remainingCheckpoints = planner.checkpoints.filterNot")
+        val remainingRenderIndex = plannerScreen.indexOf("remainingCheckpoints.forEach")
+        assertTrue(recommendedRenderIndex >= 0)
+        assertTrue(remainingFilterIndex > recommendedRenderIndex)
+        assertTrue(remainingRenderIndex > remainingFilterIndex)
+        assertEquals(
+            1,
+            Regex("planner\\.recommendedCheckpoints\\.forEach")
+                .findAll(plannerScreen)
+                .count()
+        )
+        assertEquals(
+            1,
+            Regex("remainingCheckpoints\\.forEach")
+                .findAll(plannerScreen)
+                .count()
+        )
+
+        listOf(
+            "checkpoint.timeLabel",
+            "checkpoint.category",
+            "checkpoint.title",
+            "checkpoint.purpose",
+            "checkpoint.manualCheckSteps",
+            "checkpoint.whatNotToDo",
+            "checkpoint.priority",
+            "checkpoint.primaryAction",
+            "checkpoint.secondaryActions"
+        ).forEach { field ->
+            assertTrue("follow-up planner UI omitted $field", checkpointRenderer.contains(field))
+        }
+
+        val statelessUiSource = plannerScreen + checkpointRenderer + actionRouter
+        assertFalse(statelessUiSource.contains("analysis.input"))
+        assertFalse(statelessUiSource.contains("IncidentPreviewRedactor"))
+        assertFalse(statelessUiSource.contains("incident.preview"))
+        assertFalse(statelessUiSource.contains("plan.safeWord"))
+        assertFalse(statelessUiSource.contains("plan.callbackScript"))
+        assertFalse(statelessUiSource.contains("plan.contacts"))
+        assertFalse(statelessUiSource.contains("incidents.add("))
+        assertFalse(statelessUiSource.contains("incidents.clear("))
+        assertFalse(statelessUiSource.contains("prefs.edit("))
+        assertFalse(statelessUiSource.contains("safetyPlan.save("))
+        assertFalse(statelessUiSource.contains("CheckBox("))
+        assertFalse(statelessUiSource.contains("EditText("))
+        assertFalse(statelessUiSource.contains("RadioButton("))
+        assertFalse(statelessUiSource.contains("Switch("))
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+        assertFalse(statelessUiSource.contains("selectedCheckpoint"))
+        assertFalse(statelessUiSource.contains("selectedCheckIn"))
+        assertFalse(statelessUiSource.contains("reminderSchedule"))
+        assertFalse(statelessUiSource.contains("onSaveInstanceState"))
+        assertFalse(statelessUiSource.contains(".save("))
+        assertFalse(statelessUiSource.contains("putString("))
+        assertFalse(statelessUiSource.contains("putBoolean("))
+        assertFalse(statelessUiSource.contains("putInt("))
+        assertFalse(statelessUiSource.contains("Intent.ACTION_SEND"))
+
+        listOf(
+            "QUICK_STOP -> show(Screen.QUICK_STOP)",
+            "EXPOSURE_IMPACT_TRIAGE -> show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "TRUSTED_HELPER_REVIEW -> show(Screen.TRUSTED_HELPER_REVIEW)",
+            "CHECKER -> show(Screen.CHECKER)",
+            "ANALYSIS_RESULT -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "FAMILY_CALLBACK_CARD -> openFamilyCallbackCard(currentAnalysis)",
+            "SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES -> show(Screen.FAMILY_ALERT_MESSAGES)",
+            "FAMILY_READINESS_ROADMAP -> show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH -> openDrill()",
+            "SAFETY_PLAN -> show(Screen.PLAN)",
+            "RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)",
+            "ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)",
+            "TIMELINE_BRIEFING -> show(Screen.TIMELINE_BRIEFING)",
+            "SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)",
+            "PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)"
+        ).forEach { route ->
+            assertTrue("follow-up planner route omitted: $route", normalizedActionRouter.contains(route))
+        }
+        assertTrue(normalizedActionRouter.contains("EVIDENCE_KIT ->"))
+        assertTrue(normalizedActionRouter.contains("openEvidenceKit("))
+        assertTrue(normalizedActionRouter.contains("OFFICIAL_HELP_DIRECTORY ->"))
+        assertTrue(
+            normalizedActionRouter.contains(
+                "openHelpDirectory(Screen.FOLLOW_UP_CHECK_IN_PLANNER)"
+            )
+        )
+        assertTrue(normalizedActionRouter.contains("REPORT_PREP ->"))
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FollowUpCheckInActionId.REPORT_PREP -> show(Screen.REPORT_PREP)"
+            )
+        )
+        assertFalse(actionRouter.contains("dial("))
+        assertFalse(actionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(actionRouter.contains("Intent.ACTION_CALL"))
+
+        val shareArguments = Regex("shareFollowUpCheckInPlanner\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("planner.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 후속 점검 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        assertFalse(shareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(shareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(shareHelper.contains("ClipData"))
+        assertFalse(shareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(shareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(shareHelper.contains("ScamAnalysis"))
+        assertFalse(shareHelper.contains("currentAnalysis"))
+        assertFalse(shareHelper.contains("analysis.input"))
+        assertFalse(shareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(shareHelper.contains("SafetyPlan"))
+        assertFalse(shareHelper.contains("incidents"))
+        assertFalse(shareHelper.contains("ContactsContract"))
+        assertFalse(shareHelper.contains("SmsManager"))
+
+        listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ForegroundService",
+            "BroadcastReceiver"
+        ).forEach { forbiddenApi ->
+            assertFalse(
+                "follow-up planner used forbidden scheduler API: $forbiddenApi",
+                activitySource.contains(forbiddenApi) || modelSource.contains(forbiddenApi)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
     private fun readProjectFile(relativePath: String): String {

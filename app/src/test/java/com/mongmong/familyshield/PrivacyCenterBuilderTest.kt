@@ -165,6 +165,10 @@ class PrivacyCenterBuilderTest {
             "답변",
             "메모",
             "보호자 검토 이력",
+            "후속 점검 계획",
+            "시점 선택",
+            "알림 일정",
+            "후속 점검 이력",
             "가족 콜백 카드",
             "상담 준비 카드",
             "체크리스트",
@@ -200,6 +204,12 @@ class PrivacyCenterBuilderTest {
             transientCopy.contains(
                 "보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·" +
                     "공유·보호자 검토 이력"
+            )
+        )
+        assertTrue(
+            transientCopy.contains(
+                "후속 점검 계획의 시점 선택·답변·메모·알림 일정·완료·체크·점수·읽음·진행·" +
+                    "공유·후속 점검 이력"
             )
         )
         assertTrue(
