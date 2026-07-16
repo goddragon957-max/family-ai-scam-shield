@@ -19,7 +19,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
-        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD
+        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -42,6 +42,7 @@ class MainActivity : Activity() {
 
     companion object {
         private const val KEY_PENDING_SHARED_TEXT = "pending_shared_text"
+        private const val KEY_CONSENTED = "consented"
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,7 +51,7 @@ class MainActivity : Activity() {
         if (savedInstanceState == null && !pendingSharedText.isNullOrBlank()) {
             clearSharedIntent()
         }
-        val consented = prefs.getBoolean("consented", false)
+        val consented = prefs.getBoolean(KEY_CONSENTED, false)
         val startScreen = when {
             !consented -> Screen.ONBOARDING
             pendingSharedText.isNullOrBlank() -> Screen.HOME
@@ -72,12 +73,12 @@ class MainActivity : Activity() {
         if (sharedText.isNullOrBlank()) {
             pendingSharedText = null
             clearSharedIntent()
-            show(if (prefs.getBoolean("consented", false)) Screen.HOME else Screen.ONBOARDING)
+            show(if (prefs.getBoolean(KEY_CONSENTED, false)) Screen.HOME else Screen.ONBOARDING)
             return
         }
         pendingSharedText = sharedText
         clearSharedIntent()
-        show(if (prefs.getBoolean("consented", false)) Screen.CHECKER else Screen.ONBOARDING)
+        show(if (prefs.getBoolean(KEY_CONSENTED, false)) Screen.CHECKER else Screen.ONBOARDING)
     }
 
     private fun extractSharedText(intent: Intent?): String? {
@@ -111,6 +112,7 @@ class MainActivity : Activity() {
                 Screen.HELP_DIRECTORY -> helpDirectoryScreen()
                 Screen.REPORT_PREP -> officialReportPrepScreen()
                 Screen.CALLBACK_CARD -> familyCallbackCardScreen()
+                Screen.PRIVACY_CENTER -> privacyCenterScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -141,7 +143,7 @@ class MainActivity : Activity() {
         addView(consentLocal)
         primaryButton("동의하고 시작") {
             if (consentFamily.isChecked && consentLocal.isChecked) {
-                prefs.edit().putBoolean("consented", true).apply()
+                prefs.edit().putBoolean(KEY_CONSENTED, true).apply()
                 show(if (pendingSharedText.isNullOrBlank()) Screen.HOME else Screen.CHECKER)
             } else {
                 toast("두 항목에 동의해야 시작할 수 있습니다.")
@@ -153,6 +155,7 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("가족 콜백 루틴 확인") { openFamilyCallbackCard(null) }
@@ -257,6 +260,75 @@ class MainActivity : Activity() {
             }
         }
         primaryButton("새 검사") { show(Screen.CHECKER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.privacyCenterScreen() {
+        val privacyCenter = PrivacyCenterBuilder.build(
+            plan = safetyPlan.load(),
+            incidentCount = incidents.count(),
+            consentAccepted = prefs.getBoolean(KEY_CONSENTED, false)
+        )
+
+        title(privacyCenter.title)
+        subtitle(privacyCenter.intro)
+        section(
+            "기기 안에 있는 데이터",
+            privacyCenter.localDataInventoryItems.joinToString("\n\n") { item ->
+                "• ${item.title} · ${item.status}\n${item.detail}"
+            }
+        )
+        section(
+            "권한 상태",
+            privacyCenter.permissionStatusItems.joinToString("\n\n") { item ->
+                "• ${item.title} · ${item.status}\n${item.detail}"
+            }
+        )
+        section(
+            "수집하지 않는 정보·하지 않는 일",
+            privacyCenter.noCollectionStatements.joinToString("\n") { "• $it" }
+        )
+        section(
+            "개인정보 안내",
+            privacyCenter.privacyNotes.joinToString("\n") { "• $it" }
+        )
+        section(
+            "항목별 데이터 정리",
+            privacyCenter.cleanupActions.joinToString("\n\n") { action ->
+                "• ${action.label}\n${action.description}"
+            }
+        )
+
+        val incidentCleanup = privacyCenter.cleanupActions.single {
+            it.id == PrivacyCleanupActionId.INCIDENT_LOGS
+        }
+        secondaryButton(incidentCleanup.label) {
+            incidents.clear()
+            toast("사건 기록 저장 영역만 비웠습니다.")
+            show(Screen.PRIVACY_CENTER)
+        }
+
+        val safetyPlanCleanup = privacyCenter.cleanupActions.single {
+            it.id == PrivacyCleanupActionId.SAFETY_PLAN
+        }
+        secondaryButton(safetyPlanCleanup.label) {
+            safetyPlan.clear()
+            toast("가족 안전 계획 저장 영역만 비웠습니다.")
+            show(Screen.PRIVACY_CENTER)
+        }
+
+        val consentCleanup = privacyCenter.cleanupActions.single {
+            it.id == PrivacyCleanupActionId.ONBOARDING_CONSENT
+        }
+        secondaryButton(consentCleanup.label) {
+            prefs.edit().remove(KEY_CONSENTED).apply()
+            toast("시작 동의 기록만 초기화했습니다. 다른 로컬 데이터는 그대로 남습니다.")
+            show(Screen.ONBOARDING)
+        }
+
+        primaryButton("가족에게 개인정보 요약 공유") {
+            sharePrivacySummary(privacyCenter.familyShareSummary)
+        }
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -771,6 +843,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 콜백 확인 요약 공유"))
+    }
+
+    private fun sharePrivacySummary(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 개인정보 요약")
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 개인정보 요약 공유"))
     }
 
     private fun LinearLayout.riskCard(analysis: ScamAnalysis) {

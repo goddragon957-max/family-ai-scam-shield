@@ -6,17 +6,50 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 
 1. 명시적 동의 온보딩
 2. 홈 대시보드
-3. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
-4. 로컬 규칙 기반 AI 보호자 분석
-5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-6. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
-7. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-8. 상황별 신고·상담 연락처와 말할 내용 확인
-9. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+3. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
+4. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
+5. 로컬 규칙 기반 AI 보호자 분석
+6. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
+7. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+8. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+9. 상황별 신고·상담 연락처와 말할 내용 확인
+10. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 
 ## Share Entry
 
 The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plain`). A user can share a suspicious Kakao/SMS/memo text into the app; after consent, the checker opens with the shared text pre-filled. This does not add SMS, contact, call, microphone, or internet permissions.
+
+## Privacy Center (개인정보 센터)
+
+홈의 "개인정보 센터"에서 현재 기기에 어떤 앱 데이터가 있는지 값 자체를 노출하지 않고 확인할
+수 있습니다. `PrivacyCenterBuilder`는 저장된 `SafetyPlan`, 사건 기록 개수, 시작 동의 여부와
+고정된 매니페스트 사실만 입력으로 사용하며 Android UI 객체나 현재 분석 원문을 받지 않습니다.
+화면의 로컬 데이터 목록은 다음 범위를 구분해 보여줍니다:
+
+- `family_shield` `SharedPreferences`에 저장된 시작 동의 여부 한 항목
+- `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
+- `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
+- 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+
+권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
+`INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
+열고 사용자가 직접 통화를 시작합니다. `android:allowBackup="false"`도 함께 표시하며, 이 기능을
+위해 매니페스트 권한을 추가하지 않습니다. 이 백업 설정은 클라우드 백업·복원을 허용하지 않지만,
+Android 12 이상에서는 제조사에 따라 기기 간 데이터 전송을 끌 수 없는 경우가 있으므로 새 기기의
+전송 설정도 함께 확인하도록 안내합니다.
+
+데이터 정리는 하나의 전체 삭제가 아니라 명시적으로 분리된 버튼으로만 진행됩니다. "사건 기록만
+삭제"는 안전 계획과 동의 기록을 남기고, "가족 안전 계획만 삭제"는 사건 기록과 동의 기록을
+남깁니다. "시작 동의 기록 초기화 (온보딩 다시 보기)"는 동의 플래그만 지운 뒤 즉시 온보딩을
+다시 표시하며 사건 기록과 안전 계획은 그대로 둡니다. 개인정보 센터에 들어오는 것만으로 어떤
+데이터도 자동 삭제하지 않습니다.
+
+"가족에게 개인정보 요약 공유"는 Android `ACTION_SEND`의 `text/plain`만 사용합니다. 공유문에는
+동의/안전 계획 유무, 준비도, 번호가 있는 연락처 수, 사건 개수, 권한 상태 같은 집계 정보만 들어가며
+안전단어, 콜백 스크립트, 연락처 이름·전체 번호, 사건 미리보기, 붙여넣은 원문, 계좌·비밀번호·
+OTP/PIN·링크·신분정보 값은 포함하지 않습니다. 사용자가 공유 앱을 골라 실제로 보낸 뒤에는 해당
+앱의 개인정보 처리 방침이 적용됩니다.
 
 ## Family Safety Plan
 
@@ -297,6 +330,9 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- The visible Privacy Center inventories consent, safety-plan readiness/contact count, incident count/retained fields, transient non-stored screens, and every intentionally absent permission without exposing saved values.
+- Privacy Center clearing is explicit and scoped: incident logs, the family safety plan, and onboarding consent are controlled independently; opening the screen never deletes data automatically.
+- The Privacy Center family explanation uses user-triggered `ACTION_SEND` `text/plain` with aggregate status only and excludes safety-plan values, incident previews, and pasted raw text.
 - The Official Help Directory uses static on-device guidance and performs no network lookup.
 - The Official Report Prep Card is derived only from the current local analysis, redacts its on-screen clue, omits all pasted-text excerpts from sharing, is not stored, and never mutates incident logs automatically.
 - The Family Callback Verification Card is derived transiently from the current local analysis and manually saved safety plan, uses a privacy-redacted on-screen clue, is not stored, never mutates incident logs, and shares no raw/clue/safe-question/callback-script/contact-number secrets.
