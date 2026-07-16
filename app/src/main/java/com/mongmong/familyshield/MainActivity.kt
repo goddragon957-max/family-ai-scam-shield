@@ -24,7 +24,7 @@ class MainActivity : Activity() {
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
         EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD,
         FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH, ACTIVE_CONTACT_EXIT_SCRIPTS,
-        MONEY_TRANSFER_PAUSE_GATE
+        MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -135,12 +135,154 @@ class MainActivity : Activity() {
                 Screen.SAFE_PASTE_PRIVACY_COACH -> safePastePrivacyCoachScreen()
                 Screen.ACTIVE_CONTACT_EXIT_SCRIPTS -> activeContactExitScriptsScreen()
                 Screen.MONEY_TRANSFER_PAUSE_GATE -> moneyTransferPauseGateScreen()
+                Screen.REMOTE_ACCESS_CUTOFF_COACH -> remoteAccessCutoffCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.remoteAccessCutoffCoachScreen() {
+        val coach = RemoteAccessCutoffCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n지금 직접 할 추천 중단 행동\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.cutoffSentence}"
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openRemoteAccessCutoffAction(action) }
+            } else {
+                secondaryButton(action.label) { openRemoteAccessCutoffAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 중단 카드",
+            "카드는 항상 같은 순서입니다. 현재 통화·채팅·화면공유와 설치 지시를 사용자가 직접 멈춘 뒤, " +
+                "민감한 계정 작업은 가능하면 별도 기기와 신뢰하는 보호자와 함께 진행하세요. " +
+                "선택·읽음·진행 상태는 남지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            remoteAccessCutoffCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 원격지시 중단 안내 공유") {
+            shareRemoteAccessCutoffCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("진행 중 연락 종료 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.remoteAccessCutoffCard(
+        card: RemoteAccessCutoffCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 할 중단 행동\n")
+                append(card.cutoffSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n하지 않을 것\n")
+                card.doNotDoBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openRemoteAccessCutoffAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openRemoteAccessCutoffAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openRemoteAccessCutoffAction(action) }
+        }
+    }
+
+    private fun openRemoteAccessCutoffAction(action: RemoteAccessCutoffAction) {
+        when (action.id) {
+            RemoteAccessCutoffActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            RemoteAccessCutoffActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            RemoteAccessCutoffActionId.CHECKER -> show(Screen.CHECKER)
+            RemoteAccessCutoffActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            RemoteAccessCutoffActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            RemoteAccessCutoffActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            RemoteAccessCutoffActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            RemoteAccessCutoffActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            RemoteAccessCutoffActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            RemoteAccessCutoffActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            RemoteAccessCutoffActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            RemoteAccessCutoffActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            RemoteAccessCutoffActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            RemoteAccessCutoffActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            RemoteAccessCutoffActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            RemoteAccessCutoffActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            RemoteAccessCutoffActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            RemoteAccessCutoffActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+        }
+    }
+
+    private fun shareRemoteAccessCutoffCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 원격지시 중단 안내 공유"))
     }
 
     private fun LinearLayout.moneyTransferPauseGateScreen() {
@@ -196,6 +338,9 @@ class MainActivity : Activity() {
         }
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("화면공유·원격지시도 끊기") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
         secondaryButton("진행 중 연락 종료 문장") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
@@ -289,6 +434,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        primaryButton("화면공유·원격지시 중단 코치") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         primaryButton("송금 전 멈춤 확인") { show(Screen.MONEY_TRANSFER_PAUSE_GATE) }
         section(
             "${scripts.modeLabel} · ${scripts.recommendationTitle}",
@@ -891,6 +1039,9 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        primaryButton("화면공유·원격지시 끊기") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         primaryButton("송금 전 멈춤 확인") { show(Screen.MONEY_TRANSFER_PAUSE_GATE) }
         primaryButton("지금 연락 끝내는 문장") { show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS) }
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
@@ -944,6 +1095,9 @@ class MainActivity : Activity() {
                 "${step.displayOrder}. ${step.instruction}"
             }
         )
+        primaryButton("화면공유·원격지시 중단 코치") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         primaryButton("송금·결제 전에 멈춤 확인") {
             show(Screen.MONEY_TRANSFER_PAUSE_GATE)
         }
@@ -1042,6 +1196,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("화면공유·원격지시 끊기") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         primaryButton("송금·결제 전에 멈춤 확인") {
             show(Screen.MONEY_TRANSFER_PAUSE_GATE)
         }
@@ -1197,6 +1354,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("화면공유·원격지시 먼저 끊기") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         secondaryButton("송금·결제 전에 멈춤 확인") {
             show(Screen.MONEY_TRANSFER_PAUSE_GATE)
         }
@@ -1283,6 +1443,9 @@ class MainActivity : Activity() {
 
         title(plan.title)
         subtitle(plan.intro)
+        secondaryButton("화면공유·원격지시 먼저 끊기") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         secondaryButton("송금 전 멈춤 확인") { show(Screen.MONEY_TRANSFER_PAUSE_GATE) }
         section(
             plan.recommendationTitle,
@@ -1414,6 +1577,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 상황에서 화면공유·원격지시 끊기") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         primaryButton("이 요청에 돈 보내기 전 멈춤 확인") {
             show(Screen.MONEY_TRANSFER_PAUSE_GATE)
         }
@@ -2395,6 +2561,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("화면공유·원격지시 중단 코치") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
         section(
             review.recommendationTitle,
             buildString {

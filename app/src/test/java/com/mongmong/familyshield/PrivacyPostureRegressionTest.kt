@@ -25,7 +25,14 @@ class PrivacyPostureRegressionTest {
             "android.permission.INTERNET",
             "android.permission.POST_NOTIFICATIONS",
             "android.permission.SCHEDULE_EXACT_ALARM",
-            "android.permission.RECEIVE_BOOT_COMPLETED"
+            "android.permission.RECEIVE_BOOT_COMPLETED",
+            "android.permission.PACKAGE_USAGE_STATS",
+            "android.permission.QUERY_ALL_PACKAGES",
+            "android.permission.BIND_ACCESSIBILITY_SERVICE",
+            "android.permission.BIND_DEVICE_ADMIN",
+            "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE",
+            "android.permission.BIND_VPN_SERVICE",
+            "android.permission.REQUEST_INSTALL_PACKAGES"
         ).forEach { permission ->
             assertFalse("manifest declared forbidden permission: $permission", manifest.contains(permission))
         }
@@ -4251,6 +4258,521 @@ class PrivacyPostureRegressionTest {
                 "production source used forbidden token $forbiddenProductionToken in " +
                     hits.joinToString { it.path },
                 hits.isEmpty()
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun remoteAccessCutoffCoachIsPureStatelessManualAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/RemoteAccessCutoffCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.recoveryPlan24hScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.remoteAccessCutoffCard",
+            "private fun openRemoteAccessCutoffAction",
+            "private fun shareRemoteAccessCutoffCoach"
+        ).forEach { marker ->
+            assertTrue("remote-cutoff source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val entryScreens = listOf(
+            functionBlock(activitySource, "private fun LinearLayout.home()"),
+            functionBlock(activitySource, "private fun LinearLayout.result()"),
+            functionBlock(activitySource, "private fun LinearLayout.quickStopModeScreen"),
+            functionBlock(activitySource, "private fun LinearLayout.activeContactExitScriptsScreen"),
+            functionBlock(activitySource, "private fun LinearLayout.moneyTransferPauseGateScreen"),
+            functionBlock(activitySource, "private fun LinearLayout.accountLockdownChecklistScreen"),
+            functionBlock(activitySource, "private fun LinearLayout.trustedHelperReviewModeScreen"),
+            functionBlock(activitySource, "private fun LinearLayout.safetyFlowRouterScreen"),
+            functionBlock(activitySource, "private fun LinearLayout.recoveryPlan24hScreen")
+        )
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.remoteAccessCutoffCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openRemoteAccessCutoffAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareRemoteAccessCutoffCoach"
+        )
+        val valueFreeCallbackScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safeVerificationCallScriptsScreen"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "FAMILY_CALLBACK_CARD",
+            "readiness.title",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ScamAnalyzer",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "Settings.",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "remote-cutoff model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score)")
+                .containsMatchIn(modelSource)
+        )
+
+        assertTrue(activitySource.contains("REMOTE_ACCESS_CUTOFF_COACH"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.REMOTE_ACCESS_CUTOFF_COACH -> remoteAccessCutoffCoachScreen()"
+            )
+        )
+        entryScreens.forEachIndexed { index, entryScreen ->
+            assertTrue(
+                "remote-cutoff entry route missing at index $index",
+                entryScreen.contains("show(Screen.REMOTE_ACCESS_CUTOFF_COACH)")
+            )
+        }
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:remoteAccess|cutoff|installedApps|packageList|" +
+                    "deviceStatus|cardProgress|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:REMOTE_ACCESS|CUTOFF|INSTALLED_APPS|PACKAGE_LIST|" +
+                    "DEVICE_STATUS|CARD_PROGRESS|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(coachScreen.contains("RemoteAccessCutoffCoachBuilder.build("))
+        assertTrue(coachScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            coachScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(coachScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(coachScreen.contains("incidents.load("))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "remote-cutoff incident count decoded stored content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes"
+        ).forEach { renderedField ->
+            assertTrue("remote-cutoff UI omitted $renderedField", coachScreen.contains(renderedField))
+        }
+        assertTrue(
+            coachScreen.contains(
+                "shareRemoteAccessCutoffCoach(coach.familyShareSummary)"
+            )
+        )
+        assertTrue(coachScreen.contains("primaryButton(\"가족에게 원격지시 중단 안내 공유\")"))
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.cutoffSentence",
+            "card.whyItMatters",
+            "card.doNotDoBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("remote-cutoff card UI omitted $field", cardRenderer.contains(field))
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Settings.",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "remote-cutoff UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)",
+            "RECOVERY_PLAN" to "show(Screen.RECOVERY_PLAN)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "remote-cutoff route omitted exact branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "RemoteAccessCutoffActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertFalse(actionRouter.contains("openFamilyCallbackCard"))
+        assertTrue(
+            valueFreeCallbackScreen.contains("SafeVerificationCallScriptsBuilder.build(")
+        )
+        listOf(
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "TrustedContact"
+        ).forEach { forbiddenStoredLiteral ->
+            assertFalse(
+                "value-free callback destination rendered stored literal: $forbiddenStoredLiteral",
+                valueFreeCallbackScreen.contains(forbiddenStoredLiteral)
+            )
+        }
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "SmsManager",
+            "sendTextMessage",
+            "ContactsContract",
+            "ClipboardManager",
+            "PackageManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "remote-cutoff router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareRemoteAccessCutoffCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 원격지시 중단 안내 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Settings.",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "remote-cutoff share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        val cutoffSliceSource = coachScreen + cardRenderer + actionRouter + shareHelper
+        val forbiddenSliceApis = listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "NotificationListenerService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Intent.ACTION_DELETE",
+            "ACTION_UNINSTALL_PACKAGE",
+            "ACTION_INSTALL_PACKAGE",
+            "REQUEST_INSTALL_PACKAGES",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "Settings.",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "queryIntentActivities",
+            "getPackageInfo",
+            "getApplicationInfo",
+            "canRequestPackageInstalls",
+            "installPackage",
+            "setApplicationEnabledSetting",
+            "clearApplicationUserData",
+            "<queries",
+            "AppOpsManager"
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "remote-cutoff slice used forbidden API: $forbiddenSliceApi",
+                cutoffSliceSource.contains(forbiddenSliceApi) ||
+                    modelSource.contains(forbiddenSliceApi)
+            )
+        }
+
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        val forbiddenProductionTokens = forbiddenSliceApis
+            .filterNot { token -> token == "Intent.ACTION_DIAL" } + listOf(
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttpClient",
+            "Retrofit",
+            "ktor.client",
+            "android.telecom",
+            "android.telephony"
+        )
+        forbiddenProductionTokens.distinct().forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "RECORD_AUDIO",
+            "INTERNET",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
             )
         }
         assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))

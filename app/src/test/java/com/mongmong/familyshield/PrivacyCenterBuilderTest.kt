@@ -165,6 +165,11 @@ class PrivacyCenterBuilderTest {
             "통화 종료",
             "송금 전 멈춤 확인",
             "결제 상태",
+            "화면공유·원격지시 끊기 코치",
+            "원격 접근 상태",
+            "앱 목록",
+            "패키지 이름",
+            "기기 상태",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -293,6 +298,12 @@ class PrivacyCenterBuilderTest {
             ) && transientCopy.contains("저장하지 않")
         )
         assertTrue(
+            transientCopy.contains(
+                "화면공유·원격지시 끊기 코치의 카드 선택·추천·읽음·공유·체크·메모·원격 접근 상태·" +
+                    "앱 목록·패키지 이름·기기 상태·진행·이력"
+            ) && transientCopy.contains("저장하지 않")
+        )
+        assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
         )
     }
@@ -357,6 +368,68 @@ class PrivacyCenterBuilderTest {
             featureCopy.contains(
                 "붙여넣은 텍스트·통화 상태·연락처·사건 기록·가족 안전 계획·계정·카드·은행·" +
                     "기기 설정·돈의 움직임"
+            ) && featureCopy.contains("추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
+    fun remoteAccessCutoffCoachIsInventoriedAsLocalManualAndHasNoDeviceControl() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val inventory = center.localDataInventoryItems.joinToString("\n") { item ->
+            "${item.title} ${item.status} ${item.detail}"
+        }
+        val statements = center.noCollectionStatements.joinToString("\n")
+        val featureCopy = "$inventory\n$statements\n${center.familyShareSummary}"
+
+        assertTrue(featureCopy.contains("화면공유·원격지시 끊기 코치"))
+        assertTrue(featureCopy.contains("로컬 전용") && featureCopy.contains("무상태 수동 안내"))
+        assertTrue(
+            featureCopy.contains("새 Android 권한·네트워크·저장소") &&
+                featureCopy.contains("문자·메시지·통화·연락처·클립보드") &&
+                featureCopy.contains("읽거나 감시하지 않")
+        )
+        listOf(
+            "기기 관리자",
+            "접근성 서비스",
+            "VPN",
+            "알림 리스너",
+            "사용 통계",
+            "앱 작업 권한"
+        ).forEach { boundary ->
+            assertTrue("remote-access copy omitted $boundary", featureCopy.contains(boundary))
+        }
+        assertTrue(
+            featureCopy.contains("설치된 앱·패키지 목록") &&
+                (featureCopy.contains("조회하거나 스캔하지 않습니다") ||
+                    featureCopy.contains("조회·스캔하지 않습니다"))
+        )
+        assertTrue(featureCopy.contains("앱·파일·프로필") && featureCopy.contains("설치"))
+        assertTrue(featureCopy.contains("앱을 제거하지 않") || featureCopy.contains("앱 제거"))
+        assertTrue(
+            featureCopy.contains("기기·계정·접근성·네트워크·VPN·알림 설정") &&
+                (featureCopy.contains("바꾸지 않습니다") || featureCopy.contains("설정 변경"))
+        )
+        assertTrue(featureCopy.contains("받는 사람") && featureCopy.contains("자동 전송하지 않"))
+        assertTrue(featureCopy.contains("알림·알람·일정·백그라운드 작업"))
+        assertTrue(featureCopy.contains("만들거나 예약하지 않습니다"))
+        assertTrue(
+            featureCopy.contains(
+                "카드 선택·추천·읽음·공유·체크·메모·원격 접근 상태·앱 목록·패키지 이름·" +
+                    "기기 상태·진행·이력"
+            ) && featureCopy.contains("저장하지 않")
+        )
+        assertTrue(featureCopy.contains("원격 접근·화면공유·통화·앱을 자동으로 끊거나 차단하지 않"))
+        assertTrue(
+            featureCopy.contains("악성코드를 검사·제거") &&
+                featureCopy.contains("기기를 청소하지 않")
+        )
+        assertTrue(featureCopy.contains("계정·카드 동결") && featureCopy.contains("결제 취소"))
+        assertTrue(featureCopy.contains("환급·자금 회수·피해 복구를 자동 수행하지 않습니다"))
+        assertTrue(
+            featureCopy.contains(
+                "붙여넣은 텍스트·통화·화면공유·원격 접근 상태·연락처·사건 기록·가족 안전 계획·" +
+                    "계정·카드·은행·기기 설정·설치 앱·패키지 상태·접근성·네트워크·VPN·알림 " +
+                    "설정·돈의 움직임"
             ) && featureCopy.contains("추가·수정·삭제하지 않습니다")
         )
     }
@@ -444,6 +517,27 @@ class PrivacyCenterBuilderTest {
         assertTrue(
             summary.contains("송금 전 멈춤 확인 화면") &&
                 summary.contains("카드·경로·공유 버튼") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("화면공유·원격지시 끊기 코치") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("새 Android 권한·네트워크·저장소") &&
+                summary.contains("기기 관리자·접근성 서비스·VPN·알림 리스너·사용 통계·앱 작업 권한") &&
+                summary.contains("설치된 앱·패키지 목록") &&
+                summary.contains("조회·스캔하지 않습니다") &&
+                summary.contains("앱·파일·프로필 설치") &&
+                summary.contains("앱 제거") &&
+                summary.contains("설정 변경") &&
+                summary.contains("자동 전송") &&
+                summary.contains("자동으로 끊거나 차단하지 않") &&
+                summary.contains("악성코드를 검사·제거") &&
+                summary.contains("기기를 청소하지 않")
+        )
+        assertTrue(
+            summary.contains("화면공유·원격지시 끊기 코치 화면") &&
+                summary.contains("카드·경로·공유 버튼") &&
+                summary.contains("설치 앱·패키지 상태") &&
                 summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
         )
 
@@ -560,6 +654,17 @@ class PrivacyCenterBuilderTest {
             "카드를 자동으로 정지합니다",
             "계정을 자동으로 동결합니다",
             "카드를 자동으로 동결합니다",
+            "원격 접근을 끊었습니다",
+            "원격 접근이 끊겼습니다",
+            "원격 접근을 자동으로 끊습니다",
+            "화면공유를 자동으로 끊습니다",
+            "악성코드를 제거합니다",
+            "기기를 청소합니다",
+            "설치 앱을 스캔합니다",
+            "앱을 자동으로 제거합니다",
+            "기기 설정을 자동으로 바꿉니다",
+            "VPN으로 차단합니다",
+            "자동 보호합니다",
             "환급을 보장합니다",
             "금융 결과를 보장합니다",
             "100%"
@@ -601,6 +706,23 @@ class PrivacyCenterBuilderTest {
                         it.contains("송금·결제 접근 권한") &&
                         it.contains("계좌·카드·은행 연동") &&
                         it.contains("자동 정지·동결하지 않") &&
+                        it.contains("피해 복구를 자동 수행하지 않습니다")
+                }
+            )
+            assertTrue(
+                center.noCollectionStatements.any {
+                    it.contains("화면공유·원격지시 끊기 코치") &&
+                        it.contains("로컬 전용") &&
+                        it.contains("무상태 수동") &&
+                        it.contains("기기 관리자") &&
+                        it.contains("접근성 서비스") &&
+                        it.contains("VPN") &&
+                        it.contains("알림 리스너") &&
+                        it.contains("설치된 앱·패키지 목록") &&
+                        it.contains("앱을 제거하지 않") &&
+                        it.contains("설정을 바꾸지 않습니다") &&
+                        it.contains("자동으로 끊거나 차단하지 않") &&
+                        it.contains("기기를 청소하지 않") &&
                         it.contains("피해 복구를 자동 수행하지 않습니다")
                 }
             )
