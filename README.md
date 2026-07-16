@@ -7,31 +7,32 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 1. 명시적 동의 온보딩
 2. 홈 대시보드
 3. 긴급 멈춤 모드에서 대화 중단 → 돈·정보·앱 금지 → 평소 신뢰 경로 확인의 3단계부터 실행
-4. 진행 중 연락 종료 문장에서 통화·문자·카톡·영상통화·화면공유·앱 설치 압박을 끝낼 짧은 수동 문장을 읽고 기존 가족·보호 경로로 이동
-5. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
-6. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
-7. 안전 붙여넣기 개인정보 코치에서 원문을 읽거나 자동으로 바꾸지 않는 수동 가림 순서와 기존 검사·가족 보호 경로 확인
-8. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
-9. 로컬 규칙 기반 AI 보호자 분석
-10. 위험 신호 설명 카드에서 일치한 신호가 왜 의심스러운지, 흔한 압박 목표와 즉시 할 안전 행동을 원문 없이 확인
-11. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-12. "무엇이 노출됐는지 고르기"에서 실제로 한 행동을 직접 확인하고 해당할 수 있는 기존 멈춤·콜백·수습·계정 보호·증거·공식 도움 흐름 선택
-13. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
-14. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-15. 상황별 신고·상담 연락처와 말할 내용 확인
-16. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
-17. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
-18. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
-19. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
-20. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
-21. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
-22. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
-23. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
-24. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
-25. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
-26. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
-27. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
-28. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
+4. 송금 전 멈춤 확인에서 송금·결제·상품권·기프티콘·가상자산·계좌 이동·금융 비밀 제공을 별도 확인 전까지 멈추고 기존 가족·계정·증거·공식 도움 경로 선택
+5. 진행 중 연락 종료 문장에서 통화·문자·카톡·영상통화·화면공유·앱 설치 압박을 끝낼 짧은 수동 문장을 읽고 기존 가족·보호 경로로 이동
+6. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
+7. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
+8. 안전 붙여넣기 개인정보 코치에서 원문을 읽거나 자동으로 바꾸지 않는 수동 가림 순서와 기존 검사·가족 보호 경로 확인
+9. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
+10. 로컬 규칙 기반 AI 보호자 분석
+11. 위험 신호 설명 카드에서 일치한 신호가 왜 의심스러운지, 흔한 압박 목표와 즉시 할 안전 행동을 원문 없이 확인
+12. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
+13. "무엇이 노출됐는지 고르기"에서 실제로 한 행동을 직접 확인하고 해당할 수 있는 기존 멈춤·콜백·수습·계정 보호·증거·공식 도움 흐름 선택
+14. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+15. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+16. 상황별 신고·상담 연락처와 말할 내용 확인
+17. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+18. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
+19. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
+20. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
+21. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
+22. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
+23. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
+24. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
+25. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
+26. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
+27. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
+28. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
+29. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
 
 ## Share Entry
 
@@ -114,6 +115,45 @@ Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"
 전달합니다. 공유문에는 일반 멈춤 안내와 앱 경로/행동 이름만 들어가며 붙여넣은 원문, 화면 단서,
 안전 질문·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL/도메인·신분정보 값을 넣지
 않습니다.
+
+## Money Transfer Pause Gate (송금 전 멈춤 확인)
+
+홈의 긴급 멈춤 바로 아래, 분석 결과, 긴급 멈춤 모드, 진행 중 연락 종료 문장, 계정·기기 잠금
+체크리스트, 안전 흐름 길잡이, 24시간 수습 계획, 신고·상담 연락처와 상담 준비 카드에서 송금이나
+결제 전에 거치는 수동 확인 화면을 열 수 있습니다. `MoneyTransferPauseGateBuilder`는 현재
+`ScamAnalysis?`의 위험도·일치 신호, 실제 안전단어·콜백 문장·연락처 값이 없는
+`FamilyReadiness.level`, 저장 사건의 0개/1개 이상 범주만 사용해 같은 입력에 항상 같은 카드와
+기존 앱 경로를 추천합니다. 붙여넣은 원문, 개인정보를 가린 단서, 사건 본문, 전화·연락처·계좌·
+카드·인증정보·링크 값, 가족 안전 계획의 실제 값은 읽거나 사용하지 않습니다.
+
+고정 카드는 송금·결제 멈춤 선언, 안전계좌·환급·대출 수수료 의심, 상품권·기프티콘·가상자산
+멈춤, OTP/PIN/비밀번호·카드정보 거절, 가족/기관 별도 확인, 증거·공식 도움으로 이어가기의 여섯
+가지입니다. 각 카드에는 직접 읽을 멈춤 문장, 중요한 이유, 하지 않을 경계와 기존 화면으로
+이동하는 주요·보조 버튼이 있습니다. 고위험·긴급 송금, 인증정보, 안전계좌, 환급·대출 비용,
+상품권·기프티콘, 가상자산, 해외 결제 알림, 가족 긴급상황·딥페이크·번호 변경, 비밀 유지·기관
+사칭, 저장 사건 유무와 가족 준비 수준에 따라 추천만 결정적으로 달라집니다. 분석이 없어도 모든
+카드를 보수적으로 보여주며 어떤 연락이나 결제도 안전하다고 판정하지 않습니다.
+
+행동 버튼은 기존 긴급 멈춤, 진행 중 연락 종료 문장, 검사/현재 결과, 가족 콜백·안전 확인 전화·
+가족 경고·보호자 검토·준비 로드맵, 계정·기기 잠금, 증거 보존, 신고·상담 연락처·상담 준비,
+안전 흐름, 24시간 수습과 후속 점검 화면으로만 이동합니다. 은행·공식 도움·증거·
+계정 보호·수습 기능을 복제하지 않으며 결제나 금융 결과를 처리했다고 표시하지 않습니다.
+
+이 게이트는 사용자가 직접 읽고 직접 선택하는 로컬 전용·무상태 수동 안내입니다. 새 Android
+권한·네트워크·저장소를 추가하지 않고 문자·메시지·통화·연락처·클립보드·금융 앱을 읽거나
+감시하지 않습니다. 결제·은행 API, NFC, Android 계정 관리자, 송금·결제 접근 권한이나 계좌·
+카드·은행 연동을 사용하지 않습니다. 카드 선택·추천·읽음·공유·체크·메모·결제 상태·진행·이력을
+저장하지 않고 받는 사람 선택·자동 전송·알림·알람·일정·백그라운드 작업을 만들지 않습니다.
+화면·카드·경로·공유 버튼은 붙여넣은 텍스트, 통화 상태, 연락처, 사건 기록, 가족 안전 계획,
+계정·카드·은행·기기 설정이나 돈의 움직임을 추가·수정·삭제하지 않습니다. 송금·이체·결제의 자동
+차단·실행·취소, 계정·카드 자동 정지·동결, 환급·자금 회수·피해 복구 또는 법률·금융 결과를
+수행하거나 보장하지 않습니다.
+
+"가족에게 송금 멈춤 안내 공유"는 사용자가 직접 눌렀을 때만 Android `ACTION_SEND`의
+`text/plain` 공유 화면을 열고 빌더가 만든 `MoneyTransferPauseGate.familyShareSummary`만
+전달합니다. 공유문은 일반 멈춤 문장, 카드 제목과 기존 경로·행동 라벨만 포함하며 붙여넣은 원문,
+가린 단서, 사건 내용, 안전 계획 값, 이름·연락처·전화·계좌·카드·OTP/PIN·비밀번호·URL/도메인·
+신분정보 값을 포함하지 않습니다. 앱은 공유 대상이나 받는 사람을 고르지 않습니다.
 
 ## Active Contact Exit Scripts (진행 중 연락 종료 문장)
 
@@ -490,7 +530,7 @@ Android 권한을 사용하지 않습니다. 계정 복구, 사기 차단, 피�
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 진행 중 연락 종료 문장의 카드 선택·추천·읽음·공유·말하기·답장·통화 종료·체크 상태·메모·이력, 안전 흐름 선택, 안전 붙여넣기 개인정보 코치의 카드 선택·진행·읽음·공유·가림 이력·체크 상태·메모, 노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·공유·보호자 검토 이력, 후속 점검의 시점 선택·답변·메모·완료·진행·공유 이력, 가족 역할 보드의 이름·담당자·역할 선택·체크·메모·완료·진행·공유 이력, 가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·읽음·진행·공유·대화 이력, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 진행 중 연락 종료 문장의 카드 선택·추천·읽음·공유·말하기·답장·통화 종료·체크 상태·메모·이력, 송금 전 멈춤 확인의 카드 선택·추천·읽음·공유·체크·메모·결제 상태·진행·이력, 안전 흐름 선택, 안전 붙여넣기 개인정보 코치의 카드 선택·진행·읽음·공유·가림 이력·체크 상태·메모, 노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·공유·보호자 검토 이력, 후속 점검의 시점 선택·답변·메모·완료·진행·공유 이력, 가족 역할 보드의 이름·담당자·역할 선택·체크·메모·완료·진행·공유 이력, 가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·읽음·진행·공유·대화 이력, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -851,6 +891,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Money Transfer Pause Gate is deterministic, local-only, stateless manual pre-payment guidance—not a bank integration, payment blocker, account/card freeze, cancellation, refund, or recovery tool. It uses only current risk/signals, value-less readiness level, and saved-incident presence; reads no pasted text, redacted clue, incident body, safety-plan literal, contact/phone/account/card/OTP/PIN/URL/domain value, message/call/clipboard/financial app, and adds no permission, network use, scheduler, financial API, NFC, account-manager access, or persistence. It auto-sends nothing, selects no recipient, stores no card/recommendation/read/share/check/note/payment-status/progress/history state, and never mutates pasted text, call state, contacts, incidents, safety plans, account/card/bank/device settings, or money movement. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic pause/card/route/action labels.
 - Active Contact Exit Scripts is deterministic, local-only, stateless manual wording for ending a live suspicious call, message, video call, screen-share, or app-install demand—not a telecom, call-blocking, call-screening, auto-hang-up, auto-dial, or auto-SMS tool. It uses only current risk/signals, value-less readiness level, and saved-incident presence category; reads no pasted text, redacted clue, incident body, safety-plan literal, contact/phone/account/OTP/PIN/URL/domain value, message/call/clipboard, and adds no permission, network use, scheduler, or persistence. It auto-sends nothing, selects no recipient, stores no card/recommendation/read/share/speech/reply/call/check/note/history state, and never mutates pasted text, call state, contacts, incidents, safety plans, or device settings. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic script and existing route/action labels.
 - Safe Paste Privacy Coach is deterministic, local-only, stateless manual masking guidance—not clipboard access, automatic redaction, scanning, monitoring, or text mutation. It uses only current risk/signals, readiness level, and saved-incident presence; reads no pasted text, redacted clue, safety-plan value, incident body, contact/message/call/clipboard; adds no permission or network use; auto-sends and schedules nothing; stores no card choice, progress/read/share/masking history, checkmark, name, assignment, note, clipboard content, or pasted-text history; and never mutates pasted text or incidents. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic manual-masking checklist and card/route/action labels, excluding pasted text, clues, plan values, and phone/account/password/OTP/PIN/URL/domain/resident-number-like values.
 - Family Calm Debrief Agenda is a deterministic, local-only, stateless, blame-free five-minute conversation guide—not chat monitoring, a task tracker, a diary, or a timer. It uses only current risk/signals, readiness level, and saved-incident presence; reads no pasted text, redacted clue, safety-plan value, incident body, contact/message/call/account/device; adds no permission or network use; auto-sends and schedules nothing; stores no agenda/card selection, answer, note, name, assignment, date, check/completion/score/read/progress/share/debrief history; and never mutates incidents. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic agenda/category and recommended route/action labels, excluding pasted text, clues, plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.

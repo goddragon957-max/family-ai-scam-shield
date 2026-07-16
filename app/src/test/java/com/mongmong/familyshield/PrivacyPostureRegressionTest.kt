@@ -3778,6 +3778,486 @@ class PrivacyPostureRegressionTest {
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
+    @Test
+    fun moneyTransferPauseGateIsPureStatelessManualAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MoneyTransferPauseGate.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.recoveryPlan24hScreen",
+            "private fun LinearLayout.helpDirectoryScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.moneyTransferPauseCard",
+            "private fun openMoneyTransferPauseAction",
+            "private fun shareMoneyTransferPauseGate"
+        ).forEach { marker ->
+            assertTrue("money-pause source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val homeScreen = functionBlock(activitySource, "private fun LinearLayout.home()")
+        val resultScreen = functionBlock(activitySource, "private fun LinearLayout.result()")
+        val quickStopScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.quickStopModeScreen"
+        )
+        val activeContactScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.activeContactExitScriptsScreen"
+        )
+        val accountLockdownScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.accountLockdownChecklistScreen"
+        )
+        val flowRouterScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safetyFlowRouterScreen"
+        )
+        val recoveryScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.recoveryPlan24hScreen"
+        )
+        val helpScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.helpDirectoryScreen"
+        )
+        val reportPrepScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.officialReportPrepScreen"
+        )
+        val gateScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.moneyTransferPauseGateScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.moneyTransferPauseCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openMoneyTransferPauseAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareMoneyTransferPauseGate"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ScamAnalyzer",
+            "Regex(",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "Payment",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "money-pause model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score)")
+                .containsMatchIn(modelSource)
+        )
+
+        assertTrue(activitySource.contains("MONEY_TRANSFER_PAUSE_GATE"))
+        assertFalse(modelSource.contains("INCIDENT_TIMELINE_BRIEFING"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.MONEY_TRANSFER_PAUSE_GATE -> moneyTransferPauseGateScreen()"
+            )
+        )
+        listOf(
+            homeScreen,
+            resultScreen,
+            quickStopScreen,
+            activeContactScreen,
+            accountLockdownScreen,
+            flowRouterScreen,
+            recoveryScreen,
+            helpScreen,
+            reportPrepScreen
+        ).forEachIndexed { index, entryScreen ->
+            assertTrue(
+                "money-pause entry route missing at index $index",
+                entryScreen.contains("show(Screen.MONEY_TRANSFER_PAUSE_GATE)")
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:moneyTransfer|pauseGate|selectedPayment|" +
+                    "paymentStatus|paymentHistory|cardProgress|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:MONEY_TRANSFER|PAUSE_GATE|SELECTED_PAYMENT|PAYMENT_STATUS|" +
+                    "PAYMENT_HISTORY|CARD_PROGRESS|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(gateScreen.contains("MoneyTransferPauseGateBuilder.build("))
+        assertTrue(gateScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            gateScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(gateScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(gateScreen.contains("incidents.load("))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "money-pause incident count decoded stored content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(gate.title)",
+            "subtitle(gate.intro)",
+            "gate.modeLabel",
+            "gate.recommendationTitle",
+            "gate.recommendationExplanation",
+            "gate.recommendedCards",
+            "gate.recommendedActions",
+            "gate.cards",
+            "gate.privacySafetyNotes"
+        ).forEach { renderedField ->
+            assertTrue("money-pause UI omitted $renderedField", gateScreen.contains(renderedField))
+        }
+        assertTrue(
+            gateScreen.contains(
+                "shareMoneyTransferPauseGate(gate.familyShareSummary)"
+            )
+        )
+        assertTrue(gateScreen.contains("primaryButton(\"가족에게 송금 멈춤 안내 공유\")"))
+        assertTrue(gateScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("gate\\.cards\\.forEach").findAll(gateScreen).count())
+        assertTrue(gateScreen.contains("recommended = card.id in recommendedIds"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.pauseSentence",
+            "card.whyItMatters",
+            "card.doNotDoBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("money-pause card UI omitted $field", cardRenderer.contains(field))
+        }
+
+        val statelessUiSource = gateScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "doAfterTextChanged",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "selectedPayment",
+            "paymentStatus",
+            "paymentHistory",
+            "cardProgress",
+            "checkmark",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "money-pause UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)",
+            "RECOVERY_PLAN" to "show(Screen.RECOVERY_PLAN)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "money-pause route omitted exact branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "MoneyTransferPauseActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertFalse(actionRouter.contains("TIMELINE_BRIEFING"))
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "SmsManager",
+            "sendTextMessage",
+            "ContactsContract",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Payment",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "money-pause router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareMoneyTransferPauseGate\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("gate.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 송금 멈춤 안내 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "Payment",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "money-pause share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        val gateSliceSource = gateScreen + cardRenderer + actionRouter + shareHelper
+        listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "Payment",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenSliceApi ->
+            assertFalse(
+                "money-pause slice used forbidden API: $forbiddenSliceApi",
+                gateSliceSource.contains(forbiddenSliceApi) ||
+                    modelSource.contains(forbiddenSliceApi)
+            )
+        }
+
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttpClient",
+            "Retrofit",
+            "ktor.client",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "android.telecom",
+            "android.telephony",
+            "sendTextMessage",
+            "Payment",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager"
+        ).forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
     private fun functionBlock(source: String, marker: String): String {
         val start = source.indexOf(marker)
         require(start >= 0) { "Source marker missing: $marker" }

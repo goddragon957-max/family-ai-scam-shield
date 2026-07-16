@@ -163,6 +163,8 @@ class PrivacyCenterBuilderTest {
             "진행 중 연락 종료 문장",
             "말하기",
             "통화 종료",
+            "송금 전 멈춤 확인",
+            "결제 상태",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -286,6 +288,11 @@ class PrivacyCenterBuilderTest {
             ) && transientCopy.contains("저장하지 않")
         )
         assertTrue(
+            transientCopy.contains(
+                "송금 전 멈춤 확인의 카드 선택·추천·읽음·공유·체크·메모·결제 상태·진행·이력"
+            ) && transientCopy.contains("저장하지 않")
+        )
+        assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
         )
     }
@@ -315,6 +322,42 @@ class PrivacyCenterBuilderTest {
         assertTrue(
             featureCopy.contains("붙여넣은 텍스트·통화 상태·연락처·사건 기록·가족 안전 계획·기기 설정") &&
                 featureCopy.contains("추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
+    fun moneyTransferPauseGateIsInventoriedAsLocalManualAndHasNoFinancialAccess() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val inventory = center.localDataInventoryItems.joinToString("\n") { item ->
+            "${item.title} ${item.status} ${item.detail}"
+        }
+        val statements = center.noCollectionStatements.joinToString("\n")
+        val featureCopy = "$inventory\n$statements\n${center.familyShareSummary}"
+
+        assertTrue(featureCopy.contains("송금 전 멈춤 확인"))
+        assertTrue(featureCopy.contains("로컬 전용") && featureCopy.contains("무상태 수동 안내"))
+        assertTrue(featureCopy.contains("새 Android 권한") && featureCopy.contains("네트워크"))
+        assertTrue(featureCopy.contains("문자·메시지·통화·연락처·클립보드·금융 앱"))
+        assertTrue(featureCopy.contains("읽거나 감시하지 않"))
+        assertTrue(featureCopy.contains("결제·은행 API"))
+        assertTrue(featureCopy.contains("NFC") && featureCopy.contains("Android 계정 관리자"))
+        assertTrue(featureCopy.contains("송금·결제 접근 권한"))
+        assertTrue(featureCopy.contains("계좌·카드·은행 연동"))
+        assertTrue(featureCopy.contains("받는 사람") && featureCopy.contains("자동 전송"))
+        assertTrue(featureCopy.contains("알림·알람·일정·백그라운드 작업"))
+        assertTrue(featureCopy.contains("만들거나 예약하지 않습니다"))
+        assertTrue(
+            featureCopy.contains("카드 선택·추천·읽음·공유·체크·메모·결제 상태·진행·이력") &&
+                featureCopy.contains("저장하지 않")
+        )
+        assertTrue(featureCopy.contains("돈을 자동 차단·이체·결제·취소"))
+        assertTrue(featureCopy.contains("계정·카드를 자동 정지·동결"))
+        assertTrue(featureCopy.contains("환급·자금 회수·피해 복구"))
+        assertTrue(
+            featureCopy.contains(
+                "붙여넣은 텍스트·통화 상태·연락처·사건 기록·가족 안전 계획·계정·카드·은행·" +
+                    "기기 설정·돈의 움직임"
+            ) && featureCopy.contains("추가·수정·삭제하지 않습니다")
         )
     }
 
@@ -386,6 +429,22 @@ class PrivacyCenterBuilderTest {
             summary.contains("안전 붙여넣기 개인정보 코치 화면") &&
                 summary.contains("카드·경로·공유 버튼") &&
                 summary.contains("붙여넣은 텍스트나 사건 기록을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
+            summary.contains("송금 전 멈춤 확인") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("새 Android 권한·네트워크·저장소") &&
+                summary.contains("결제·은행 API") &&
+                summary.contains("송금·결제 접근 권한") &&
+                summary.contains("계좌·카드·은행 연동") &&
+                summary.contains("자동 전송") &&
+                summary.contains("자동 정지·동결") &&
+                summary.contains("환급·자금 회수·피해 복구")
+        )
+        assertTrue(
+            summary.contains("송금 전 멈춤 확인 화면") &&
+                summary.contains("카드·경로·공유 버튼") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
         )
 
         listOf(
@@ -493,6 +552,16 @@ class PrivacyCenterBuilderTest {
             "통화를 선별합니다",
             "문자에 자동으로 답장합니다",
             "받는 사람을 자동으로 선택합니다",
+            "송금을 자동으로 실행합니다",
+            "결제를 자동으로 실행합니다",
+            "송금을 자동으로 취소합니다",
+            "결제를 자동으로 취소합니다",
+            "계정을 자동으로 정지합니다",
+            "카드를 자동으로 정지합니다",
+            "계정을 자동으로 동결합니다",
+            "카드를 자동으로 동결합니다",
+            "환급을 보장합니다",
+            "금융 결과를 보장합니다",
             "100%"
         )
 
@@ -521,6 +590,18 @@ class PrivacyCenterBuilderTest {
                         it.contains("무상태 수동") &&
                         it.contains("통화 차단") &&
                         it.contains("자동 SMS 기능이 아닙니다")
+                }
+            )
+            assertTrue(
+                center.noCollectionStatements.any {
+                    it.contains("송금 전 멈춤 확인") &&
+                        it.contains("로컬 전용") &&
+                        it.contains("무상태 수동") &&
+                        it.contains("결제·은행 API") &&
+                        it.contains("송금·결제 접근 권한") &&
+                        it.contains("계좌·카드·은행 연동") &&
+                        it.contains("자동 정지·동결하지 않") &&
+                        it.contains("피해 복구를 자동 수행하지 않습니다")
                 }
             )
             assertTrue(center.privacyNotes.any { it.contains("들어오는 것만으로") && it.contains("삭제되지는 않습니다") })
