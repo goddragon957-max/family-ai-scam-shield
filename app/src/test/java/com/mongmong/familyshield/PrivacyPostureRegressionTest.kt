@@ -2321,6 +2321,320 @@ class PrivacyPostureRegressionTest {
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
+    @Test
+    fun familyResponseRoleBoardIsPureStatelessManualAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/FamilyResponseRoleBoard.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyResponseRoleCard",
+            "private fun openFamilyResponseRoleAction",
+            "private fun shareFamilyResponseRoleBoard"
+        ).forEach { marker ->
+            assertTrue("family role-board source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val homeScreen = functionBlock(activitySource, "private fun LinearLayout.home()")
+        val resultScreen = functionBlock(activitySource, "private fun LinearLayout.result()")
+        val boardScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familyResponseRoleBoardScreen"
+        )
+        val roleRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familyResponseRoleCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openFamilyResponseRoleAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareFamilyResponseRoleBoard"
+        )
+        val normalizedHomeScreen = homeScreen.replace(Regex("\\s+"), " ")
+        val normalizedResultScreen = resultScreen.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+        assertFalse(modelSource.contains("SafetyPlan"))
+        assertFalse(modelSource.contains("SafetyPlanStore"))
+
+        assertTrue(activitySource.contains("FAMILY_RESPONSE_ROLE_BOARD"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.FAMILY_RESPONSE_ROLE_BOARD -> familyResponseRoleBoardScreen()"
+            )
+        )
+        assertTrue(
+            normalizedHomeScreen.contains(
+                "secondaryButton(\"가족 역할 나눠 대응하기\") { " +
+                    "show(Screen.FAMILY_RESPONSE_ROLE_BOARD) }"
+            ) ||
+                normalizedHomeScreen.contains(
+                    "primaryButton(\"가족 역할 나눠 대응하기\") { " +
+                        "show(Screen.FAMILY_RESPONSE_ROLE_BOARD) }"
+                )
+        )
+        assertTrue(
+            normalizedResultScreen.contains(
+                "secondaryButton(\"이 신호로 가족 역할 나누기\") { " +
+                    "show(Screen.FAMILY_RESPONSE_ROLE_BOARD) }"
+            ) ||
+                normalizedResultScreen.contains(
+                    "primaryButton(\"이 신호로 가족 역할 나누기\") { " +
+                        "show(Screen.FAMILY_RESPONSE_ROLE_BOARD) }"
+                )
+        )
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:roleBoard|selectedRole|assignedRole|" +
+                    "roleAssignment|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:ROLE_BOARD|SELECTED_ROLE|ASSIGNED_ROLE|ROLE_ASSIGNMENT|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(boardScreen.contains("FamilyResponseRoleBoardBuilder.build("))
+        assertTrue(boardScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            boardScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(
+            boardScreen.contains("incidentCount = incidents.load().size") ||
+                boardScreen.contains("incidentCount = incidents.load().count()") ||
+                boardScreen.contains("incidentCount = incidents.count()")
+        )
+        assertTrue(boardScreen.contains("title(board.title)"))
+        assertTrue(boardScreen.contains("subtitle(board.intro)"))
+        assertTrue(boardScreen.contains("board.recommendationTitle"))
+        assertTrue(boardScreen.contains("board.recommendationExplanation"))
+        assertTrue(boardScreen.contains("board.recommendedActions"))
+        assertTrue(boardScreen.contains("board.privacySafetyNotes"))
+        assertTrue(
+            boardScreen.contains(
+                "shareFamilyResponseRoleBoard(board.familyShareSummary)"
+            )
+        )
+        assertTrue(boardScreen.contains("primaryButton(\"가족에게 역할 보드 공유\")"))
+        assertTrue(
+            boardScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")") ||
+                boardScreen.contains("secondaryButton(\"홈으로\")")
+        )
+
+        val recommendedRenderIndex = boardScreen.indexOf("board.recommendedRoles")
+        val remainingRolesIndex = boardScreen.indexOf("remainingRoles")
+        assertTrue(recommendedRenderIndex >= 0)
+        assertTrue(remainingRolesIndex > recommendedRenderIndex)
+        assertEquals(
+            1,
+            Regex("board\\.recommendedRoles\\.forEach")
+                .findAll(boardScreen)
+                .count()
+        )
+        assertEquals(
+            1,
+            Regex("remainingRoles\\.forEach")
+                .findAll(boardScreen)
+                .count()
+        )
+
+        listOf(
+            "card.roleLabel",
+            "card.mission",
+            "card.safeHandoffSentence",
+            "card.category",
+            "card.whenToUse",
+            "card.doNotDoBoundaries",
+            "card.priority",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("family role-board UI omitted $field", roleRenderer.contains(field))
+        }
+
+        val statelessUiSource = boardScreen + roleRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "CheckBox(",
+            "EditText(",
+            "RadioButton(",
+            "Switch(",
+            "selectedRole",
+            "assignedRole",
+            "roleAssignment",
+            "checkmark",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenState ->
+            assertFalse(
+                "family role-board UI used forbidden state/value: $forbiddenState",
+                statelessUiSource.contains(forbiddenState, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        listOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "TRUSTED_HELPER_HANDOFF" to "show(Screen.TRUSTED_HELPER_HANDOFF)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "RECOVERY_PLAN" to "show(Screen.RECOVERY_PLAN)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REPORT_PREP" to "show(Screen.REPORT_PREP)",
+            "INCIDENT_TIMELINE_BRIEFING" to "show(Screen.TIMELINE_BRIEFING)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "family role-board route omitted action: $actionId",
+                normalizedActionRouter.contains("FamilyResponseRoleActionId.$actionId ->")
+            )
+            assertTrue(
+                "family role-board route omitted destination for $actionId: $destination",
+                normalizedActionRouter.contains(destination)
+            )
+        }
+        assertTrue(
+            normalizedActionRouter.contains("FamilyResponseRoleActionId.EVIDENCE_KIT ->")
+        )
+        assertTrue(normalizedActionRouter.contains("openEvidenceKit("))
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyResponseRoleActionId.OFFICIAL_HELP_DIRECTORY ->"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "openHelpDirectory(Screen.FAMILY_RESPONSE_ROLE_BOARD)"
+            )
+        )
+        assertFalse(actionRouter.contains("dial("))
+        assertFalse(actionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(actionRouter.contains("Intent.ACTION_CALL"))
+
+        val shareArguments = Regex("shareFamilyResponseRoleBoard\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("board.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 역할 보드 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "incidents",
+            "ContactsContract",
+            "SmsManager"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "family role-board share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        listOf(
+            "ContactsContract",
+            "SmsManager",
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ForegroundService",
+            "BroadcastReceiver"
+        ).forEach { forbiddenApi ->
+            assertFalse(
+                "family role-board used forbidden API: $forbiddenApi",
+                activitySource.contains(forbiddenApi) || modelSource.contains(forbiddenApi)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    private fun functionBlock(source: String, marker: String): String {
+        val start = source.indexOf(marker)
+        require(start >= 0) { "Source marker missing: $marker" }
+        val openingBrace = source.indexOf('{', start)
+        require(openingBrace >= 0) { "Opening brace missing after: $marker" }
+        var depth = 0
+        for (index in openingBrace until source.length) {
+            when (source[index]) {
+                '{' -> depth += 1
+                '}' -> {
+                    depth -= 1
+                    if (depth == 0) return source.substring(start, index + 1)
+                }
+            }
+        }
+        error("Closing brace missing after: $marker")
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile

@@ -169,6 +169,11 @@ class PrivacyCenterBuilderTest {
             "시점 선택",
             "알림 일정",
             "후속 점검 이력",
+            "가족 대응 역할 보드",
+            "담당자 배정",
+            "역할 선택",
+            "체크 표시",
+            "역할 보드 이력",
             "가족 콜백 카드",
             "상담 준비 카드",
             "체크리스트",
@@ -213,6 +218,17 @@ class PrivacyCenterBuilderTest {
             )
         )
         assertTrue(
+            transientCopy.contains(
+                "가족 대응 역할 보드의 이름·담당자 배정·역할 선택·체크 표시·메모·완료·점수·읽음·진행·" +
+                    "공유·역할 보드 이력"
+            )
+        )
+        assertTrue(
+            transientCopy.contains(
+                "가족 대응 역할 보드"
+            ) && transientCopy.contains("사건 기록을 추가·수정·삭제하지 않습니다")
+        )
+        assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
         )
     }
@@ -241,6 +257,16 @@ class PrivacyCenterBuilderTest {
         assertTrue(summary.contains("ACTION_DIAL"))
         assertTrue(summary.contains("붙여넣은 전체 원문") && summary.contains("보관하지 않습니다"))
         assertTrue(summary.contains("텍스트 요약"))
+        assertTrue(
+            summary.contains(
+                "가족 대응 역할 보드의 이름·담당자 배정·역할 선택·체크 표시·메모·완료·점수·읽음·진행·" +
+                    "공유·역할 보드 이력"
+            )
+        )
+        assertTrue(
+            summary.contains("가족 대응 역할 보드") &&
+                summary.contains("사건 기록을 추가·수정·삭제하지 않습니다")
+        )
 
         listOf(
             rawPastedText,

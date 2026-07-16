@@ -28,6 +28,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 22. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
 23. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
 24. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
+25. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
 
 ## Share Entry
 
@@ -141,6 +142,41 @@ Android 권한을 추가하지 않습니다. "가족에게 멈춤 안내 공유"
 화면을 열고 빌더가 만든 `familyShareSummary`만 전달합니다. 공유문은 점검 시점·범주·기존 앱 행동
 라벨과 일반적인 수동 확인 단계만 포함하며 붙여넣은 원문, 개인정보 가림 단서, 안전 질문·콜백
 내용·연락처 값, 전체 전화번호, 계좌·비밀번호·OTP/PIN, URL/도메인, 주민등록번호와 비슷한 값을
+포함하지 않습니다.
+
+## Family Response Role Board (가족 역할 나눠 대응하기)
+
+홈의 "가족 역할 나눠 대응하기"와 현재 분석 결과의 "이 신호로 가족 역할 나누기"에서 가족이
+이름이나 연락처를 입력하지 않고 대응 업무를 일반 역할로 나눠 볼 수 있습니다.
+`FamilyResponseRoleBoardBuilder`는 현재
+`ScamAnalysis?`의 위험도·일치 신호, 실제 안전 질문·콜백 문장·연락처 값이 없는
+`FamilyReadiness`, 저장된 사건의 개수만 사용해 같은 입력에 항상 같은 역할 카드와 추천 순서를
+만듭니다. 사건 원문, 개인정보 가림 단서, 사건별 내용이나 가족 구성원 이름은 읽거나 표시하지
+않습니다.
+
+고정된 수동 역할은 멈춤 진행자, 가족 본인확인 담당, 노출 분류 담당, 계정·기기 보호 담당, 증거
+보존 담당, 공식 도움 연결 담당, 가족 경고 전달 담당, 후속 점검 담당입니다. 각 카드에는 임무,
+비밀값 없는 인계 문장, 역할 범주, 사용할 때, 하지 말아야 할 일과 기존 긴급 멈춤·노출 영향 분류·
+보호자 검토·도움 요청·검사/현재 결과·가족 콜백·안전 확인 전화·가족 경고·준비 로드맵·안전 연습·
+후속 점검·24시간 수습·계정 잠금·증거 보존·공식 도움·신고 준비·사건 타임라인·안전 흐름·개인정보
+센터로 이동하는 버튼이 표시됩니다. 역할 추천은 현재 로컬 신호와 준비 상태에 맞춘 보수적인
+순서일 뿐 안전, 피해, 본인 확인 또는 조치 완료의 증거가 아닙니다.
+
+이 보드는 가족이 옆에서 직접 상의할 때 쓰는 로컬 전용·무상태 수동 안내이며 사람 이름을 역할에
+배정하는 작업 관리 기능이 아닙니다. 가족 이름·전화번호·비밀번호·OTP/PIN·안전단어 답·정확한
+계좌번호·원문·링크·메모를 묻거나 저장하지 않습니다. 선택한 역할·담당자·체크 표시·완료 상태·
+점수·읽음·진행 상태·공유 이력·역할 보드 이력을 저장하지 않고, 화면을 열거나 버튼을 누르는
+것만으로 사건 기록을 추가·수정·삭제하지 않습니다. 문자·메시지·통화·연락처를 읽거나 감시하지
+않고 받는 사람을 고르거나 메시지를 자동 전송하지 않으며, 네트워크 호출이나 새 Android 권한을
+추가하지 않습니다. 알림·알람·캘린더 일정·작업·서비스·백그라운드 워커·예약 알림을 만들거나
+예약하지 않습니다.
+
+보드는 계좌·카드를 자동 정지하거나 기기·계정·메시지를 감시하지 않고, 통화·문자를 자동 실행 또는
+차단하지 않으며, 링크 검사·악성 앱 제거·피해금 회수·법률 또는 금융 결과를 보장하지 않습니다.
+"가족에게 역할 보드 공유"는 사용자가 직접 누를 때만 Android `ACTION_SEND`의 `text/plain` 공유
+화면을 열고 빌더가 만든 `familyShareSummary`만 전달합니다. 공유문은 일반 역할 라벨·범주·기존 앱
+행동 라벨과 비밀값 없는 일반 인계 문장만 포함하며 붙여넣은 원문, 개인정보 가림 단서, 안전 계획
+값, 가족 이름, 전체 전화번호, 계좌·비밀번호·OTP/PIN, URL/도메인, 주민등록번호와 비슷한 값을
 포함하지 않습니다.
 
 ## Trusted Helper Handoff Card (보호자 도움 요청 카드)
@@ -710,6 +746,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Family Response Role Board is deterministic, local-only, value-less, stateless manual coordination through eight generic roles rather than named assignments. It creates or schedules no notifications, alarms, calendar entries, jobs, workers, background services, or reminders; adds no permissions or network use; reads or monitors no contacts/messages/calls/accounts/devices; auto-sends nothing; stores no names, assignments, role selections, checkmarks, notes, completion/score/read/progress/share/board history; and never mutates incidents. Its user-triggered text share passes only the builder-produced role/category/action labels and generic handoff sentences, excluding pasted text, redacted clues, safety-plan values, family names, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - Follow-up Check-in Planner is deterministic, local-only, stateless manual guidance for family checks after a suspicious contact and beyond the immediate response. It creates or schedules no notifications, alarms, calendar entries, jobs, workers, background services, or reminders; adds no permissions or network use; reads or monitors no contacts/messages/calls/accounts/devices; auto-sends nothing; stores no selected checkpoint, answer, note, reminder schedule, completion/check/score/read/progress/share/follow-up history; and never mutates incidents. Its user-triggered text share passes only the builder-produced checkpoint/category/action labels and generic manual steps, excluding pasted text, redacted clues, safety-plan values, and phone/account/OTP/PIN/URL/domain/resident-number-like values.
 - Trusted Helper Review Mode is deterministic, local-only, value-less, and stateless guidance for a trusted helper sitting beside the user; it asks only action/information categories, never passwords, OTP/PIN/card secrets, safe-word answers, exact contact/account/identity values, links, or raw scam text. It reads or monitors no contacts/messages/calls, auto-sends nothing, stores no selected card/helper answer/helper note/completion/check/score/read/progress/share/review history, never mutates incidents, adds no permissions or network use, and its user-triggered text share passes only builder-produced stage/category/card/action labels and generic first safe moves.
 - Exposure Impact Triage is deterministic, local-only, stateless, non-diagnostic mapping guidance opened from "무엇이 노출됐는지 고르기"; matched signals indicate only conditional possibilities to verify directly, never proof that exposure or harm occurred. It adds no permissions or network use, reads or monitors no contacts/messages/calls, performs no automatic monitoring, auto-sends nothing, stores no exposure selection/answer/completion/check/score/read/progress/share/exposure history, never mutates incidents, and its user-triggered text share passes only the builder-produced safe summary of exposure/category/action labels and generic first safe moves.

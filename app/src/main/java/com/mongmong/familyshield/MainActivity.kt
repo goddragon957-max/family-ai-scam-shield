@@ -22,7 +22,7 @@ class MainActivity : Activity() {
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
-        EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER
+        EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -128,12 +128,165 @@ class MainActivity : Activity() {
                 Screen.FAMILY_READINESS_ROADMAP -> familyReadinessRoadmapScreen()
                 Screen.EXPOSURE_IMPACT_TRIAGE -> exposureImpactTriageScreen()
                 Screen.FOLLOW_UP_CHECK_IN_PLANNER -> followUpCheckInPlannerScreen()
+                Screen.FAMILY_RESPONSE_ROLE_BOARD -> familyResponseRoleBoardScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.familyResponseRoleBoardScreen() {
+        val board = FamilyResponseRoleBoardBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = board.recommendedRoleIds.toSet()
+
+        title(board.title)
+        subtitle(board.intro)
+        section(
+            board.recommendationTitle,
+            buildString {
+                append(board.recommendationExplanation)
+                append("\n\n먼저 나눌 수동 역할\n")
+                append(
+                    board.recommendedRoles.joinToString("\n") { card ->
+                        "• ${card.roleLabel} · ${card.category.label} · ${card.priority.label}"
+                    }
+                )
+                append("\n\n먼저 이어갈 앱 행동\n")
+                append(
+                    board.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        board.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openFamilyResponseRoleAction(action) }
+            } else {
+                secondaryButton(action.label) { openFamilyResponseRoleAction(action) }
+            }
+        }
+
+        section(
+            "추천 가족 역할",
+            "이름을 배정하거나 저장하지 않고, 지금 필요한 일반 역할을 가족이 말로 나눠 맡으세요. 역할 선택과 진행 상태는 남지 않습니다."
+        )
+        board.recommendedRoles.forEach { card ->
+            familyResponseRoleCard(card, recommended = true)
+        }
+
+        val remainingRoles = board.roleCards.filterNot { card -> card.id in recommendedIds }
+        if (remainingRoles.isNotEmpty()) {
+            section(
+                "나머지 가족 역할",
+                "추천과 관계없이 필요한 역할을 직접 살펴보세요. 어떤 가족이 맡았는지 앱에 입력하거나 기록하지 않습니다."
+            )
+            remainingRoles.forEach { card ->
+                familyResponseRoleCard(card, recommended = false)
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            board.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 역할 보드 공유") {
+            shareFamilyResponseRoleBoard(board.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.familyResponseRoleCard(
+        card: FamilyResponseRoleCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.roleLabel)
+            append(" · ")
+            append(card.category.label)
+            append(" · ")
+            append(card.priority.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("역할 임무\n")
+                append(card.mission)
+                append("\n\n안전한 인계 문장\n")
+                append(card.safeHandoffSentence)
+                append("\n\n언제 맡나요?\n")
+                append(card.whenToUse)
+                append("\n\n하지 마세요\n")
+                card.doNotDoBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openFamilyResponseRoleAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openFamilyResponseRoleAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openFamilyResponseRoleAction(action) }
+        }
+    }
+
+    private fun openFamilyResponseRoleAction(action: FamilyResponseRoleAction) {
+        when (action.id) {
+            FamilyResponseRoleActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            FamilyResponseRoleActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            FamilyResponseRoleActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            FamilyResponseRoleActionId.TRUSTED_HELPER_HANDOFF ->
+                show(Screen.TRUSTED_HELPER_HANDOFF)
+            FamilyResponseRoleActionId.CHECKER -> show(Screen.CHECKER)
+            FamilyResponseRoleActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            FamilyResponseRoleActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FamilyResponseRoleActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            FamilyResponseRoleActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            FamilyResponseRoleActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            FamilyResponseRoleActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            FamilyResponseRoleActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            FamilyResponseRoleActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            FamilyResponseRoleActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FamilyResponseRoleActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FamilyResponseRoleActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            FamilyResponseRoleActionId.REPORT_PREP -> show(Screen.REPORT_PREP)
+            FamilyResponseRoleActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            FamilyResponseRoleActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            FamilyResponseRoleActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun shareFamilyResponseRoleBoard(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 역할 보드 공유"))
     }
 
     private fun LinearLayout.onboarding() {
@@ -182,6 +335,7 @@ class MainActivity : Activity() {
         secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         secondaryButton("보호자 도움 요청 카드") { show(Screen.TRUSTED_HELPER_HANDOFF) }
         secondaryButton("보호자와 함께 안전 검토") { show(Screen.TRUSTED_HELPER_REVIEW) }
+        secondaryButton("가족 역할 나눠 대응하기") { show(Screen.FAMILY_RESPONSE_ROLE_BOARD) }
         secondaryButton("안전 확인 전화 스크립트") { show(Screen.SAFE_CALL_SCRIPTS) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
@@ -665,6 +819,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("이 신호로 보호자 검토 시작") {
             show(Screen.TRUSTED_HELPER_REVIEW)
+        }
+        secondaryButton("이 신호로 가족 역할 나누기") {
+            show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
         }
         secondaryButton("이 신호로 후속 점검 보기") {
             show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
@@ -1661,6 +1818,9 @@ class MainActivity : Activity() {
             "개인정보·안전 안내",
             review.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
         )
+        secondaryButton("가족 역할 보드로 이어가기") {
+            show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+        }
         primaryButton("가족에게 보호자 검토 요약 공유") {
             shareTrustedHelperReview(review.familyShareSummary)
         }
@@ -2523,6 +2683,9 @@ class MainActivity : Activity() {
             "개인정보·안전 안내",
             planner.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
         )
+        secondaryButton("가족 역할 나눠 후속 대응하기") {
+            show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+        }
         primaryButton("가족에게 후속 점검 공유") {
             shareFollowUpCheckInPlanner(planner.familyShareSummary)
         }
