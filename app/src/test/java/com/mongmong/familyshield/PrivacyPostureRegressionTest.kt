@@ -53,6 +53,36 @@ class PrivacyPostureRegressionTest {
         assertFalse(privacyShareHelper.contains("incident.preview"))
     }
 
+    @Test
+    fun incidentBriefingReadsSavedLogsWithoutMutatingAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val briefingScreen = activitySource
+            .substringAfter("private fun LinearLayout.incidentTimelineBriefingScreen")
+            .substringBefore("private fun openIncidentBriefingAction")
+        val briefingShareHelper = activitySource
+            .substringAfter("private fun shareIncidentTimelineBriefing")
+            .substringBefore("private fun sharePrivacySummary")
+
+        assertTrue(briefingScreen.contains("incidents.load()"))
+        assertTrue(
+            briefingScreen.contains(
+                "shareIncidentTimelineBriefing(briefing.familyShareSummary)"
+            )
+        )
+        assertFalse(briefingScreen.contains("incidents.add("))
+        assertFalse(briefingScreen.contains("incidents.clear("))
+        assertFalse(briefingScreen.contains("prefs.edit("))
+
+        assertTrue(briefingShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(briefingShareHelper.contains("type = \"text/plain\""))
+        assertTrue(briefingShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertFalse(briefingShareHelper.contains("Incident"))
+        assertFalse(briefingShareHelper.contains("ScamAnalysis"))
+        assertFalse(briefingShareHelper.contains("preview"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile

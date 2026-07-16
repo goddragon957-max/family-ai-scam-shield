@@ -19,7 +19,7 @@ import android.widget.Toast
 class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
-        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER
+        HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -114,6 +114,7 @@ class MainActivity : Activity() {
                 Screen.CALLBACK_CARD -> familyCallbackCardScreen()
                 Screen.PRIVACY_CENTER -> privacyCenterScreen()
                 Screen.FLOW_ROUTER -> safetyFlowRouterScreen()
+                Screen.TIMELINE_BRIEFING -> incidentTimelineBriefingScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -166,6 +167,7 @@ class MainActivity : Activity() {
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.HOME) }
         secondaryButton("증거 보존 체크리스트") { openEvidenceKit(null) }
+        secondaryButton("사건 타임라인 요약") { show(Screen.TIMELINE_BRIEFING) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/1394 또는 은행 지급정지")
     }
@@ -321,8 +323,105 @@ class MainActivity : Activity() {
                 show(Screen.LOG)
             }
         }
+        primaryButton("사건 타임라인 요약") { show(Screen.TIMELINE_BRIEFING) }
         primaryButton("새 검사") { show(Screen.CHECKER) }
         secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.incidentTimelineBriefingScreen() {
+        val briefing = IncidentTimelineBriefingBuilder.build(
+            incidents = incidents.load(),
+            hasCurrentAnalysis = currentAnalysis != null,
+            displayTime = incidents::displayTime
+        )
+
+        title(briefing.title)
+        subtitle(briefing.intro)
+        briefing.emptyStateTitle?.let { emptyTitle ->
+            section(emptyTitle, briefing.emptyStateMessage.orEmpty())
+        }
+
+        val latestSummary = if (briefing.latestIncidentDisplayTime == null) {
+            "최근 사건: 저장된 사건 없음"
+        } else {
+            "최근 사건: ${briefing.latestIncidentDisplayTime} · ${briefing.latestIncidentRiskLabel}"
+        }
+        section(
+            "저장 기록 요약",
+            buildString {
+                appendLine("전체 ${briefing.totalCount}건")
+                appendLine(
+                    "높음 ${briefing.riskCounts.high}건 · 주의 ${briefing.riskCounts.medium}건 · " +
+                        "낮음 ${briefing.riskCounts.low}건 · 확인 필요 ${briefing.riskCounts.needsReview}건"
+                )
+                appendLine("가장 높은 위험도: ${briefing.highestRiskLabel}")
+                append(latestSummary)
+            }
+        )
+        section(
+            "주요 탐지 신호",
+            if (briefing.topSignals.isEmpty()) {
+                "저장된 탐지 신호가 없습니다. 새 요청이 돈·앱 설치·인증정보로 이어지면 직접 검사하세요."
+            } else {
+                briefing.topSignals.joinToString("\n") { signal ->
+                    "• ${signal.label} · ${signal.incidentCount}건"
+                }
+            }
+        )
+
+        section(
+            "추천 다음 단계",
+            "저장 기록은 실제 피해 행동을 뜻하지 않습니다. 본인 상황에 해당하는 경로만 직접 고르세요."
+        )
+        briefing.nextSteps.forEach { action ->
+            section(
+                if (action.recommended) "추천 · ${action.label}" else action.label,
+                action.explanation
+            )
+            if (action.recommended) {
+                primaryButton(action.label) { openIncidentBriefingAction(action) }
+            } else {
+                secondaryButton(action.label) { openIncidentBriefingAction(action) }
+            }
+        }
+
+        if (briefing.timelineItems.isNotEmpty()) {
+            section(
+                "최근 사건 타임라인",
+                "최신 기록부터 표시합니다. 각 단서는 저장할 때 개인정보를 가린 미리보기이며 가족 공유 요약에는 넣지 않습니다."
+            )
+            briefing.timelineItems.forEach { item ->
+                section(
+                    "${item.displayTime} · ${item.riskLabel} (${item.score}점)",
+                    "신호: ${item.signalSummary}\n" +
+                        "개인정보 가림 단서: ${item.redactedPreview}\n" +
+                        "다음 행동: ${item.recommendedNextActionLabel}"
+                )
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            briefing.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 사건 요약 공유") {
+            shareIncidentTimelineBriefing(briefing.familyShareSummary)
+        }
+        secondaryButton("사건 기록으로 돌아가기") { show(Screen.LOG) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openIncidentBriefingAction(action: IncidentBriefingNextStep) {
+        when (action.id) {
+            IncidentBriefingActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            IncidentBriefingActionId.RESPONSE_CENTER -> openResponseCenter()
+            IncidentBriefingActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            IncidentBriefingActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.TIMELINE_BRIEFING)
+            IncidentBriefingActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            IncidentBriefingActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
+        }
     }
 
     private fun LinearLayout.privacyCenterScreen() {
@@ -914,6 +1013,15 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 안전 흐름 요약 공유"))
+    }
+
+    private fun shareIncidentTimelineBriefing(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_SUBJECT, "가족 AI 보이스피싱 방패 사건 요약")
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 사건 요약 공유"))
     }
 
     private fun sharePrivacySummary(summary: String) {

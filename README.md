@@ -15,6 +15,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 9. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
 10. 상황별 신고·상담 연락처와 말할 내용 확인
 11. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+12. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
 
 ## Share Entry
 
@@ -277,6 +278,29 @@ The important checklist lines are included in the safe family report (`SafetyRep
 주민등록번호·여권번호 같은 신분정보 패턴은 저장 전에 가림 처리하며, 붙여넣은 전체 원문은 사건
 기록에 보관하지 않습니다. 이전 버전에서 저장된 미리보기도 불러올 때 다시 가림 처리합니다.
 
+## Incident Timeline Briefing (사건 타임라인 요약)
+
+홈의 "사건 타임라인 요약" 또는 사건 기록 화면의 같은 이름 버튼에서, 사용자가 직접 저장한 최근
+사건 기록을 최신순 타임라인과 집계로 확인할 수 있습니다. `IncidentTimelineBriefingBuilder`는
+`IncidentStore.load()`가 돌려준 개인정보 가림 기록만 입력으로 받아 전체 건수, 위험도별 건수,
+가장 높은 위험도, 최근 사건 시각, 여러 기록에서 많이 나타난 탐지 신호와 사건별 다음 행동을
+결정적으로 정리합니다. 음수 점수와 비어 있거나 잘못된 위험도·신호·미리보기는 안전한 표시값으로
+정규화하며, 사건 순서가 섞여 있어도 최신 기록부터 보여줍니다.
+
+요약 화면은 저장된 사건을 읽을 뿐 새 분석이나 사건 기록을 만들지 않으며, 화면 선택과 요약을
+새 저장소에 남기지 않습니다. 사건 기록을 지우거나 바꾸는 버튼도 두지 않고 안전 흐름 길잡이,
+긴급 대응 센터, 증거 보존 체크리스트, 신고·상담 연락처와 현재 분석의 상담 준비 카드(현재 분석이
+없으면 새 검사)로 연결합니다. 저장된 기록은 실제 피해 행동을 증명하지 않으므로 사용자가 본인
+상황에 해당하는 경로를 직접 고릅니다.
+
+"가족에게 사건 요약 공유"는 사용자가 직접 누를 때 Android `ACTION_SEND`의 `text/plain`만
+사용합니다. 공유문은 위험도별 건수, 가장 높은 위험도, 허용된 탐지 신호 분류와 앱 안의 다음 행동
+이름처럼 집계에 필요한 안전한 값만 새로 구성합니다. 사건별 개인정보 가림 미리보기와 표시 시각,
+붙여넣은 원문, 전화번호·계좌번호·비밀번호·OTP/PIN·링크·도메인·신분정보, 가족 안전단어·콜백
+질문·연락처 이름과 번호는 넣지 않습니다. 이 기능은 로컬에서만 동작하고 네트워크 호출, 자동
+문자·통화·연락처 읽기, 새 Android 권한을 추가하지 않으며 공식 도움은 결과 보장이 아닌 경로
+안내로만 제공합니다.
+
 ## Analyzer Signals
 
 The local analyzer scores these signals:
@@ -349,6 +373,7 @@ run and result.
 
 - No server and no network analysis.
 - The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.
+- The Incident Timeline Briefing deterministically summarizes saved privacy-redacted incident fields without creating new stored data; its user-triggered text share contains aggregate risk/signal/action labels only and excludes every per-incident clue, display time, pasted text, and safety-plan value without adding network use or Android permissions.
 - The visible Privacy Center inventories consent, safety-plan readiness/contact count, incident count/retained fields, transient non-stored screens, and every intentionally absent permission without exposing saved values.
 - Privacy Center clearing is explicit and scoped: incident logs, the family safety plan, and onboarding consent are controlled independently; opening the screen never deletes data automatically.
 - The Privacy Center family explanation uses user-triggered `ACTION_SEND` `text/plain` with aggregate status only and excludes safety-plan values, incident previews, and pasted raw text.
