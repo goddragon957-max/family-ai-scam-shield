@@ -24,18 +24,27 @@ class IncidentStore(context: Context) {
             riskLabel = analysis.riskLevel.label,
             score = analysis.score,
             signals = analysis.matchedSignals.joinToString(", ") { it.label },
-            preview = analysis.input.take(80).replace("\n", " ")
+            preview = IncidentPreviewRedactor.build(analysis)
         )
-        val next = (load() + incident).takeLast(30)
+        val next = (load() + incident).sortedByDescending { it.timestamp }.take(30)
         prefs.edit().putString("items", next.joinToString("\n") { encode(it) }).apply()
     }
 
     fun load(): List<Incident> {
         val saved = prefs.getString("items", null).orEmpty()
-        return saved.lineSequence()
+        val decoded = saved.lineSequence()
             .filter { it.isNotBlank() }
             .mapNotNull(::decode)
             .toList()
+
+        val sanitized = decoded.map { incident ->
+            incident.copy(preview = IncidentPreviewRedactor.redact(incident.preview))
+        }
+        if (sanitized != decoded) {
+            prefs.edit().putString("items", sanitized.joinToString("\n") { encode(it) }).apply()
+        }
+
+        return sanitized
             .sortedByDescending { it.timestamp }
     }
 

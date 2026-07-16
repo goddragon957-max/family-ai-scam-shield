@@ -9,7 +9,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 3. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
 4. 로컬 규칙 기반 AI 보호자 분석
 5. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-6. 기기 로컬 사건 기록 저장
+6. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 
 ## Share Entry
 
@@ -147,6 +147,14 @@ The important checklist lines are included in the safe family report (`SafetyRep
 사건 기록에도 남지 않습니다. 단위 테스트(`ScamSampleLibraryTest`)가 모든 샘플이 허구로
 표시되어 있고 분석기가 기대한 위험도/신호를 내는지 검증합니다.
 
+## Incident Log (사건 기록)
+
+사용자가 분석 결과에서 직접 저장을 선택한 경우에만 최근 30개 사건을 기기의
+`SharedPreferences`에 보관합니다. 각 기록에는 위험도, 탐지 신호, 점수, 저장 시각과 짧은
+개인정보 가림 미리보기만 들어갑니다. 전화번호, 긴 계좌형 숫자, 인증번호(OTP), 링크·도메인,
+주민등록번호·여권번호 같은 신분정보 패턴은 저장 전에 가림 처리하며, 붙여넣은 전체 원문은 사건
+기록에 보관하지 않습니다. 이전 버전에서 저장된 미리보기도 불러올 때 다시 가림 처리합니다.
+
 ## Analyzer Signals
 
 The local analyzer scores these signals:
@@ -223,7 +231,7 @@ run and result.
 - No Android permissions are requested for calls, SMS, contacts, microphone, or internet.
 - Android backup is disabled (`android:allowBackup="false"`) so local incident/safety-plan data is not included in platform cloud backup.
 - The user must paste suspicious text manually.
-- Incident logs are stored only in local `SharedPreferences` on the device.
+- Incident logs keep only risk level, detected signals, score, timestamp, and a redacted preview in local `SharedPreferences`; the full pasted text is not retained in the incident log.
 - Rule-based scoring is a safety checklist, not a guarantee. Always call family through an already-saved trusted number before sending money, installing apps, or sharing authentication codes.
 
 ## Package

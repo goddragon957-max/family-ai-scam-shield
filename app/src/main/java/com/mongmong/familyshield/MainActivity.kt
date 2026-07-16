@@ -206,7 +206,7 @@ class MainActivity : Activity() {
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
         primaryButton("사건 기록에 저장") {
             incidents.add(analysis)
-            toast("사건 기록에 저장했습니다.")
+            toast("개인정보를 가린 사건 기록을 저장했습니다.")
             show(Screen.LOG)
         }
         secondaryButton("다른 내용 검사") { show(Screen.CHECKER) }
@@ -215,7 +215,10 @@ class MainActivity : Activity() {
 
     private fun LinearLayout.incidentLog() {
         title("사건 기록")
-        subtitle("기록은 이 기기의 SharedPreferences에만 저장됩니다. 최근 30개만 보관합니다.")
+        subtitle(
+            "기록은 이 기기에만 저장되고 최근 30개만 보관합니다. 붙여넣은 전체 원문은 사건 기록에 남기지 않으며, " +
+                "개인정보를 가린 짧은 단서만 표시합니다."
+        )
         val items = incidents.load()
         if (items.isEmpty()) {
             section("기록 없음", "저장된 분석 결과가 없습니다.")
@@ -223,7 +226,7 @@ class MainActivity : Activity() {
             items.forEach { incident ->
                 section(
                     "${incidents.displayTime(incident.timestamp)} · ${incident.riskLabel} (${incident.score}점)",
-                    "신호: ${incident.signals.ifBlank { "강한 신호 없음" }}\n내용: ${incident.preview}"
+                    "신호: ${incident.signals.ifBlank { "강한 신호 없음" }}\n가림 처리된 단서: ${incident.preview}"
                 )
             }
             secondaryButton("기록 모두 삭제") {
