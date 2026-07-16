@@ -153,7 +153,16 @@ class PrivacyCenterBuilderTest {
             append(center.familyShareSummary)
         }
 
-        listOf("안전 흐름 선택", "가족 콜백 카드", "상담 준비 카드", "체크리스트", "3분 훈련", "샘플 선택").forEach { term ->
+        listOf(
+            "안전 흐름 선택",
+            "가족 콜백 카드",
+            "상담 준비 카드",
+            "체크리스트",
+            "가족 경고 메시지",
+            "공유 이력",
+            "3분 훈련",
+            "샘플 선택"
+        ).forEach { term ->
             assertTrue("transient copy omitted $term", transientCopy.contains(term))
         }
         assertTrue(

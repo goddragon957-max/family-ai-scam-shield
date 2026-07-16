@@ -17,6 +17,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 11. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
 12. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
 13. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
+14. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
 
 ## Share Entry
 
@@ -63,6 +64,32 @@ The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plai
 신분정보 값을 넣지 않습니다. 체크리스트는 기기 안에서 결정되며 네트워크 호출이나 새 Android
 권한을 추가하지 않습니다.
 
+## Family Alert Message Pack (가족 경고 메시지 팩)
+
+홈과 현재 AI 분석 결과의 "가족 경고 메시지 만들기"에서 가족 전체 경고, 새 번호 사칭 주의,
+계정 탈취 의심 알림, 원격제어·앱 설치·링크 주의, 송금·상품권·OTP 금지, 증거·신고 협조 요청,
+일상 예방 공유 메시지를 볼 수 있습니다. `FamilyAlertMessagePackBuilder`는 `ScamAnalysis.input`을
+읽거나 복사하지 않고 현재 분석의 탐지 신호만 사용하며, 가족 안전 계획 자체 대신 값 없는
+`FamilyReadiness` 상태만 사용합니다. 따라서 붙여넣은 원문, 안전단어·콜백 스크립트·연락처 값을
+메시지에 넣지 않습니다. 같은 신호와 준비 상태에는 항상 같은 템플릿 순서와 추천 결과를 만들고,
+분석 결과가 없을 때도 일상 예방과 가족 전체 경고, 안전 계획·
+콜백 점검을 기본으로 안내합니다. 예방과 증거·공식 도움 템플릿은 분석 유형과 관계없이 항상
+확인할 수 있습니다.
+
+각 카드의 기존 기능 버튼은 가족 콜백 확인 카드, 가족 안전 계획, 안전 흐름 길잡이, 계정·기기
+잠금 체크리스트, 증거 보존 체크리스트, 신고·상담 연락처, 새 분석 또는 신고용 상담 준비 카드로
+이동합니다. 공식 연락처·증거 보존·계정 보호 안내를 이 화면에 복제하지 않으며, 메시지 팩을 열거나
+버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다. 템플릿 선택, 공유 이력,
+체크 상태도 저장하지 않는 임시 화면입니다.
+
+템플릿별 공유와 추천 메시지 묶음 공유는 사용자가 버튼을 눌렀을 때만 Android `ACTION_SEND`의
+`text/plain` 공유 화면을 엽니다. 앱은 연락처를 읽거나 받는 사람을 고르지 않고 메시지를 자동으로
+보내지 않으며, 사용자가 공유 앱과 대상을 직접 선택합니다. 공유문에는 붙여넣은 원문,
+개인정보 가림 단서, 안전 질문·콜백 대사·연락처 이름과 번호, 전화·계좌·비밀번호·OTP/PIN·링크·
+도메인·신분정보 값을 넣지 않습니다. 모든 추천은 기기 안에서 수행되며 네트워크 호출이나 새
+Android 권한을 사용하지 않습니다. 계정 복구, 사기 차단, 피해금 회수·환급, 법적 결과나 안전을
+보장하지 않습니다.
+
 ## Privacy Center (개인정보 센터)
 
 홈의 "개인정보 센터"에서 현재 기기에 어떤 앱 데이터가 있는지 값 자체를 노출하지 않고 확인할
@@ -74,7 +101,7 @@ The launcher activity also accepts Android `ACTION_SEND` text shares (`text/plai
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습·3분 훈련 결과와 드릴·샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -399,6 +426,7 @@ run and result.
 - No server and no network analysis.
 - The Safety Flow Router deterministically maps the current local analysis and family readiness to existing app flows; route and recommendation selections are not stored, opening it never mutates incident logs automatically, and its text share excludes pasted text and safety-plan secrets without adding network use or Android permissions.
 - The Account & Device Lockdown Checklist is deterministic, local-only, stateless manual guidance; it does not change device or account settings, mutate incident logs, or add permissions, and its user-triggered text share contains only static section/action labels rather than analysis or safety-plan values.
+- The Family Alert Message Pack is deterministic, local-only, and stateless; it uses analysis signals and secret-free readiness only, reads no contacts, never auto-sends, stores no template selection or share history, never mutates incident logs, and shares only builder-produced privacy-safe text without adding network use or Android permissions.
 - The Incident Timeline Briefing deterministically summarizes saved privacy-redacted incident fields without creating new stored data; its user-triggered text share contains aggregate risk/signal/action labels only and excludes every per-incident clue, display time, pasted text, and safety-plan value without adding network use or Android permissions.
 - The visible Privacy Center inventories consent, safety-plan readiness/contact count, incident count/retained fields, transient non-stored screens, and every intentionally absent permission without exposing saved values.
 - Privacy Center clearing is explicit and scoped: incident logs, the family safety plan, and onboarding consent are controlled independently; opening the screen never deletes data automatically.

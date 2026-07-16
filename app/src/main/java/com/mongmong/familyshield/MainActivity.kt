@@ -20,7 +20,7 @@ class MainActivity : Activity() {
     private enum class Screen {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
-        ACCOUNT_LOCKDOWN
+        ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -117,6 +117,7 @@ class MainActivity : Activity() {
                 Screen.FLOW_ROUTER -> safetyFlowRouterScreen()
                 Screen.TIMELINE_BRIEFING -> incidentTimelineBriefingScreen()
                 Screen.ACCOUNT_LOCKDOWN -> accountLockdownChecklistScreen()
+                Screen.FAMILY_ALERT_MESSAGES -> familyAlertMessagePackScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -160,6 +161,7 @@ class MainActivity : Activity() {
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
+        secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
         secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
         readinessSection()
@@ -232,6 +234,94 @@ class MainActivity : Activity() {
             SafetyFlowActionId.OFFICIAL_HELP_DIRECTORY -> openHelpDirectory(Screen.FLOW_ROUTER)
             SafetyFlowActionId.EVIDENCE_KIT -> openEvidenceKit(action.evidenceSituation)
             SafetyFlowActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun LinearLayout.familyAlertMessagePackScreen() {
+        val pack = FamilyAlertMessagePackBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = pack.recommendedTemplateIds.toSet()
+
+        title(pack.title)
+        subtitle(pack.intro)
+        section(
+            pack.recommendationTitle,
+            buildString {
+                append(pack.recommendationExplanation)
+                append("\n\n")
+                append(
+                    pack.recommendedTemplates.joinToString("\n") { template ->
+                        "• ${template.title} · ${template.urgency.label}"
+                    }
+                )
+            }
+        )
+
+        pack.templates.forEach { template ->
+            val recommended = template.id in recommendedIds
+            val heading = buildString {
+                if (recommended) append("추천 · ")
+                append(template.title)
+                append(" · ")
+                append(template.urgency.label)
+            }
+            section(
+                heading,
+                buildString {
+                    append("받는 사람\n")
+                    append(template.audience)
+                    append("\n\n언제 쓰나요?\n")
+                    append(template.whenToUse)
+                    append("\n\n공유할 메시지\n")
+                    append(template.messageBody)
+                    append("\n\n보낸 뒤 확인\n")
+                    template.followUpChecklist.forEach { item ->
+                        append("• ").append(item).append('\n')
+                    }
+                }.trim()
+            )
+            if (recommended) {
+                primaryButton("${template.title} 직접 공유") {
+                    shareFamilyAlertText(template.messageBody)
+                }
+            } else {
+                secondaryButton("${template.title} 직접 공유") {
+                    shareFamilyAlertText(template.messageBody)
+                }
+            }
+            template.actions.forEach { action ->
+                secondaryButton(action.label) { openFamilyAlertAction(action) }
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            pack.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("추천 메시지 묶음 직접 공유") {
+            shareFamilyAlertText(pack.combinedShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun openFamilyAlertAction(action: FamilyAlertAction) {
+        when (action.id) {
+            FamilyAlertActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FamilyAlertActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            FamilyAlertActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            FamilyAlertActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FamilyAlertActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FamilyAlertActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.FAMILY_ALERT_MESSAGES)
+            FamilyAlertActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            FamilyAlertActionId.NEW_ANALYSIS -> show(Screen.CHECKER)
         }
     }
 
@@ -373,6 +463,7 @@ class MainActivity : Activity() {
         )
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("계정·기기 잠금 체크리스트") { show(Screen.ACCOUNT_LOCKDOWN) }
+        secondaryButton("가족 경고 메시지 만들기") { show(Screen.FAMILY_ALERT_MESSAGES) }
         secondaryButton("신고용 상담 준비 카드") { show(Screen.REPORT_PREP) }
         secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.RESULT) }
         primaryButton("가족에게 안전 리포트 공유") { shareSafetyReport(analysis) }
@@ -1097,6 +1188,14 @@ class MainActivity : Activity() {
             putExtra(Intent.EXTRA_TEXT, summary)
         }
         startActivity(Intent.createChooser(shareIntent, "가족에게 안전 흐름 요약 공유"))
+    }
+
+    private fun shareFamilyAlertText(text: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, text)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족 경고 메시지 직접 공유"))
     }
 
     private fun shareAccountLockdownChecklist(summary: String) {

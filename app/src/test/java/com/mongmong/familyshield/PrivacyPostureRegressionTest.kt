@@ -195,6 +195,138 @@ class PrivacyPostureRegressionTest {
         assertFalse(lockdownShareHelper.contains("incidents"))
     }
 
+    @Test
+    fun familyAlertMessagesAreStatelessUseExistingFlowsAndShareOnlyBuilderText() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val alertScreen = activitySource
+            .substringAfter("private fun LinearLayout.familyAlertMessagePackScreen")
+            .substringBefore("private fun openFamilyAlertAction")
+        val alertActionRouter = activitySource
+            .substringAfter("private fun openFamilyAlertAction")
+            .substringBefore("private fun LinearLayout.accountLockdownChecklistScreen")
+        val alertShareHelper = activitySource
+            .substringAfter("private fun shareFamilyAlertText")
+            .substringBefore("private fun shareAccountLockdownChecklist")
+        val normalizedActionRouter = alertActionRouter.replace(Regex("\\s+"), " ")
+
+        assertTrue(activitySource.contains("FAMILY_ALERT_MESSAGES"))
+        assertTrue(
+            activitySource.contains(
+                "secondaryButton(\"가족 경고 메시지 만들기\") { " +
+                    "show(Screen.FAMILY_ALERT_MESSAGES) }"
+            )
+        )
+        assertTrue(
+            activitySource.contains(
+                "Screen.FAMILY_ALERT_MESSAGES -> familyAlertMessagePackScreen()"
+            )
+        )
+        assertTrue(alertScreen.contains("FamilyAlertMessagePackBuilder.build("))
+        assertTrue(alertScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            alertScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(alertScreen.contains("shareFamilyAlertText(template.messageBody)"))
+        assertTrue(alertScreen.contains("shareFamilyAlertText(pack.combinedShareSummary)"))
+        val alertShareArguments = Regex("shareFamilyAlertText\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(
+            listOf(
+                "template.messageBody",
+                "template.messageBody",
+                "pack.combinedShareSummary"
+            ),
+            alertShareArguments
+        )
+        assertTrue(alertScreen.contains("secondaryButton(\"홈으로\")"))
+        assertFalse(alertScreen.contains("analysis.input"))
+        assertFalse(alertScreen.contains("IncidentPreviewRedactor"))
+        assertFalse(alertScreen.contains("incidents.add("))
+        assertFalse(alertScreen.contains("incidents.clear("))
+        assertFalse(alertScreen.contains("prefs.edit("))
+        assertFalse(alertScreen.contains("safetyPlan.save("))
+        assertFalse(alertScreen.contains("CheckBox("))
+        assertFalse(alertScreen.contains("currentAnalysis ="))
+        assertFalse(alertScreen.contains(".save("))
+        assertFalse(alertScreen.contains("putString("))
+        assertFalse(alertScreen.contains("putBoolean("))
+
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.FAMILY_CALLBACK_CARD -> " +
+                    "openFamilyCallbackCard(currentAnalysis)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.SAFETY_PLAN -> show(Screen.PLAN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.EVIDENCE_KIT -> openEvidenceKit(null)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                    "openHelpDirectory(Screen.FAMILY_ALERT_MESSAGES)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.REPORT_PREP -> " +
+                    "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)"
+            )
+        )
+        assertTrue(
+            normalizedActionRouter.contains(
+                "FamilyAlertActionId.NEW_ANALYSIS -> show(Screen.CHECKER)"
+            )
+        )
+
+        assertTrue(alertShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(alertShareHelper.contains("type = \"text/plain\""))
+        assertTrue(alertShareHelper.contains("putExtra(Intent.EXTRA_TEXT, text)"))
+        assertTrue(alertShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, text\\)")
+                .findAll(alertShareHelper)
+                .count()
+        )
+        assertFalse(alertShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(alertShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(alertShareHelper.contains("ClipData"))
+        assertFalse(alertShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(alertShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(alertShareHelper.contains("ScamAnalysis"))
+        assertFalse(alertShareHelper.contains("currentAnalysis"))
+        assertFalse(alertShareHelper.contains("analysis.input"))
+        assertFalse(alertShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(alertShareHelper.contains("SafetyPlan"))
+        assertFalse(alertShareHelper.contains("incidents"))
+        assertFalse(alertShareHelper.contains("ContactsContract"))
+        assertFalse(alertShareHelper.contains("SmsManager"))
+    }
+
     private fun readProjectFile(relativePath: String): String {
         val userDirectory = requireNotNull(System.getProperty("user.dir"))
         var directory = File(userDirectory).absoluteFile
