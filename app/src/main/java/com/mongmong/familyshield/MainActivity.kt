@@ -141,11 +141,10 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         section("개인정보 보호", "분석은 로컬 규칙 기반 AI 보호자 엔진으로만 진행됩니다. 네트워크 권한, SMS 권한, 통화 권한을 요청하지 않습니다.")
+        readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("이미 피해가 의심돼요 / 긴급 대응 센터") { openResponseCenter() }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
-        secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
-        secondaryButton("가족 안전 연습 / 3분 훈련") { openDrill() }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/182 또는 은행 지급정지")
     }
 
@@ -256,6 +255,24 @@ class MainActivity : Activity() {
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
+    private fun LinearLayout.readinessSection() {
+        val readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        val body = buildString {
+            readiness.checklist.forEach { item ->
+                append(if (item.done) "✔ " else "☐ ").append(item.label).append('\n')
+            }
+            append("\n다음 할 일: ").append(readiness.nextAction)
+        }
+        section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        if (readiness.level == ReadinessLevel.READY) {
+            secondaryButton("가족 안전 연습 / 3분 훈련") { openDrill() }
+            secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
+        } else {
+            secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
+            secondaryButton("가족 안전 연습 / 3분 훈련") { openDrill() }
+        }
+    }
+
     private fun openDrill() {
         selectedDrillScenario = null
         show(Screen.DRILL)
@@ -267,11 +284,15 @@ class MainActivity : Activity() {
         section("개인정보 보호", "훈련은 내장된 가상 시나리오만 사용합니다. 연습 내용이나 결과를 저장하거나 전송하지 않습니다.")
 
         val plan = safetyPlan.load()
+        val readiness = FamilyReadinessBuilder.build(plan)
         if (plan.safeWord.isNotBlank()) {
             section("우리 가족 연습 질문", "훈련 중 상대 역할에게 이렇게 물어보세요: “${plan.safeWord}”\n답이 어색하면 요구를 거절하고 저장된 번호로 콜백하는 것까지 연습하세요.")
+        }
+        if (readiness.level == ReadinessLevel.READY) {
+            section("연습 준비 상태 · ${readiness.level.label}", "안전단어, 콜백 연락처, 콜백 스크립트가 모두 저장되어 있어요. 저장된 루틴 그대로 연습하면 됩니다.")
         } else {
-            section("안전단어가 아직 없어요", "가족 안전 계획에 안전단어를 저장하면 훈련에서 우리 가족만의 질문으로 연습할 수 있습니다.")
-            primaryButton("가족 안전 계획 만들기") { show(Screen.PLAN) }
+            section("연습 전 점검 · ${readiness.level.label}", "저장된 안전 계획이 아직 부족해요. 계획을 먼저 채우면 우리 가족만의 질문과 번호로 연습할 수 있습니다.\n다음 할 일: ${readiness.nextAction}")
+            primaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
         }
 
         section("연습 방법", SafetyDrillBuilder.FICTION_NOTICE + "\n가족 한 명이 아래 시나리오의 가상 대사를 읽어주고, 다른 가족이 대응을 연습하세요.")
