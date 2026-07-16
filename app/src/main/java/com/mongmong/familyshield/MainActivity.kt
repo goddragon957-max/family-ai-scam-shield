@@ -23,7 +23,7 @@ class MainActivity : Activity() {
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
         TRUSTED_HELPER_REVIEW, SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP,
         EXPOSURE_IMPACT_TRIAGE, FOLLOW_UP_CHECK_IN_PLANNER, FAMILY_RESPONSE_ROLE_BOARD,
-        FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH
+        FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH, ACTIVE_CONTACT_EXIT_SCRIPTS
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -132,12 +132,150 @@ class MainActivity : Activity() {
                 Screen.FAMILY_RESPONSE_ROLE_BOARD -> familyResponseRoleBoardScreen()
                 Screen.FAMILY_CALM_DEBRIEF_AGENDA -> familyCalmDebriefAgendaScreen()
                 Screen.SAFE_PASTE_PRIVACY_COACH -> safePastePrivacyCoachScreen()
+                Screen.ACTIVE_CONTACT_EXIT_SCRIPTS -> activeContactExitScriptsScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.activeContactExitScriptsScreen() {
+        val scripts = ActiveContactExitScriptsBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = scripts.recommendedCardIds.toSet()
+
+        title(scripts.title)
+        subtitle(scripts.intro)
+        section(
+            "${scripts.modeLabel} · ${scripts.recommendationTitle}",
+            buildString {
+                append(scripts.recommendationExplanation)
+                append("\n\n지금 직접 읽을 추천 문장\n")
+                append(
+                    scripts.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.scriptText}"
+                    }
+                )
+                append("\n\n연락을 끝낸 뒤 이어갈 기존 앱 경로\n")
+                append(
+                    scripts.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        scripts.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openActiveContactExitScriptAction(action) }
+            } else {
+                secondaryButton(action.label) { openActiveContactExitScriptAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 종료 문장",
+            "카드는 항상 같은 순서입니다. 지금 상황에 맞는 짧은 문장을 사용자가 직접 읽고 연락을 끝낸 뒤, 필요한 기존 앱 경로만 직접 고르세요. 읽음이나 선택 상태는 남지 않습니다."
+        )
+        scripts.cards.forEach { card ->
+            activeContactExitScriptCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            scripts.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 종료 문장 안내 공유") {
+            shareActiveContactExitScripts(scripts.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.activeContactExitScriptCard(
+        card: ActiveContactExitScriptCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 문장\n")
+                append(card.scriptText)
+                append("\n\n언제 쓰나요?\n")
+                append(card.whenToUse)
+                append("\n\n말하지 않거나 하지 않을 것\n")
+                card.neverSayOrDo.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openActiveContactExitScriptAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openActiveContactExitScriptAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openActiveContactExitScriptAction(action) }
+        }
+    }
+
+    private fun openActiveContactExitScriptAction(action: ActiveContactExitScriptAction) {
+        when (action.id) {
+            ActiveContactExitScriptActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            ActiveContactExitScriptActionId.CHECKER -> show(Screen.CHECKER)
+            ActiveContactExitScriptActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            ActiveContactExitScriptActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            ActiveContactExitScriptActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            ActiveContactExitScriptActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            ActiveContactExitScriptActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            ActiveContactExitScriptActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            ActiveContactExitScriptActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            ActiveContactExitScriptActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            ActiveContactExitScriptActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            ActiveContactExitScriptActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            ActiveContactExitScriptActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            ActiveContactExitScriptActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            ActiveContactExitScriptActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            ActiveContactExitScriptActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            ActiveContactExitScriptActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
+    }
+
+    private fun shareActiveContactExitScripts(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 종료 문장 안내 공유"))
     }
 
     private fun LinearLayout.safePastePrivacyCoachScreen() {
@@ -155,6 +293,9 @@ class MainActivity : Activity() {
             "이 코치 화면은 의심 내용을 받거나 읽지 않고 자동으로 바꾸지 않습니다. " +
                 "아래 순서를 먼저 읽고, 붙여넣기 전 사용자가 직접 필요한 부분만 가리세요."
         )
+        secondaryButton("연락 중 압박을 끝내는 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
         section(
             coach.recommendationTitle,
             buildString {
@@ -291,6 +432,9 @@ class MainActivity : Activity() {
             agenda.durationLabel,
             "타이머나 기록 없이 아래 순서를 가족이 직접 읽고, 필요한 기존 앱 경로만 골라 이어가세요."
         )
+        secondaryButton("다시 연락 중이면 종료 문장 보기") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
         section(
             agenda.recommendationTitle,
             buildString {
@@ -608,6 +752,7 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        primaryButton("지금 연락 끝내는 문장") { show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS) }
         primaryButton("지금 뭐부터 할지 고르기") { show(Screen.FLOW_ROUTER) }
         secondaryButton("무엇이 노출됐는지 고르기") {
             show(Screen.EXPOSURE_IMPACT_TRIAGE)
@@ -659,6 +804,9 @@ class MainActivity : Activity() {
                 "${step.displayOrder}. ${step.instruction}"
             }
         )
+        primaryButton("압박 연락을 끝내는 문장 보기") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
         section(
             mode.recommendationTitle,
             buildString {
@@ -751,6 +899,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("연락 중 압박을 끝내는 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
         section(
             router.recommendationTitle,
             buildString {
@@ -1113,6 +1264,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 상황에서 연락 끝내는 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
         secondaryButton("다음부터 붙여넣기 전 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
         }

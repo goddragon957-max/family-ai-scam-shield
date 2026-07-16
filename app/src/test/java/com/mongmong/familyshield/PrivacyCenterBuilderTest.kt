@@ -160,6 +160,9 @@ class PrivacyCenterBuilderTest {
             "안전 붙여넣기 개인정보 코치",
             "가림 이력",
             "클립보드",
+            "진행 중 연락 종료 문장",
+            "말하기",
+            "통화 종료",
             "노출 영향 분류",
             "노출 선택",
             "노출 이력",
@@ -277,7 +280,41 @@ class PrivacyCenterBuilderTest {
                 transientCopy.contains("만들거나 예약하지 않습니다")
         )
         assertTrue(
+            transientCopy.contains(
+                "진행 중 연락 종료 문장의 카드 선택·추천·읽음·공유·말하기·답장·통화 종료·" +
+                    "체크 상태·메모"
+            ) && transientCopy.contains("저장하지 않")
+        )
+        assertTrue(
             transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
+        )
+    }
+
+    @Test
+    fun activeContactExitScriptsAreInventoriedAsLocalManualAndNonAutomated() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val inventory = center.localDataInventoryItems.joinToString("\n") { item ->
+            "${item.title} ${item.status} ${item.detail}"
+        }
+        val statements = center.noCollectionStatements.joinToString("\n")
+        val featureCopy = "$inventory\n$statements\n${center.familyShareSummary}"
+
+        assertTrue(featureCopy.contains("진행 중 연락 종료 문장"))
+        assertTrue(featureCopy.contains("로컬 전용") && featureCopy.contains("무상태 수동 안내"))
+        assertTrue(featureCopy.contains("새 Android 권한") && featureCopy.contains("네트워크"))
+        assertTrue(featureCopy.contains("문자·메시지·통화·연락처·클립보드"))
+        assertTrue(featureCopy.contains("읽거나 감시하지 않"))
+        assertTrue(featureCopy.contains("전화를 걸거나 끊지 않"))
+        assertTrue(featureCopy.contains("문자 답장·받는 사람 선택·공유를 자동으로 하지 않습니다"))
+        assertTrue(featureCopy.contains("통화 차단") && featureCopy.contains("통화 선별"))
+        assertTrue(featureCopy.contains("자동 SMS 기능이 아닙니다"))
+        assertTrue(featureCopy.contains("카드 선택·추천·읽음·공유·말하기·답장·통화 종료·체크 상태·메모"))
+        assertTrue(featureCopy.contains("저장하지 않"))
+        assertTrue(featureCopy.contains("알림·알람·일정·백그라운드 작업"))
+        assertTrue(featureCopy.contains("만들거나 예약하지 않습니다"))
+        assertTrue(
+            featureCopy.contains("붙여넣은 텍스트·통화 상태·연락처·사건 기록·가족 안전 계획·기기 설정") &&
+                featureCopy.contains("추가·수정·삭제하지 않습니다")
         )
     }
 
@@ -450,6 +487,12 @@ class PrivacyCenterBuilderTest {
             "자동으로 교정합니다",
             "자동으로 검사합니다",
             "자동 스캔합니다",
+            "통화를 자동으로 겁니다",
+            "통화를 자동으로 끊습니다",
+            "통화를 차단합니다",
+            "통화를 선별합니다",
+            "문자에 자동으로 답장합니다",
+            "받는 사람을 자동으로 선택합니다",
             "100%"
         )
 
@@ -469,6 +512,15 @@ class PrivacyCenterBuilderTest {
                         it.contains("로컬 전용·무상태 수동") &&
                         it.contains("클립보드") &&
                         it.contains("자동 가림·교정·검사·삭제를 하지 않습니다")
+                }
+            )
+            assertTrue(
+                center.noCollectionStatements.any {
+                    it.contains("진행 중 연락 종료 문장") &&
+                        it.contains("로컬 전용") &&
+                        it.contains("무상태 수동") &&
+                        it.contains("통화 차단") &&
+                        it.contains("자동 SMS 기능이 아닙니다")
                 }
             )
             assertTrue(center.privacyNotes.any { it.contains("들어오는 것만으로") && it.contains("삭제되지는 않습니다") })

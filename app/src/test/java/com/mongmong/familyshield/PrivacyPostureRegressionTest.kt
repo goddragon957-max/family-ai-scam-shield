@@ -14,8 +14,12 @@ class PrivacyPostureRegressionTest {
         assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
         listOf(
             "android.permission.READ_SMS",
+            "android.permission.SEND_SMS",
+            "android.permission.RECEIVE_SMS",
             "android.permission.CALL_PHONE",
             "android.permission.READ_CALL_LOG",
+            "android.permission.READ_PHONE_STATE",
+            "android.permission.ANSWER_PHONE_CALLS",
             "android.permission.READ_CONTACTS",
             "android.permission.RECORD_AUDIO",
             "android.permission.INTERNET",
@@ -3318,7 +3322,447 @@ class PrivacyPostureRegressionTest {
             "java.net.Socket",
             "OkHttpClient",
             "Retrofit",
-            "ktor.client"
+            "ktor.client",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "android.telecom",
+            "android.telephony",
+            "sendTextMessage"
+        ).forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun activeContactExitScriptsArePureStatelessManualAndShareOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/ActiveContactExitScripts.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.activeContactExitScriptCard",
+            "private fun openActiveContactExitScriptAction",
+            "private fun shareActiveContactExitScripts"
+        ).forEach { marker ->
+            assertTrue("active-contact source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        val homeScreen = functionBlock(activitySource, "private fun LinearLayout.home()")
+        val resultScreen = functionBlock(activitySource, "private fun LinearLayout.result()")
+        val quickStopScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.quickStopModeScreen"
+        )
+        val flowRouterScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safetyFlowRouterScreen"
+        )
+        val safePasteScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.safePastePrivacyCoachScreen"
+        )
+        val debriefScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen"
+        )
+        val scriptsScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.activeContactExitScriptsScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.activeContactExitScriptCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openActiveContactExitScriptAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareActiveContactExitScripts"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ScamAnalyzer",
+            "Regex(",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener"
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "active-contact model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score)")
+                .containsMatchIn(modelSource)
+        )
+
+        assertTrue(activitySource.contains("ACTIVE_CONTACT_EXIT_SCRIPTS"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.ACTIVE_CONTACT_EXIT_SCRIPTS -> activeContactExitScriptsScreen()"
+            )
+        )
+        listOf(
+            homeScreen,
+            resultScreen,
+            quickStopScreen,
+            flowRouterScreen,
+            safePasteScreen,
+            debriefScreen
+        ).forEachIndexed { index, entryScreen ->
+            assertTrue(
+                "active-contact entry route missing at index $index",
+                entryScreen.contains("show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)")
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:activeContact|exitScript|selectedScript|scriptProgress|" +
+                    "scriptHistory|callStatus|replyStatus|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:ACTIVE_CONTACT|EXIT_SCRIPT|SELECTED_SCRIPT|SCRIPT_PROGRESS|" +
+                    "SCRIPT_HISTORY|CALL_STATUS|REPLY_STATUS|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+
+        assertTrue(scriptsScreen.contains("ActiveContactExitScriptsBuilder.build("))
+        assertTrue(scriptsScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            scriptsScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(scriptsScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(scriptsScreen.contains("incidents.load("))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "active-contact incident count decoded stored content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(scripts.title)",
+            "subtitle(scripts.intro)",
+            "scripts.recommendationTitle",
+            "scripts.recommendationExplanation",
+            "scripts.recommendedCards",
+            "scripts.recommendedActions",
+            "scripts.cards",
+            "scripts.privacySafetyNotes"
+        ).forEach { renderedField ->
+            assertTrue("active-contact UI omitted $renderedField", scriptsScreen.contains(renderedField))
+        }
+        assertTrue(
+            scriptsScreen.contains(
+                "shareActiveContactExitScripts(scripts.familyShareSummary)"
+            )
+        )
+        assertTrue(scriptsScreen.contains("primaryButton(\"가족에게 종료 문장 안내 공유\")"))
+        assertTrue(scriptsScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("scripts\\.cards\\.forEach").findAll(scriptsScreen).count())
+        assertTrue(scriptsScreen.contains("recommended = card.id in recommendedIds"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.scriptText",
+            "card.whenToUse",
+            "card.neverSayOrDo",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("active-contact card UI omitted $field", cardRenderer.contains(field))
+        }
+
+        val statelessUiSource = scriptsScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "doAfterTextChanged",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "selectedScript",
+            "scriptProgress",
+            "scriptHistory",
+            "callStatus",
+            "replyStatus",
+            "checkmark",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "active-contact UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "INCIDENT_TIMELINE_BRIEFING" to "show(Screen.TIMELINE_BRIEFING)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "active-contact route omitted action: $actionId",
+                normalizedActionRouter.contains("ActiveContactExitScriptActionId.$actionId ->")
+            )
+            assertTrue(
+                "active-contact route omitted destination for $actionId: $destination",
+                normalizedActionRouter.contains(destination)
+            )
+        }
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "SmsManager",
+            "sendTextMessage",
+            "ContactsContract",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip"
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "active-contact router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareActiveContactExitScripts\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("scripts.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 종료 문장 안내 공유"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(shareHelper)
+                .count()
+        )
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "ContactsContract",
+            "SmsManager",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "active-contact share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource)
+            )
+        }
+
+        val activeContactSliceSource = scriptsScreen + cardRenderer + actionRouter + shareHelper
+        listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener"
+        ).forEach { forbiddenSliceApi ->
+            assertFalse(
+                "active-contact slice used forbidden API: $forbiddenSliceApi",
+                activeContactSliceSource.contains(forbiddenSliceApi) ||
+                    modelSource.contains(forbiddenSliceApi)
+            )
+        }
+
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "SmsManager",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "android.telecom",
+            "android.telephony",
+            "sendTextMessage"
         ).forEach { forbiddenProductionToken ->
             val hits = productionSources.filter { file ->
                 file.readText().contains(forbiddenProductionToken)
