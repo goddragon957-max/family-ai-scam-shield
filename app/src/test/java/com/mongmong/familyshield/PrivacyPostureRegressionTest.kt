@@ -1288,7 +1288,7 @@ class PrivacyPostureRegressionTest {
         assertFalse(statelessUiSource.contains("safetyPlan.save("))
         assertFalse(statelessUiSource.contains("CheckBox("))
         assertFalse(statelessUiSource.contains("EditText("))
-        assertFalse(statelessUiSource.contains("currentAnalysis ="))
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
         assertFalse(statelessUiSource.contains(".save("))
         assertFalse(statelessUiSource.contains("putString("))
         assertFalse(statelessUiSource.contains("putBoolean("))
@@ -1350,6 +1350,216 @@ class PrivacyPostureRegressionTest {
         assertFalse(drillShareHelper.contains("incidents"))
         assertFalse(drillShareHelper.contains("ContactsContract"))
         assertFalse(drillShareHelper.contains("SmsManager"))
+    }
+
+    @Test
+    fun familyReadinessRoadmapIsPureStatelessDelegatesToExistingFlowsAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/FamilyReadinessRoadmap.kt"
+        )
+        val readinessSection = activitySource
+            .substringAfter("private fun LinearLayout.readinessSection")
+            .substringBefore("private fun openDrill")
+        val resultScreen = activitySource
+            .substringAfter("private fun LinearLayout.result()")
+            .substringBefore("private fun LinearLayout.incidentLog")
+        val roadmapScreen = activitySource
+            .substringAfter("private fun LinearLayout.familyReadinessRoadmapScreen")
+            .substringBefore("private fun LinearLayout.familyReadinessRoadmapCard")
+        val roadmapCardRenderer = activitySource
+            .substringAfter("private fun LinearLayout.familyReadinessRoadmapCard")
+            .substringBefore("private fun openFamilyReadinessRoadmapAction")
+        val roadmapActionRouter = activitySource
+            .substringAfter("private fun openFamilyReadinessRoadmapAction")
+            .substringBefore("private fun shareFamilyReadinessRoadmap")
+        val roadmapShareHelper = activitySource
+            .substringAfter("private fun shareFamilyReadinessRoadmap")
+            .substringBefore("private fun LinearLayout.riskSignalExplainerScreen")
+        val normalizedActionRouter = roadmapActionRouter.replace(Regex("\\s+"), " ")
+
+        listOf(
+            "private fun LinearLayout.readinessSection",
+            "private fun openDrill",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.incidentLog",
+            "private fun LinearLayout.familyReadinessRoadmapScreen",
+            "private fun LinearLayout.familyReadinessRoadmapCard",
+            "private fun openFamilyReadinessRoadmapAction",
+            "private fun shareFamilyReadinessRoadmap",
+            "private fun LinearLayout.riskSignalExplainerScreen"
+        ).forEach { marker ->
+            assertTrue("roadmap source marker missing: $marker", activitySource.contains(marker))
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertFalse(modelSource.contains("analysis.input"))
+        assertFalse(modelSource.contains("IncidentPreviewRedactor"))
+        assertFalse(modelSource.contains("SafetyPlan"))
+        assertFalse(modelSource.contains("SafetyPlanStore"))
+
+        assertTrue(activitySource.contains("FAMILY_READINESS_ROADMAP"))
+        assertTrue(
+            activitySource.contains(
+                "Screen.FAMILY_READINESS_ROADMAP -> familyReadinessRoadmapScreen()"
+            )
+        )
+        assertTrue(
+            readinessSection.contains(
+                "secondaryButton(\"가족 준비 로드맵\") { " +
+                    "show(Screen.FAMILY_READINESS_ROADMAP) }"
+            )
+        )
+        assertTrue(
+            resultScreen.contains(
+                "secondaryButton(\"이 상황 기준 준비 로드맵\") { " +
+                    "show(Screen.FAMILY_READINESS_ROADMAP) }"
+            )
+        )
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:roadmap|readinessRoadmap)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "(?m)^\\s*private\\s+var[^\\n]*FamilyReadinessRoadmap"
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex("KEY_\\w*(?:ROADMAP|READINESS_ROADMAP)\\w*")
+                .containsMatchIn(activitySource)
+        )
+
+        assertTrue(roadmapScreen.contains("FamilyReadinessRoadmapBuilder.build("))
+        assertTrue(roadmapScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            roadmapScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(roadmapScreen.contains("title(roadmap.title)"))
+        assertTrue(roadmapScreen.contains("subtitle(roadmap.intro)"))
+        assertTrue(roadmapScreen.contains("roadmap.readinessSummary.levelLabel"))
+        assertTrue(roadmapScreen.contains("roadmap.readinessSummary.completedCount"))
+        assertTrue(roadmapScreen.contains("roadmap.readinessSummary.totalCount"))
+        assertTrue(roadmapScreen.contains("roadmap.readinessSummary.remainingCount"))
+        assertTrue(roadmapScreen.contains("roadmap.privacySafetyNotes"))
+        assertTrue(
+            roadmapScreen.contains(
+                "shareFamilyReadinessRoadmap(roadmap.familyShareSummary)"
+            )
+        )
+        assertTrue(roadmapScreen.contains("primaryButton(\"가족에게 준비 로드맵 공유\")"))
+        assertTrue(roadmapScreen.contains("secondaryButton(\"분석 결과로 돌아가기\")"))
+        assertTrue(roadmapScreen.contains("secondaryButton(\"홈으로\")"))
+        val recommendedRenderIndex = roadmapScreen.indexOf("roadmap.recommendedCards.forEach")
+        val remainingRenderIndex = roadmapScreen.indexOf("val remainingCards = roadmap.cards.filterNot")
+        assertTrue(recommendedRenderIndex >= 0)
+        assertTrue(remainingRenderIndex > recommendedRenderIndex)
+        assertEquals(
+            1,
+            Regex("roadmap\\.recommendedCards\\.forEach")
+                .findAll(roadmapScreen)
+                .count()
+        )
+
+        listOf(
+            "card.stage",
+            "card.title",
+            "card.readinessStatus",
+            "card.priority",
+            "card.whyItMatters",
+            "card.nextSmallSteps",
+            "card.avoidNotes",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue("roadmap UI omitted $field", roadmapCardRenderer.contains(field))
+        }
+
+        val statelessUiSource = roadmapScreen + roadmapCardRenderer + roadmapActionRouter
+        assertFalse(statelessUiSource.contains("analysis.input"))
+        assertFalse(statelessUiSource.contains("IncidentPreviewRedactor"))
+        assertFalse(statelessUiSource.contains("plan.safeWord"))
+        assertFalse(statelessUiSource.contains("plan.callbackScript"))
+        assertFalse(statelessUiSource.contains("plan.contacts"))
+        assertFalse(statelessUiSource.contains("incidents.add("))
+        assertFalse(statelessUiSource.contains("incidents.clear("))
+        assertFalse(statelessUiSource.contains("prefs.edit("))
+        assertFalse(statelessUiSource.contains("safetyPlan.save("))
+        assertFalse(statelessUiSource.contains("CheckBox("))
+        assertFalse(statelessUiSource.contains("EditText("))
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+        assertFalse(statelessUiSource.contains(".save("))
+        assertFalse(statelessUiSource.contains("putString("))
+        assertFalse(statelessUiSource.contains("putBoolean("))
+
+        listOf(
+            "FamilyReadinessRoadmapActionId.QUICK_STOP -> show(Screen.QUICK_STOP)",
+            "FamilyReadinessRoadmapActionId.CHECKER -> show(Screen.CHECKER)",
+            "FamilyReadinessRoadmapActionId.ANALYSIS_RESULT -> " +
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "FamilyReadinessRoadmapActionId.RISK_SIGNAL_EXPLAINERS -> " +
+                "show(Screen.RISK_SIGNAL_EXPLAINERS)",
+            "FamilyReadinessRoadmapActionId.SAMPLE_LIBRARY -> openSampleLibrary()",
+            "FamilyReadinessRoadmapActionId.FAMILY_CALLBACK_CARD -> " +
+                "openFamilyCallbackCard(currentAnalysis)",
+            "FamilyReadinessRoadmapActionId.SAFETY_PLAN -> show(Screen.PLAN)",
+            "FamilyReadinessRoadmapActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)",
+            "FamilyReadinessRoadmapActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)",
+            "FamilyReadinessRoadmapActionId.EVIDENCE_KIT -> openEvidenceKit(null)",
+            "FamilyReadinessRoadmapActionId.OFFICIAL_HELP_DIRECTORY -> " +
+                "openHelpDirectory(Screen.FAMILY_READINESS_ROADMAP)",
+            "FamilyReadinessRoadmapActionId.RESPONSE_CENTER -> openResponseCenter()",
+            "FamilyReadinessRoadmapActionId.FAMILY_ALERT_MESSAGES -> " +
+                "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "FamilyReadinessRoadmapActionId.TRUSTED_HELPER_HANDOFF -> " +
+                "show(Screen.TRUSTED_HELPER_HANDOFF)",
+            "FamilyReadinessRoadmapActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)",
+            "FamilyReadinessRoadmapActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)",
+            "FamilyReadinessRoadmapActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()",
+            "FamilyReadinessRoadmapActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)"
+        ).forEach { route ->
+            assertTrue("family readiness roadmap route omitted: $route", normalizedActionRouter.contains(route))
+        }
+        assertFalse(roadmapActionRouter.contains("dial("))
+        assertFalse(roadmapActionRouter.contains("Intent.ACTION_DIAL"))
+        assertFalse(roadmapActionRouter.contains("Intent.ACTION_CALL"))
+
+        val shareArguments = Regex("shareFamilyReadinessRoadmap\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("roadmap.familyShareSummary"), shareArguments)
+        assertTrue(roadmapShareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(roadmapShareHelper.contains("type = \"text/plain\""))
+        assertTrue(roadmapShareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(roadmapShareHelper.contains("Intent.createChooser"))
+        assertEquals(
+            1,
+            Regex("putExtra\\(Intent\\.EXTRA_TEXT, summary\\)")
+                .findAll(roadmapShareHelper)
+                .count()
+        )
+        assertFalse(roadmapShareHelper.contains("Intent.EXTRA_SUBJECT"))
+        assertFalse(roadmapShareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(roadmapShareHelper.contains("ClipData"))
+        assertFalse(roadmapShareHelper.contains("FLAG_GRANT_READ_URI_PERMISSION"))
+        assertFalse(roadmapShareHelper.contains("FLAG_GRANT_WRITE_URI_PERMISSION"))
+        assertFalse(roadmapShareHelper.contains("ScamAnalysis"))
+        assertFalse(roadmapShareHelper.contains("currentAnalysis"))
+        assertFalse(roadmapShareHelper.contains("analysis.input"))
+        assertFalse(roadmapShareHelper.contains("IncidentPreviewRedactor"))
+        assertFalse(roadmapShareHelper.contains("SafetyPlan"))
+        assertFalse(roadmapShareHelper.contains("incidents"))
+        assertFalse(roadmapShareHelper.contains("ContactsContract"))
+        assertFalse(roadmapShareHelper.contains("SmsManager"))
     }
 
     private fun readProjectFile(relativePath: String): String {

@@ -166,6 +166,10 @@ class PrivacyCenterBuilderTest {
             "드릴 선택",
             "통과 여부",
             "연습 이력",
+            "가족 준비 로드맵",
+            "카드 선택",
+            "완료",
+            "로드맵 이력",
             "샘플 선택"
         ).forEach { term ->
             assertTrue("transient copy omitted $term", transientCopy.contains(term))
@@ -173,6 +177,14 @@ class PrivacyCenterBuilderTest {
         assertTrue(
             transientCopy.contains("영구 저장하지 않") ||
                 transientCopy.contains("SharedPreferences에 저장하지 않")
+        )
+        assertTrue(
+            transientCopy.contains(
+                "가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력"
+            )
+        )
+        assertTrue(
+            transientCopy.contains("저장하지 않") || transientCopy.contains("기록하지 않")
         )
     }
 

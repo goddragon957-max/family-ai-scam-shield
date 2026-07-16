@@ -21,7 +21,7 @@ class MainActivity : Activity() {
         ONBOARDING, HOME, CHECKER, RESULT, LOG, PLAN, RESPONSE_CENTER, EVIDENCE, DRILL, SAMPLES,
         HELP_DIRECTORY, REPORT_PREP, CALLBACK_CARD, PRIVACY_CENTER, FLOW_ROUTER, TIMELINE_BRIEFING,
         ACCOUNT_LOCKDOWN, FAMILY_ALERT_MESSAGES, QUICK_STOP, RECOVERY_PLAN, TRUSTED_HELPER_HANDOFF,
-        SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS
+        SAFE_CALL_SCRIPTS, RISK_SIGNAL_EXPLAINERS, FAMILY_READINESS_ROADMAP
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -123,6 +123,7 @@ class MainActivity : Activity() {
                 Screen.TRUSTED_HELPER_HANDOFF -> trustedHelperHandoffScreen()
                 Screen.SAFE_CALL_SCRIPTS -> safeVerificationCallScriptsScreen()
                 Screen.RISK_SIGNAL_EXPLAINERS -> riskSignalExplainerScreen()
+                Screen.FAMILY_READINESS_ROADMAP -> familyReadinessRoadmapScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -646,6 +647,7 @@ class MainActivity : Activity() {
         riskCard(analysis)
         secondaryButton("탐지 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
         secondaryButton("이 신호로 가족 연습하기") { openDrill() }
+        secondaryButton("이 상황 기준 준비 로드맵") { show(Screen.FAMILY_READINESS_ROADMAP) }
         actionPlanSection(analysis)
         aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
@@ -1117,6 +1119,7 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("가족 준비 로드맵") { show(Screen.FAMILY_READINESS_ROADMAP) }
         if (readiness.level == ReadinessLevel.READY) {
             secondaryButton("가족 안전 연습 코치") { openDrill() }
             secondaryButton("가족 안전 계획 설정") { show(Screen.PLAN) }
@@ -1762,6 +1765,154 @@ class MainActivity : Activity() {
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+
+    private fun LinearLayout.familyReadinessRoadmapScreen() {
+        val roadmap = FamilyReadinessRoadmapBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load())
+        )
+        val recommendedIds = roadmap.recommendedCardIds.toSet()
+
+        title(roadmap.title)
+        subtitle(roadmap.intro)
+        section(
+            "값 없는 가족 준비 요약",
+            buildString {
+                appendLine("준비 수준: ${roadmap.readinessSummary.levelLabel}")
+                appendLine(
+                    "준비 항목: ${roadmap.readinessSummary.completedCount}/" +
+                        "${roadmap.readinessSummary.totalCount}"
+                )
+                append("아직 확인할 항목: ${roadmap.readinessSummary.remainingCount}개")
+            }
+        )
+        section(
+            roadmap.recommendationTitle,
+            buildString {
+                append(roadmap.recommendationExplanation)
+                append("\n\n먼저 이어갈 앱 행동\n")
+                append(
+                    roadmap.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        roadmap.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openFamilyReadinessRoadmapAction(action) }
+            } else {
+                secondaryButton(action.label) { openFamilyReadinessRoadmapAction(action) }
+            }
+        }
+
+        section(
+            "추천 준비 카드",
+            "현재 로컬 분석 신호와 값 없는 준비 수준에 맞춘 순서입니다. 선택이나 완료 상태는 저장되지 않습니다."
+        )
+        roadmap.recommendedCards.forEach { card ->
+            familyReadinessRoadmapCard(card, recommended = true)
+        }
+
+        val remainingCards = roadmap.cards.filterNot { card -> card.id in recommendedIds }
+        if (remainingCards.isNotEmpty()) {
+            section(
+                "나머지 가족 준비 지도",
+                "추천과 관계없이 필요한 단계를 살펴보고 기존 안전 화면으로 직접 이동할 수 있습니다."
+            )
+            remainingCards.forEach { card ->
+                familyReadinessRoadmapCard(card, recommended = false)
+            }
+        }
+
+        section(
+            "개인정보·안전 안내",
+            roadmap.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 준비 로드맵 공유") {
+            shareFamilyReadinessRoadmap(roadmap.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.familyReadinessRoadmapCard(
+        card: FamilyReadinessRoadmapCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.stage.label)
+            append(" · ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("준비 상태 · ").append(card.readinessStatus.label)
+                append("\n우선순위 · ").append(card.priority.label)
+                append("\n\n왜 필요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n다음 작은 단계\n")
+                card.nextSmallSteps.forEachIndexed { index, step ->
+                    append(index + 1).append(". ").append(step).append('\n')
+                }
+                append("\n피해 주세요\n")
+                card.avoidNotes.forEach { note -> append("• ").append(note).append('\n') }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openFamilyReadinessRoadmapAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openFamilyReadinessRoadmapAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openFamilyReadinessRoadmapAction(action) }
+        }
+    }
+
+    private fun openFamilyReadinessRoadmapAction(action: FamilyReadinessRoadmapAction) {
+        when (action.id) {
+            FamilyReadinessRoadmapActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            FamilyReadinessRoadmapActionId.CHECKER -> show(Screen.CHECKER)
+            FamilyReadinessRoadmapActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            FamilyReadinessRoadmapActionId.RISK_SIGNAL_EXPLAINERS ->
+                show(Screen.RISK_SIGNAL_EXPLAINERS)
+            FamilyReadinessRoadmapActionId.SAMPLE_LIBRARY -> openSampleLibrary()
+            FamilyReadinessRoadmapActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FamilyReadinessRoadmapActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            FamilyReadinessRoadmapActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            FamilyReadinessRoadmapActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FamilyReadinessRoadmapActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FamilyReadinessRoadmapActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.FAMILY_READINESS_ROADMAP)
+            FamilyReadinessRoadmapActionId.RESPONSE_CENTER -> openResponseCenter()
+            FamilyReadinessRoadmapActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            FamilyReadinessRoadmapActionId.TRUSTED_HELPER_HANDOFF ->
+                show(Screen.TRUSTED_HELPER_HANDOFF)
+            FamilyReadinessRoadmapActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            FamilyReadinessRoadmapActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            FamilyReadinessRoadmapActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            FamilyReadinessRoadmapActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+        }
+    }
+
+    private fun shareFamilyReadinessRoadmap(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 준비 로드맵 공유"))
+    }
 
     private fun LinearLayout.riskSignalExplainerScreen() {
         val explainer = RiskSignalExplainerBuilder.build(

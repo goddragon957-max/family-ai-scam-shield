@@ -24,6 +24,7 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 18. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
 19. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
 20. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
+21. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
 
 ## Share Entry
 
@@ -253,7 +254,7 @@ Android 권한을 사용하지 않습니다. 계정 복구, 사기 차단, 피�
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 안전 흐름 선택, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -449,6 +450,30 @@ The important checklist lines are included in the safe family report (`SafetyRep
 원문·개인정보 가림 단서·안전 계획 값·연락처·전화·계좌·OTP/PIN·URL·도메인·신분정보 값을
 포함하지 않습니다. 이 교육용 연습은 사기 예방이나 피해 복구·법적 결과를 보장하지 않습니다.
 
+## Family Readiness Roadmap (가족 준비 로드맵)
+
+홈의 가족 준비도 카드에 있는 "가족 준비 로드맵" 또는 현재 분석 결과의 "이 상황 기준 준비
+로드맵"에서 우리 가족이 다음에 무엇을 준비할지 확인할 수 있습니다.
+`FamilyReadinessRoadmapBuilder`는 현재 `ScamAnalysis?`의 위험도·일치 신호와 안전단어·콜백 문장·
+연락처 값이 없는 `FamilyReadiness`만 사용해 같은 입력에 항상 같은 추천 순서를 만듭니다. 가족 안전
+계획 시작, 콜백 루틴 연습, 위험 신호 이해, 긴급 멈춤 준비, 피해 의심 시 대응 준비, 증거와 계정
+보호 준비, 가족 경고/도우미 네트워크, 개인정보와 로컬 데이터 점검의 여덟 카드를 고정 순서로
+제공하고 모든 버튼은 이미 있는 안전 화면으로만 이동합니다.
+
+화면의 준비 요약은 준비 수준과 완료/전체/남은 개수만 표시하며 저장된 안전 질문, 콜백 문장,
+연락처 이름·전화번호의 실제 내용은 로드맵에 전달하거나 보여주지 않습니다. 로드맵 카드 선택, 완료·체크 상태, 점수,
+읽음·진행 상태, 공유 이력, 로드맵 이력을 저장하지 않고 화면을 열거나 버튼을 눌러 사건 기록을
+추가·수정·삭제하지 않습니다. 문자·메시지·통화·연락처를 읽거나 감시하지 않고, 가족을 자동
+모니터링하거나 메시지를 자동 전송하지 않으며, 네트워크 호출이나 새 Android 권한을 추가하지
+않습니다.
+
+"가족에게 준비 로드맵 공유"는 사용자가 직접 눌렀을 때만 Android `ACTION_SEND`의 `text/plain`
+공유 화면을 열고 빌더가 만든 `familyShareSummary`만 전달합니다. 공유문은 로드맵 단계·제목,
+기존 앱 행동 라벨과 일반적인 다음 작은 단계만 포함하며 붙여넣은 원문, 개인정보 가림 단서,
+안전 질문·콜백 내용·연락처 값, 전화·계좌·비밀번호·OTP/PIN·URL·도메인·신분정보 값을 포함하지
+않습니다. 이 로드맵은 통화·문자 차단, 악성 앱 제거, 계정·카드 정지, 피해금 회수 또는 법률·안전
+결과를 보장하지 않습니다.
+
 ## Family Readiness Scorecard (가족 준비도)
 
 홈 화면 상단(개인정보 안내 바로 아래)에 표시되는 준비도 카드입니다. `FamilyReadinessBuilder`가
@@ -590,6 +615,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Family Readiness Roadmap is deterministic, local-only, value-less, and stateless preparation guidance based only on current risk/signals and readiness level/counts; it reads or monitors no contacts/messages/calls, auto-sends nothing, stores no card selection/completion/check/score/read/progress/share/roadmap history, never mutates incidents, adds no permissions or network use, and shares only builder-produced stages, titles, existing action labels, and generic next steps.
 - Family Safety Drill Coach is deterministic, local-only, fictional, stateless family rehearsal guidance based only on current matched signals/risk and value-less readiness; it reads no contacts/messages/calls, auto-sends nothing, stores no drill selection/pass-fail/check/score/read/progress/share/practice history, never mutates incidents, adds no permissions, and shares only builder-produced fictional titles, generic stop phrases, pass-check labels, and existing action labels.
 - Risk Signal Explainer Cards is deterministic, local-only educational guidance based only on matched local signals, not remote AI or an official judgment; it adds no permissions or network use, reads or monitors no contacts/messages/calls, auto-sends nothing, stores no signal selection/read/progress/share history, never mutates incident logs, and its user-triggered text share passes only the builder-produced safe summary of signal/category/action labels and generic safety moves.
 - Quick Stop Mode is deterministic, local-only, stateless manual first-response guidance; it reads no contacts, auto-sends nothing, stores no button/check/share state, never mutates incident logs automatically, shares only its builder-produced generic route summary, and adds no Android permissions.
