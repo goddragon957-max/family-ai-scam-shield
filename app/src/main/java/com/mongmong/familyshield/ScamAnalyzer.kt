@@ -105,6 +105,24 @@ enum class ScamSignal(
             "목소리\\s*복제", "음성\\s*복제", "목소리\\s*합성", "음성\\s*합성",
             "ai\\s*음성", "ai\\s*목소리", "보이스\\s*피싱", "딥페이크\\s*(목소리|영상|통화)?"
         ).map { Regex(it, RegexOption.IGNORE_CASE) }
+    ),
+    SAFE_ACCOUNT_FRAUD(
+        "명의도용/안전계좌 편취",
+        "명의 도용, 자금세탁 연루, 안전계좌 확인을 명목으로 계좌 이체를 요구할 수 있습니다.",
+        26,
+        listOf("명의\\s*도용|계좌\\s*보호|자금\\s*세탁\\s*연루|안전\\s*계좌|대포\\s*통장").map { Regex(it) }
+    ),
+    PARCEL_INVITATION_SMISHING(
+        "택배/청첩장/부고 링크",
+        "택배 배송, 모바일 청첩장, 부고 알림을 사칭한 문자로 링크 클릭을 유도할 수 있습니다.",
+        18,
+        listOf("택배\\s*(배송|조회|주소|도착)|모바일\\s*청첩장|청첩장|부고장|부고\\s*(알림|안내)").map { Regex(it) }
+    ),
+    OVERSEAS_PAYMENT_ALERT(
+        "해외/소액 결제 승인 알림",
+        "소액 결제나 해외 결제 승인 문자로 놀라게 한 뒤 인증번호나 확인 전화를 유도할 수 있습니다.",
+        20,
+        listOf("해외\\s*결제|소액\\s*결제|결제\\s*승인|해외\\s*(발급|사용)\\s*승인").map { Regex(it) }
     )
 }
 
@@ -123,6 +141,9 @@ data class ScamAnalysis(
 
     val guardianAdvice: GuardianAdvice
         get() = GuardianAdvisor.advise(this)
+
+    val actionPlan: ActionPlan
+        get() = ActionPlanBuilder.build(this)
 }
 
 data class GuardianAdvice(
@@ -163,6 +184,15 @@ object GuardianAdvisor {
         if (ScamSignal.SECRECY in signals) {
             actions += "‘비밀로 해라’는 말이 나오면 가족 단톡방이나 보호자에게 바로 공유하세요."
         }
+        if (ScamSignal.SAFE_ACCOUNT_FRAUD in signals) {
+            actions += "검찰·경찰·금감원은 전화로 ‘안전계좌’, ‘명의도용 확인’을 이유로 계좌 이체를 요구하지 않습니다. 이체하지 마세요."
+        }
+        if (ScamSignal.PARCEL_INVITATION_SMISHING in signals) {
+            actions += "택배·청첩장·부고 문자 속 링크는 누르지 말고 발신자에게 직접 확인하세요."
+        }
+        if (ScamSignal.OVERSEAS_PAYMENT_ALERT in signals) {
+            actions += "해외/소액 결제 승인 알림에 놀라 인증번호를 부르지 말고 카드사 공식 앱·대표번호로 확인하세요."
+        }
         if (actions.isEmpty()) {
             actions += "대화가 돈·인증번호·앱설치로 이어지면 다시 검사하고 가족 확인 루틴을 실행하세요."
         }
@@ -202,7 +232,11 @@ object ScamAnalyzer {
             ScamSignal.DEEPFAKE_VOICE to ScamSignal.FAMILY_EMERGENCY,
             ScamSignal.LIVE_CALL_CONTROL to ScamSignal.APP_INSTALL,
             ScamSignal.LIVE_CALL_CONTROL to ScamSignal.CREDENTIALS,
-            ScamSignal.GIFTICON_PIN to ScamSignal.SECRECY
+            ScamSignal.GIFTICON_PIN to ScamSignal.SECRECY,
+            ScamSignal.SAFE_ACCOUNT_FRAUD to ScamSignal.IMPERSONATION,
+            ScamSignal.SAFE_ACCOUNT_FRAUD to ScamSignal.URGENT_TRANSFER,
+            ScamSignal.PARCEL_INVITATION_SMISHING to ScamSignal.LINK,
+            ScamSignal.OVERSEAS_PAYMENT_ALERT to ScamSignal.CREDENTIALS
         ).count { (a, b) -> a in matches && b in matches } * 10
 
         val score = (matches.sumOf { it.score } + synergy).coerceAtMost(100)

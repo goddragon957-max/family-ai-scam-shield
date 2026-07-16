@@ -37,6 +37,16 @@ The app does not call a remote model in this MVP. "AI 보호자" means a determi
 - callback prompt: ask a family safe question and call back through an already-saved trusted number
 - safe share report: summarizes risk/signals/actions for family chat without including the pasted original text
 
+## 3분 실행 루틴 (Action Plan)
+
+The result screen also shows a short, ordered "지금부터 3분" checklist tailored to the risk level:
+
+- 높음: stop transfer/app install/OTP now, hang up if pressured, call back through the saved family number, and stop payment/report if money was already sent
+- 주의: don't click links, verify through official bank/agency channels, hold off on entering personal info
+- 낮음: still warns that money, OTP, or app-install requests need direct family verification
+
+The important checklist lines are included in the safe family report (`SafetyReportBuilder`) without ever including the original pasted text.
+
 ## Analyzer Signals
 
 The local analyzer scores these signals:
@@ -55,6 +65,9 @@ The local analyzer scores these signals:
 - 기프티콘/상품권 PIN 요구
 - 통화 유지/화면공유/원격 확인 압박
 - 딥페이크/음성 복제 의심 (목소리 복제, 음성 합성, 보이스피싱)
+- 명의도용/안전계좌 편취 (명의 도용, 계좌 보호, 자금세탁 연루, 안전계좌, 대포통장)
+- 택배/청첩장/부고 링크 스미싱 (택배 배송/조회, 모바일 청첩장, 부고장)
+- 해외/소액 결제 승인 알림 (해외 결제, 소액 결제, 결제 승인)
 
 ## Build And Test
 

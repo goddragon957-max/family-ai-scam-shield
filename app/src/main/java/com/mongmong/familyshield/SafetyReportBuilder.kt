@@ -3,12 +3,14 @@ package com.mongmong.familyshield
 object SafetyReportBuilder {
     fun build(analysis: ScamAnalysis): String {
         val advice = analysis.guardianAdvice
+        val plan = analysis.actionPlan
         val signals = if (analysis.matchedSignals.isEmpty()) {
             "강한 위험 신호 없음"
         } else {
             analysis.matchedSignals.joinToString("\n") { "- ${it.label}" }
         }
         val actions = advice.immediateActions.joinToString("\n") { "- $it" }
+        val planSteps = plan.steps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
 
         return buildString {
             appendLine("[가족 AI 보이스피싱 방패] 확인 요청")
@@ -18,6 +20,9 @@ object SafetyReportBuilder {
             appendLine()
             appendLine("감지 신호")
             appendLine(signals)
+            appendLine()
+            appendLine(plan.title)
+            appendLine(planSteps)
             appendLine()
             appendLine("지금 할 일")
             appendLine(actions)

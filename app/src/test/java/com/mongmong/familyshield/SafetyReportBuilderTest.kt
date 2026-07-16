@@ -16,6 +16,8 @@ class SafetyReportBuilderTest {
         assertTrue(report.contains("위험도: 높음"))
         assertTrue(report.contains("긴급 송금 압박"))
         assertTrue(report.contains("가족 긴급상황/목소리 사칭"))
+        assertTrue(report.contains("지금부터 3분: 즉시 실행 루틴"))
+        assertTrue(report.contains("1. 송금·이체·환전을 지금 즉시 멈추세요."))
         assertTrue(report.contains("원문은 개인정보 보호를 위해 포함하지 않았습니다"))
         assertFalse(report.contains(original))
         assertFalse(report.contains("300만원"))

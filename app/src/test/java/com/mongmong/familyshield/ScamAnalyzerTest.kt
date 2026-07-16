@@ -92,6 +92,38 @@ class ScamAnalyzerTest {
     }
 
     @Test
+    fun safeAccountAuthorityFraudIsFlagged() {
+        val result = ScamAnalyzer.analyze(
+            "검찰청입니다. 명의도용으로 대포통장이 개설되어 자금세탁 연루 조사 중이니 안전계좌로 이체하세요."
+        )
+
+        assertTrue(ScamSignal.SAFE_ACCOUNT_FRAUD in result.matchedSignals)
+        assertTrue(ScamSignal.IMPERSONATION in result.matchedSignals)
+        assertTrue(result.score >= 30)
+    }
+
+    @Test
+    fun parcelInvitationSmishingIsFlagged() {
+        val result = ScamAnalyzer.analyze(
+            "택배 배송이 지연되어 주소 확인이 필요합니다. 아래 링크에서 확인해주세요. https://short.example/box"
+        )
+
+        assertTrue(ScamSignal.PARCEL_INVITATION_SMISHING in result.matchedSignals)
+        assertTrue(ScamSignal.LINK in result.matchedSignals)
+    }
+
+    @Test
+    fun overseasPaymentAlertPanicBaitIsFlagged() {
+        val result = ScamAnalyzer.analyze(
+            "해외 결제 승인 완료 안내입니다. 본인이 아니라면 아래 인증번호를 알려주세요."
+        )
+
+        assertTrue(ScamSignal.OVERSEAS_PAYMENT_ALERT in result.matchedSignals)
+        assertTrue(ScamSignal.CREDENTIALS in result.matchedSignals)
+        assertTrue(result.score >= 30)
+    }
+
+    @Test
     fun guardianAdviceTellsFamilyToStopAndCallBack() {
         val result = ScamAnalyzer.analyze(
             "엄마 나 번호 바뀌었어. 이 번호로 저장해. 급히 계좌로 돈 보내줘. 아무한테도 말하지 마."

@@ -180,6 +180,7 @@ class MainActivity : Activity() {
         val analysis = currentAnalysis ?: ScamAnalyzer.analyze("")
         title("AI 분석 결과")
         riskCard(analysis)
+        actionPlanSection(analysis)
         aiGuardianSection(analysis)
         section("권장 행동", analysis.summary)
         familyPlanSection()
@@ -360,6 +361,12 @@ class MainActivity : Activity() {
             })
         }
         addView(box, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(14)))
+    }
+
+    private fun LinearLayout.actionPlanSection(analysis: ScamAnalysis) {
+        val plan = analysis.actionPlan
+        val body = plan.steps.mapIndexed { index, step -> "${index + 1}. $step" }.joinToString("\n")
+        section(plan.title, body)
     }
 
     private fun LinearLayout.aiGuardianSection(analysis: ScamAnalysis) {
