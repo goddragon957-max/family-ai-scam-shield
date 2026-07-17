@@ -31,7 +31,8 @@ class MainActivity : Activity() {
         NEW_NUMBER_QUARANTINE_COACH, CREDENTIAL_SECRET_FREEZE_COACH,
         OFFICIAL_PRESSURE_REALITY_CHECK_COACH, RECOVERY_PROMISE_REALITY_CHECK_COACH,
         GIFT_CARD_CODE_PAUSE_COACH, LINK_APP_INSTALL_QUARANTINE_COACH,
-        CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH, BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH
+        CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH, BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH,
+        DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -167,12 +168,225 @@ class MainActivity : Activity() {
                     cashWithdrawalCourierHandoffPauseCoachScreen()
                 Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH ->
                     bankAtmStaffDisclosureScriptCoachScreen()
+                Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH ->
+                    doorstepVisitorHandoffRefusalCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.doorstepVisitorHandoffRefusalCoachScreen() {
+        val coach = DoorstepVisitorHandoffRefusalCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 문 앞 방문·직접 전달 거절 문구\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.doorstepHandoffPressureSituation}\n" +
+                            card.valueFreeRefusalScript
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) {
+                    openDoorstepVisitorHandoffRefusalAction(action)
+                }
+            } else {
+                secondaryButton(action.label) {
+                    openDoorstepVisitorHandoffRefusalAction(action)
+                }
+            }
+        }
+
+        section(
+            "전체 수동 문 앞 방문·직접 전달 거절 문구 카드",
+            "카드는 항상 같은 순서입니다. 문을 열거나 사람을 들이거나 현금·카드·통장·" +
+                "휴대폰·서류·봉투를 건네기 전에 값 없는 거절 문장을 직접 고르세요. " +
+                "앱은 주소·방문자·금액·사건·물품 값을 받지 않으며 선택·읽음·확인 " +
+                "상태도 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            doorstepVisitorHandoffRefusalCard(
+                card,
+                recommended = card.id in recommendedIds
+            )
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 문 앞 방문·직접 전달 거절 안내 공유") {
+            shareDoorstepVisitorHandoffRefusalCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("현금 인출·직접 전달 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
+        secondaryButton("은행·ATM 직원 공개 문구 코치") {
+            show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("현재 연락을 끝내는 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        secondaryButton("별도 경로 확인") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.doorstepVisitorHandoffRefusalCard(
+        card: DoorstepVisitorHandoffRefusalCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("문 앞 방문·직접 전달 압박 상황\n")
+                append(card.doorstepHandoffPressureSituation)
+                append("\n\n값 없이 직접 읽을 거절 문장\n")
+                append(card.valueFreeRefusalScript)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n열기·들임·전달·말하기·공유·첨부·기록 경계\n")
+                card.doNotOpenLetInHandoffSayShareAttachOrRecordBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openDoorstepVisitorHandoffRefusalAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openDoorstepVisitorHandoffRefusalAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) {
+                openDoorstepVisitorHandoffRefusalAction(action)
+            }
+        }
+    }
+
+    private fun openDoorstepVisitorHandoffRefusalAction(
+        action: DoorstepVisitorHandoffRefusalAction
+    ) {
+        when (action.id) {
+            DoorstepVisitorHandoffRefusalActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            DoorstepVisitorHandoffRefusalActionId.CHECKER -> show(Screen.CHECKER)
+            DoorstepVisitorHandoffRefusalActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            DoorstepVisitorHandoffRefusalActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            DoorstepVisitorHandoffRefusalActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            DoorstepVisitorHandoffRefusalActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            DoorstepVisitorHandoffRefusalActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            DoorstepVisitorHandoffRefusalActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            DoorstepVisitorHandoffRefusalActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            DoorstepVisitorHandoffRefusalActionId.NEW_NUMBER_QUARANTINE_COACH ->
+                show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            DoorstepVisitorHandoffRefusalActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            DoorstepVisitorHandoffRefusalActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            DoorstepVisitorHandoffRefusalActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            DoorstepVisitorHandoffRefusalActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            DoorstepVisitorHandoffRefusalActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            DoorstepVisitorHandoffRefusalActionId.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH ->
+                show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+            DoorstepVisitorHandoffRefusalActionId.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH ->
+                show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+            DoorstepVisitorHandoffRefusalActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            DoorstepVisitorHandoffRefusalActionId.GIFT_CARD_CODE_PAUSE_COACH ->
+                show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
+            DoorstepVisitorHandoffRefusalActionId.LINK_APP_INSTALL_QUARANTINE_COACH ->
+                show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+            DoorstepVisitorHandoffRefusalActionId.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
+                show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+            DoorstepVisitorHandoffRefusalActionId.RECOVERY_PROMISE_REALITY_CHECK_COACH ->
+                show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+            DoorstepVisitorHandoffRefusalActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            DoorstepVisitorHandoffRefusalActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            DoorstepVisitorHandoffRefusalActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            DoorstepVisitorHandoffRefusalActionId.PRIVACY_CENTER ->
+                show(Screen.PRIVACY_CENTER)
+            DoorstepVisitorHandoffRefusalActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            DoorstepVisitorHandoffRefusalActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            DoorstepVisitorHandoffRefusalActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            DoorstepVisitorHandoffRefusalActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+            DoorstepVisitorHandoffRefusalActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            DoorstepVisitorHandoffRefusalActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            DoorstepVisitorHandoffRefusalActionId.SAFETY_FLOW_ROUTER ->
+                show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareDoorstepVisitorHandoffRefusalCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 문 앞 방문·직접 전달 거절 안내 공유"))
     }
 
     private fun LinearLayout.bankAtmStaffDisclosureScriptCoachScreen() {
@@ -185,6 +399,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -395,6 +612,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -603,6 +823,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -799,6 +1022,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("상품권·코드 링크나 설치 지시도 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -985,6 +1211,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("회복 링크·앱 설치 지시를 열기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -1177,6 +1406,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("기관 사칭 링크·앱 설치 압박 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1368,6 +1600,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("로그인·인증값 입력 링크와 설치 지시 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -1564,6 +1799,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("새 연락수단이 건넨 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1759,6 +1997,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("목소리로 받은 링크·앱 설치 지시 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -2121,6 +2362,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("링크·앱 값을 넘기지 않고 격리 경계 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2307,6 +2551,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("재연락의 링크·앱 설치 압박 다시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -2500,6 +2747,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("확인 결과와 별개로 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2689,6 +2939,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("별도 확인 전 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2870,6 +3123,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("원격 지시의 링크·앱 설치 단계 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3050,6 +3306,9 @@ class MainActivity : Activity() {
         primaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        primaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         primaryButton("송금 링크·앱 설치 지시를 따르기 전 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3227,6 +3486,9 @@ class MainActivity : Activity() {
         }
         primaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        primaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         primaryButton("링크·앱 설치 압박 연락을 끝내고 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -3560,6 +3822,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3740,6 +4005,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("링크·앱 설치 압박 대응 역할 전에 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -3949,6 +4217,9 @@ class MainActivity : Activity() {
         primaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        primaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         primaryButton("링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4038,6 +4309,9 @@ class MainActivity : Activity() {
         }
         primaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        primaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         primaryButton("링크·앱 설치 압박 즉시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -4185,6 +4459,9 @@ class MainActivity : Activity() {
         primaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        primaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         primaryButton("링크·앱 설치 격리 경로") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4299,6 +4576,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -4423,6 +4703,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("계정·기기 조치 전에 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -4680,6 +4963,9 @@ class MainActivity : Activity() {
         primaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        primaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         primaryButton("이 링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4813,6 +5099,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("저장 내용 값을 읽히지 않고 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4923,6 +5212,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("값·열기·조회·스캔 없이 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -5072,6 +5364,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("링크·앱 값을 다루지 않고 설치 압박 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5140,6 +5435,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("공식 도움과 분리해 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5205,6 +5503,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("신고 준비와 분리해 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -5368,6 +5669,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("준비 상태와 별개로 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -5876,6 +6180,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("보호자와 링크·앱 설치 압박 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -6648,6 +6955,9 @@ class MainActivity : Activity() {
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
         }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
+        }
         secondaryButton("링크·앱 설치 압박과 실제 행동을 분리해 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -6812,6 +7122,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("은행·ATM 직원 공개 문구 코치") {
             show(Screen.BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH)
+        }
+        secondaryButton("문 앞 방문·직접 전달 거절 문구 코치") {
+            show(Screen.DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH)
         }
         secondaryButton("후속 연락의 링크·앱 설치 지시 다시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
