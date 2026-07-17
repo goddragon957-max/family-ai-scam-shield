@@ -4192,6 +4192,16 @@ class PrivacyPostureRegressionTest {
             "setPrimaryClip",
             "TextWatcher",
             "addTextChangedListener",
+            "AutofillManager",
+            "AutofillValue",
+            "android.view.autofill",
+            "CredentialManager",
+            "android.credentials",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
             "Intent.ACTION_CALL",
             "Intent.ACTION_DIAL",
             "TelecomManager",
@@ -4239,6 +4249,16 @@ class PrivacyPostureRegressionTest {
             "setPrimaryClip",
             "TextWatcher",
             "addTextChangedListener",
+            "AutofillManager",
+            "AutofillValue",
+            "android.view.autofill",
+            "CredentialManager",
+            "android.credentials",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
             "HttpURLConnection",
             "HttpsURLConnection",
             "java.net.URL",
@@ -7582,7 +7602,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(16, entryRouteSources.size)
         assertEquals(
-            20,
+            21,
             Regex("show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -8360,7 +8380,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(21, entryRouteSources.size)
         assertEquals(
-            23,
+            24,
             Regex("show\\(Screen\\.VOICE_IMPERSONATION_REALITY_CHECK\\)")
                 .findAll(activitySource)
                 .count()
@@ -9199,7 +9219,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            23,
+            24,
             Regex("show\\(Screen\\.NEW_NUMBER_QUARANTINE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -9783,6 +9803,797 @@ class PrivacyPostureRegressionTest {
         forbiddenSliceApis.forEach { forbiddenSliceApi ->
             assertFalse(
                 "new-number quarantine slice used forbidden API/source: $forbiddenSliceApi",
+                fullSliceSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
+        assertFalse(nonShareSliceSource.contains("Intent.ACTION_SEND"))
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "SEND_SMS",
+            "RECEIVE_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun credentialSecretFreezeCoachIsPureStatelessRoutesOnlyAndSharesBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/CredentialSecretFreezeCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.credentialSecretFreezeCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.credentialSecretFreezeCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openCredentialSecretFreezeAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareCredentialSecretFreezeCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        listOf(
+            "private fun LinearLayout.credentialSecretFreezeCoachScreen",
+            "private fun LinearLayout.credentialSecretFreezeCard",
+            "private fun openCredentialSecretFreezeAction",
+            "private fun shareCredentialSecretFreezeCoach"
+        ).forEach { marker ->
+            assertTrue(
+                "credential-secret-freeze source marker missing: $marker",
+                activitySource.contains(marker)
+            )
+        }
+        assertTrue(activitySource.contains("CREDENTIAL_SECRET_FREEZE_COACH"))
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.CREDENTIAL_SECRET_FREEZE_COACH -> credentialSecretFreezeCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.readinessSection()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.exposureImpactTriageScreen",
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen",
+            "private fun LinearLayout.newNumberQuarantineCoachScreen",
+            "private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.CREDENTIAL_SECRET_FREEZE_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.map { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "credential-secret-freeze entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(23, entryRouteSources.size)
+        assertEquals(
+            23,
+            Regex("show\\(Screen\\.CREDENTIAL_SECRET_FREEZE_COACH\\)")
+                .findAll(activitySource)
+                .count()
+        )
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "credential-secret-freeze entry used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+        assertEquals(2, Regex("\\bincidentCount\\b").findAll(modelSource).count())
+        assertFalse(Regex("analysis\\s*\\.\\s*[A-Za-z]").containsMatchIn(modelSource))
+
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "analysis.redactedClue",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "SafetyPlanStore",
+            "SafetyPlan(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "IncidentStore",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incident.body",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "AutofillManager",
+            "AutofillValue",
+            "android.view.autofill",
+            "CredentialManager",
+            "android.credentials",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
+            "ContactsContract",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "FileProvider",
+            "MediaStore",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "credential-secret-freeze model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        val builderCallPattern = Regex(
+            "CredentialSecretFreezeCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("CredentialSecretFreezeCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertEquals(1, Regex("safetyPlan\\.load\\(\\)").findAll(coachScreen).count())
+        assertEquals(1, Regex("incidents\\.count\\(\\)").findAll(coachScreen).count())
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(coachScreen.contains("val plan ="))
+        assertFalse(
+            coachScreen
+                .replace("FamilyReadinessBuilder.build(safetyPlan.load())", "")
+                .contains("safetyPlan.")
+        )
+        assertFalse(coachScreen.replace("incidents.count()", "").contains("incidents."))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "credential-secret incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareCredentialSecretFreezeCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "credential-secret-freeze UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.freezeScenario",
+            "card.valueFreeActionSentence",
+            "card.whyItMatters",
+            "card.doNotEnterShareClipboardOrAutofillBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(
+                "credential-secret-freeze card UI omitted $renderedCardField",
+                cardRenderer.contains(renderedCardField)
+            )
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "AutofillManager",
+            "AutofillValue",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "credentialValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "securityAnswerValue",
+            "accountValue",
+            "cardValue",
+            "clipboardValue",
+            "autofillState",
+            "loginState",
+            "authenticationState",
+            "recipientName",
+            "verificationStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "credential-secret-freeze UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        val expectedActionRoutes = linkedMapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFETY_PLAN" to "show(Screen.PLAN)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "SAFE_PASTE_PRIVACY_COACH" to "show(Screen.SAFE_PASTE_PRIVACY_COACH)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "FAMILY_SAFE_WORD_RESET_COACH" to
+                "show(Screen.FAMILY_SAFE_WORD_RESET_COACH)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "VOICE_IMPERSONATION_REALITY_CHECK_COACH" to
+                "show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)",
+            "NEW_NUMBER_QUARANTINE_COACH" to "show(Screen.NEW_NUMBER_QUARANTINE_COACH)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "RECONTACT_BOUNDARY_COACH" to "show(Screen.RECONTACT_BOUNDARY_COACH)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to
+                "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EVIDENCE_HANDOFF_PRIVACY_COACH" to
+                "show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.CREDENTIAL_SECRET_FREEZE_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        )
+        val actionIdBlock = functionBlock(
+            modelSource,
+            "enum class CredentialSecretFreezeActionId"
+        )
+        val declaredActionIds = Regex("(?m)^\\s*([A-Z][A-Z_]+),?\\s*$")
+            .findAll(actionIdBlock)
+            .map { match -> match.groupValues[1] }
+            .toSet()
+        assertEquals(expectedActionRoutes.keys, declaredActionIds)
+        expectedActionRoutes.forEach { (actionId, destination) ->
+            assertTrue(
+                "credential-secret-freeze route omitted $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "CredentialSecretFreezeActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            expectedActionRoutes.size,
+            Regex("CredentialSecretFreezeActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyStore",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "credential-secret-freeze router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareCredentialSecretFreezeCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertEquals(1, Regex("Intent\\.ACTION_SEND").findAll(shareHelper).count())
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "NotificationManager",
+            "PackageManager",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "credentialValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "accountValue",
+            "cardValue",
+            "recipientName",
+            "verificationStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "credential-secret-freeze share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource, ignoreCase = true)
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:credential|otp|pin|password|securityAnswer|" +
+                    "accountValue|cardValue|clipboardValue|autofillState|loginState|recipient)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:CREDENTIAL|OTP|PIN|PASSWORD|SECURITY_ANSWER|ACCOUNT_VALUE|" +
+                    "CARD_VALUE|CLIPBOARD_VALUE|AUTOFILL_STATE|LOGIN_STATE|RECIPIENT)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+        val persistenceSources = incidentStoreSource + safetyPlanStoreSource
+        listOf(
+            "CredentialSecretFreeze",
+            "credential_secret_freeze",
+            "credential_value",
+            "otp_value",
+            "pin_value",
+            "password_value",
+            "security_answer_value",
+            "account_value",
+            "card_value",
+            "clipboard_value",
+            "autofill_state",
+            "login_state",
+            "authentication_state",
+            "credential_status",
+            "recovery_status",
+            "freeze_progress",
+            "freeze_recipient"
+        ).forEach { forbiddenStoredState ->
+            assertFalse(
+                "credential-secret-freeze state was persisted: $forbiddenStoredState",
+                persistenceSources.contains(forbiddenStoredState, ignoreCase = true)
+            )
+        }
+
+        val nonShareSliceSource = coachScreen + cardRenderer + actionRouter + modelSource
+        val fullSliceSource = nonShareSliceSource + shareHelper
+        val forbiddenSliceApis = listOf(
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "AutofillManager",
+            "AutofillValue",
+            "android.view.autofill",
+            "CredentialManager",
+            "android.credentials",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
+            "ContactsContract",
+            "Intent.ACTION_INSERT",
+            "Intent.ACTION_EDIT",
+            "ACTION_PICK",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_SENDTO",
+            "smsto:",
+            "tel:",
+            "PhoneNumberUtils",
+            "Patterns.PHONE",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "NotificationListenerService",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "TextToSpeech",
+            "android.media",
+            "android.speech",
+            "Intent.EXTRA_STREAM",
+            "ACTION_SEND_MULTIPLE",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "DocumentsContract",
+            "ContentResolver",
+            "openInputStream",
+            "java.io.File",
+            "MlKit",
+            "TextRecognition",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "AlarmManager",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "OkHttp",
+            "Retrofit",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "Settings.",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save(",
+            "credentialValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "securityAnswerValue",
+            "accountValue",
+            "cardValue",
+            "clipboardValue",
+            "autofillState",
+            "loginState",
+            "authenticationState",
+            "recipientName",
+            "verificationStatus",
+            "recoveryStatus"
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "credential-secret-freeze slice used forbidden API/source: $forbiddenSliceApi",
                 fullSliceSource.contains(forbiddenSliceApi, ignoreCase = true)
             )
         }
