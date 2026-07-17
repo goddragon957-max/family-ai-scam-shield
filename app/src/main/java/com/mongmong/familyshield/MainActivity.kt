@@ -29,7 +29,7 @@ class MainActivity : Activity() {
         RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH,
         FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK,
         NEW_NUMBER_QUARANTINE_COACH, CREDENTIAL_SECRET_FREEZE_COACH,
-        OFFICIAL_PRESSURE_REALITY_CHECK_COACH
+        OFFICIAL_PRESSURE_REALITY_CHECK_COACH, RECOVERY_PROMISE_REALITY_CHECK_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -156,12 +156,193 @@ class MainActivity : Activity() {
                     credentialSecretFreezeCoachScreen()
                 Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
                     officialPressureRealityCheckCoachScreen()
+                Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH ->
+                    recoveryPromiseRealityCheckCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.recoveryPromiseRealityCheckCoachScreen() {
+        val coach = RecoveryPromiseRealityCheckCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 회복 약속 현실 점검 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.recoveryPromiseScenario}\n" +
+                            card.valueFreeActionSentence
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openRecoveryPromiseRealityCheckAction(action) }
+            } else {
+                secondaryButton(action.label) { openRecoveryPromiseRealityCheckAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 회복 약속 현실 점검 카드",
+            "카드는 항상 같은 순서입니다. 회복·환급·취소·동결·추적 약속을 결과로 " +
+                "단정하지 말고, 실제 이름·연락처·사건·계정·카드·결제·지갑·인증 값을 " +
+                "이 화면에 넣지 마세요. 앱은 값 없는 행동 문장과 기존 앱 경로만 보여 " +
+                "주며 선택·읽음·확인 상태를 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            recoveryPromiseRealityCheckCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 회복 약속 점검 안내 공유") {
+            shareRecoveryPromiseRealityCheckCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("신고 준비 화면으로 이동") {
+            show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.recoveryPromiseRealityCheckCard(
+        card: RecoveryPromiseRealityCheckCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 회복 약속 상황\n")
+                append(card.recoveryPromiseScenario)
+                append("\n\n값 없는 다음 행동\n")
+                append(card.valueFreeActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n지불·공유·제출·설치·통화 경계\n")
+                card.doNotPayShareSubmitInstallOrCallBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openRecoveryPromiseRealityCheckAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openRecoveryPromiseRealityCheckAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openRecoveryPromiseRealityCheckAction(action) }
+        }
+    }
+
+    private fun openRecoveryPromiseRealityCheckAction(
+        action: RecoveryPromiseRealityCheckAction
+    ) {
+        when (action.id) {
+            RecoveryPromiseRealityCheckActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            RecoveryPromiseRealityCheckActionId.CHECKER -> show(Screen.CHECKER)
+            RecoveryPromiseRealityCheckActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            RecoveryPromiseRealityCheckActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            RecoveryPromiseRealityCheckActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            RecoveryPromiseRealityCheckActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            RecoveryPromiseRealityCheckActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            RecoveryPromiseRealityCheckActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            RecoveryPromiseRealityCheckActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            RecoveryPromiseRealityCheckActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            RecoveryPromiseRealityCheckActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            RecoveryPromiseRealityCheckActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            RecoveryPromiseRealityCheckActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            RecoveryPromiseRealityCheckActionId.NEW_NUMBER_QUARANTINE_COACH ->
+                show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            RecoveryPromiseRealityCheckActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            RecoveryPromiseRealityCheckActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            RecoveryPromiseRealityCheckActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            RecoveryPromiseRealityCheckActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            RecoveryPromiseRealityCheckActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            RecoveryPromiseRealityCheckActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            RecoveryPromiseRealityCheckActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            RecoveryPromiseRealityCheckActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            RecoveryPromiseRealityCheckActionId.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
+                show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+            RecoveryPromiseRealityCheckActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            RecoveryPromiseRealityCheckActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            RecoveryPromiseRealityCheckActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            RecoveryPromiseRealityCheckActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            RecoveryPromiseRealityCheckActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            RecoveryPromiseRealityCheckActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            RecoveryPromiseRealityCheckActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+            RecoveryPromiseRealityCheckActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            RecoveryPromiseRealityCheckActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            RecoveryPromiseRealityCheckActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareRecoveryPromiseRealityCheckCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 회복 약속 점검 안내 공유"))
     }
 
     private fun LinearLayout.officialPressureRealityCheckCoachScreen() {
@@ -174,6 +355,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복·환급·취소 약속을 믿기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -351,6 +535,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복 조건으로 비밀값을 요구하면 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("직함·기관명·문서 압박을 믿기 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -531,6 +718,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 연락수단의 회복 약속을 믿기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박이 붙은 새 연락수단 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -712,6 +902,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("목소리로 건넨 회복 약속을 믿기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 직함·위협과 목소리를 증거로 믿기 전 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -1058,6 +1251,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복 약속에 증거를 넘기기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박 자료를 넘기기 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -1230,6 +1426,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("재연락의 회복 약속을 믿기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박 재연락을 믿기 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -1407,6 +1606,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("회복 약속과 실제 결과를 분리해 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박의 말과 결과를 분리해 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -1581,6 +1783,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복 약속도 별도 확인 전에 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박을 별도 확인 전에 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -1747,6 +1952,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복을 돕는다는 앱 설치 약속 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·앱 설치 압박을 믿기 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -1912,6 +2120,9 @@ class MainActivity : Activity() {
 
         title(gate.title)
         subtitle(gate.intro)
+        secondaryButton("환급·복구를 조건으로 돈을 요구하면 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·안전계좌·환급 압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2075,6 +2286,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        primaryButton("회복 약속 연락을 이어가지 않고 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         primaryButton("기관 사칭·위협 압박을 믿지 않고 멈춤") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2234,6 +2448,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복 약속에 값을 붙여넣기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·링크·문서 압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2383,6 +2600,9 @@ class MainActivity : Activity() {
 
         title(agenda.title)
         subtitle(agenda.intro)
+        secondaryButton("회복 약속을 가족과 함께 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박을 가족과 숨기지 않고 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2549,6 +2769,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("회복 약속에 대응하기 전 역할별 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박 대응 역할 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2742,6 +2965,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.home() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        primaryButton("회복·환급·취소 약속을 믿기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         primaryButton("경찰·검찰·은행·배송 사칭 압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2817,6 +3043,9 @@ class MainActivity : Activity() {
 
         title(mode.title)
         subtitle(mode.intro)
+        primaryButton("회복 약속을 믿거나 비용을 내기 전에 멈춤") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         primaryButton("기관 사칭·위협 압박을 증거로 믿지 않고 멈춤") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -2948,6 +3177,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("회복 약속 현실 점검 경로") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         primaryButton("기관 사칭·압박 현실 점검 경로") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3048,6 +3280,9 @@ class MainActivity : Activity() {
 
         title(pack.title)
         subtitle(pack.intro)
+        secondaryButton("회복 약속을 가족과 값 없이 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·비밀 유지 압박을 가족과 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3157,6 +3392,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("회복을 조건으로 계정 조치를 요구하면 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·계정 보호 압박을 믿기 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3398,6 +3636,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 회복·환급·취소 약속을 믿기 전 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         primaryButton("이 기관 사칭·압박 요청을 믿기 전 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3516,6 +3757,9 @@ class MainActivity : Activity() {
 
         title(briefing.title)
         subtitle(briefing.intro)
+        secondaryButton("저장 내용 값을 읽히지 않고 회복 약속 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         briefing.emptyStateTitle?.let { emptyTitle ->
             section(emptyTitle, briefing.emptyStateMessage.orEmpty())
         }
@@ -3612,6 +3856,9 @@ class MainActivity : Activity() {
 
         title(privacyCenter.title)
         subtitle(privacyCenter.intro)
+        secondaryButton("값·조회 없이 회복 약속 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("값·조회 없이 기관 사칭·압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3745,6 +3992,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.evidencePreservationScreen() {
         title("증거 보존 체크리스트")
         subtitle("상황에 맞는 항목을 골라, 메시지나 앱을 지우기 전에 직접 보관할 내용을 차분히 확인하세요.")
+        secondaryButton("증거 값 없이 회복 약속 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         section(
             "수동·로컬 안내",
             "이 화면은 증거를 자동으로 캡처하거나 업로드하지 않습니다. 선택 내용과 완료 상태도 저장하지 않으며, " +
@@ -3798,6 +4048,9 @@ class MainActivity : Activity() {
         val directory = OfficialHelpDirectoryBuilder.build()
         title(directory.title)
         subtitle(directory.intro)
+        secondaryButton("이 안내와 회복 약속을 분리해 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("이 안내와 상대의 주장을 분리해 압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3849,6 +4102,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.officialReportPrepScreen() {
         title("신고용 상담 준비 카드")
         subtitle("현재 AI 보호자 분석을 개인정보 가림 단서, 추천 공식 연락처, 상담 대사와 전화 전 체크리스트로 정리합니다.")
+        secondaryButton("신고 준비와 회복 약속을 분리해 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("신고 준비 전에 기관 사칭·압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -3997,6 +4253,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("준비 상태와 별개로 회복 약속 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -4490,6 +4749,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("보호자와 회복 약속 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("보호자와 기관 사칭·압박 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -5246,6 +5508,9 @@ class MainActivity : Activity() {
 
         title(triage.title)
         subtitle(triage.intro)
+        secondaryButton("회복 약속과 실제 노출 행동을 분리해 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박과 실제 행동을 분리해 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }
@@ -5396,6 +5661,9 @@ class MainActivity : Activity() {
 
         title(planner.title)
         subtitle(planner.intro)
+        secondaryButton("후속 회복 약속을 믿기 전 다시 현실 점검") {
+            show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
         secondaryButton("기관 사칭·압박이 이어질 때 다시 현실 점검") {
             show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
         }

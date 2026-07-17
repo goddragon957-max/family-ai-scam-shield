@@ -7602,7 +7602,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(16, entryRouteSources.size)
         assertEquals(
-            22,
+            23,
             Regex("show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -8380,7 +8380,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(21, entryRouteSources.size)
         assertEquals(
-            25,
+            26,
             Regex("show\\(Screen\\.VOICE_IMPERSONATION_REALITY_CHECK\\)")
                 .findAll(activitySource)
                 .count()
@@ -9219,7 +9219,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            25,
+            26,
             Regex("show\\(Screen\\.NEW_NUMBER_QUARANTINE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -9942,7 +9942,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            24,
+            25,
             Regex("show\\(Screen\\.CREDENTIAL_SECRET_FREEZE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -10726,7 +10726,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(26, entryRouteSources.size)
         assertEquals(
-            26,
+            27,
             Regex("show\\(Screen\\.OFFICIAL_PRESSURE_REALITY_CHECK_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -11363,6 +11363,731 @@ class PrivacyPostureRegressionTest {
             )
         }
         assertFalse(nonShareSliceSource.contains("Intent.ACTION_SEND"))
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "SEND_SMS",
+            "RECEIVE_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun recoveryPromiseRealityCheckCoachIsPureStatelessRoutesOnlyAndSharesBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/RecoveryPromiseRealityCheckCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.recoveryPromiseRealityCheckCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.recoveryPromiseRealityCheckCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openRecoveryPromiseRealityCheckAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareRecoveryPromiseRealityCheckCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertTrue(activitySource.contains("RECOVERY_PROMISE_REALITY_CHECK_COACH"))
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH -> " +
+                    "recoveryPromiseRealityCheckCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.officialPressureRealityCheckCoachScreen",
+            "private fun LinearLayout.credentialSecretFreezeCoachScreen",
+            "private fun LinearLayout.newNumberQuarantineCoachScreen",
+            "private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen",
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.incidentTimelineBriefingScreen",
+            "private fun LinearLayout.privacyCenterScreen",
+            "private fun LinearLayout.evidencePreservationScreen",
+            "private fun LinearLayout.helpDirectoryScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.readinessSection()",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.exposureImpactTriageScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen"
+        )
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.RECOVERY_PROMISE_REALITY_CHECK_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.map { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "recovery-promise entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(29, entryRouteSources.size)
+        assertEquals(
+            29,
+            Regex("show\\(Screen\\.RECOVERY_PROMISE_REALITY_CHECK_COACH\\)")
+                .findAll(activitySource)
+                .count()
+        )
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear()",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "recovery-promise entry used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "analysis.redactedClue",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "SafetyPlanStore",
+            "SafetyPlan(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "IncidentStore",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incident.body",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
+            "ContactsContract",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "FileProvider",
+            "MediaStore",
+            "ContentResolver",
+            "java.io.File",
+            "Intent.EXTRA_STREAM",
+            "Uri.parse",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Intent.ACTION_VIEW",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "URLUtil",
+            "InetAddress",
+            "PhoneNumberUtils",
+            "Patterns.PHONE",
+            "PaymentClient",
+            "BankingClient",
+            "CardClient",
+            "WalletConnect",
+            "BlockchainClient",
+            "ExchangeClient",
+            "RefundClient",
+            "ChargebackClient",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "Settings.",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "recovery-promise model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource))
+        }
+
+        val builderCallPattern = Regex(
+            "RecoveryPromiseRealityCheckCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("RecoveryPromiseRealityCheckCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertEquals(1, Regex("safetyPlan\\.load\\(\\)").findAll(coachScreen).count())
+        assertEquals(1, Regex("incidents\\.count\\(\\)").findAll(coachScreen).count())
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(coachScreen.contains("val plan ="))
+        assertFalse(
+            coachScreen
+                .replace("FamilyReadinessBuilder.build(safetyPlan.load())", "")
+                .contains("safetyPlan.")
+        )
+        assertFalse(coachScreen.replace("incidents.count()", "").contains("incidents."))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "recovery-promise incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareRecoveryPromiseRealityCheckCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "recovery-promise UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.recoveryPromiseScenario",
+            "card.valueFreeActionSentence",
+            "card.whyItMatters",
+            "card.doNotPayShareSubmitInstallOrCallBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(
+                "recovery-promise card UI omitted $renderedCardField",
+                cardRenderer.contains(renderedCardField)
+            )
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyStore",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "callerId",
+            "callState",
+            "clipboardText",
+            "autofillState",
+            "loginState",
+            "recipientName",
+            "caseId",
+            "reportStatus",
+            "submissionStatus",
+            "paymentStatus",
+            "walletStatus",
+            "refundStatus",
+            "chargebackStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "recovery-promise UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+
+        val expectedActionRoutes = linkedMapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFETY_PLAN" to "show(Screen.PLAN)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "SAFE_PASTE_PRIVACY_COACH" to "show(Screen.SAFE_PASTE_PRIVACY_COACH)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "FAMILY_SAFE_WORD_RESET_COACH" to "show(Screen.FAMILY_SAFE_WORD_RESET_COACH)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "VOICE_IMPERSONATION_REALITY_CHECK_COACH" to
+                "show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)",
+            "NEW_NUMBER_QUARANTINE_COACH" to "show(Screen.NEW_NUMBER_QUARANTINE_COACH)",
+            "CREDENTIAL_SECRET_FREEZE_COACH" to
+                "show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "RECONTACT_BOUNDARY_COACH" to "show(Screen.RECONTACT_BOUNDARY_COACH)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to
+                "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "OFFICIAL_PRESSURE_REALITY_CHECK_COACH" to
+                "show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EVIDENCE_HANDOFF_PRIVACY_COACH" to
+                "show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        )
+        val actionIdBlock = functionBlock(
+            modelSource,
+            "enum class RecoveryPromiseRealityCheckActionId"
+        )
+        val declaredActionIds = Regex("(?m)^\\s*([A-Z][A-Z_]+),?\\s*$")
+            .findAll(actionIdBlock)
+            .map { match -> match.groupValues[1] }
+            .toSet()
+        assertEquals(expectedActionRoutes.keys, declaredActionIds)
+        expectedActionRoutes.forEach { (actionId, destination) ->
+            assertTrue(
+                "recovery-promise route omitted $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "RecoveryPromiseRealityCheckActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            expectedActionRoutes.size,
+            Regex("RecoveryPromiseRealityCheckActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        assertEquals(1, Regex("openHelpDirectory\\(").findAll(actionRouter).count())
+        assertFalse((coachScreen + cardRenderer + modelSource).contains("openHelpDirectory("))
+
+        val shareArguments = Regex("shareRecoveryPromiseRealityCheckCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertEquals(1, Regex("Intent\\.ACTION_SEND").findAll(shareHelper).count())
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "NotificationManager",
+            "PackageManager",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "callerId",
+            "callState",
+            "clipboardText",
+            "autofillState",
+            "loginState",
+            "recipientName",
+            "caseId",
+            "reportStatus",
+            "submissionStatus",
+            "paymentStatus",
+            "walletStatus",
+            "refundStatus",
+            "chargebackStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "recovery-promise share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource, ignoreCase = true)
+            )
+        }
+
+        val persistenceSources = incidentStoreSource + safetyPlanStoreSource
+        listOf(
+            "RecoveryPromiseRealityCheck",
+            "recovery_promise_reality_check",
+            "recovery_promise_status",
+            "refund_status",
+            "chargeback_status",
+            "wallet_status",
+            "payment_status",
+            "case_status",
+            "report_status",
+            "recovery_status"
+        ).forEach { forbiddenStoredState ->
+            assertFalse(
+                "recovery-promise state was persisted: $forbiddenStoredState",
+                persistenceSources.contains(forbiddenStoredState, ignoreCase = true)
+            )
+        }
+
+        val nonShareSliceSource = coachScreen + cardRenderer + actionRouter + modelSource
+        assertFalse(nonShareSliceSource.contains("Intent.ACTION_SEND"))
+        listOf(
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
+            "ContactsContract",
+            "ACTION_SENDTO",
+            "smsto:",
+            "tel:",
+            "PhoneNumberUtils",
+            "Patterns.PHONE",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "NotificationListenerService",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ContentResolver",
+            "java.io.File",
+            "AlarmManager",
+            "WorkManager",
+            "JobScheduler",
+            "BroadcastReceiver",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "URLUtil",
+            "InetAddress",
+            "PaymentClient",
+            "BankingClient",
+            "WalletConnect",
+            "BlockchainClient",
+            "ExchangeClient",
+            "RefundClient",
+            "ChargebackClient",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "Settings.",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save(",
+            "officialNumber",
+            "directoryValue",
+            "callerId",
+            "callState",
+            "urlValue",
+            "domainValue",
+            "caseId",
+            "accountValue",
+            "cardValue",
+            "bankValue",
+            "paymentValue",
+            "transactionValue",
+            "walletValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "securityAnswerValue",
+            "clipboardValue",
+            "autofillState",
+            "loginState",
+            "packageName",
+            "appName",
+            "deviceId",
+            "recipientName",
+            "reportStatus",
+            "submissionStatus",
+            "refundStatus",
+            "chargebackStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenSliceApi ->
+            assertFalse(
+                "recovery-promise slice used forbidden API/source: $forbiddenSliceApi",
+                nonShareSliceSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
 
         listOf(
             "CALL_PHONE",
