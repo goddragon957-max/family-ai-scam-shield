@@ -30,7 +30,7 @@ class MainActivity : Activity() {
         FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK,
         NEW_NUMBER_QUARANTINE_COACH, CREDENTIAL_SECRET_FREEZE_COACH,
         OFFICIAL_PRESSURE_REALITY_CHECK_COACH, RECOVERY_PROMISE_REALITY_CHECK_COACH,
-        GIFT_CARD_CODE_PAUSE_COACH
+        GIFT_CARD_CODE_PAUSE_COACH, LINK_APP_INSTALL_QUARANTINE_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -160,12 +160,204 @@ class MainActivity : Activity() {
                 Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH ->
                     recoveryPromiseRealityCheckCoachScreen()
                 Screen.GIFT_CARD_CODE_PAUSE_COACH -> giftCardCodePauseCoachScreen()
+                Screen.LINK_APP_INSTALL_QUARANTINE_COACH ->
+                    linkAppInstallQuarantineCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.linkAppInstallQuarantineCoachScreen() {
+        val coach = LinkAppInstallQuarantineCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 링크·앱 설치 격리 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.linkAppPressureScenario}\n" +
+                            card.valueFreeActionSentence
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openLinkAppInstallQuarantineAction(action) }
+            } else {
+                secondaryButton(action.label) { openLinkAppInstallQuarantineAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 링크·앱 설치 격리 카드",
+            "카드는 항상 같은 순서입니다. 상대가 건넨 링크를 열거나 미리 보거나 " +
+                "복사·공유·스캔하지 말고, APK·앱을 설치하거나 권한을 허용하지 마세요. " +
+                "같은 통화·채팅·화면공유 세션에서 로그인 정보나 결제·상품권 값을 " +
+                "입력하지 않습니다. 앱은 링크나 앱을 검사하지 않고 값 없는 행동 문장과 " +
+                "기존 앱 경로만 보여 주며 선택·읽음·확인 상태도 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            linkAppInstallQuarantineCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 링크·앱 설치 격리 안내 공유") {
+            shareLinkAppInstallQuarantineCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("안전 붙여넣기 개인정보 코치") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
+        secondaryButton("원격 접근 중단 코치") { show(Screen.REMOTE_ACCESS_CUTOFF_COACH) }
+        secondaryButton("인증정보 노출 멈춤 코치") {
+            show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.linkAppInstallQuarantineCard(
+        card: LinkAppInstallQuarantineCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 링크·앱 설치 압박 상황\n")
+                append(card.linkAppPressureScenario)
+                append("\n\n값 없는 다음 행동\n")
+                append(card.valueFreeActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n열기·설치·입력·스캔·권한·공유 경계\n")
+                card.doNotOpenInstallEnterScanGrantOrShareBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openLinkAppInstallQuarantineAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openLinkAppInstallQuarantineAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openLinkAppInstallQuarantineAction(action) }
+        }
+    }
+
+    private fun openLinkAppInstallQuarantineAction(action: LinkAppInstallQuarantineAction) {
+        when (action.id) {
+            LinkAppInstallQuarantineActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            LinkAppInstallQuarantineActionId.CHECKER -> show(Screen.CHECKER)
+            LinkAppInstallQuarantineActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            LinkAppInstallQuarantineActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            LinkAppInstallQuarantineActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            LinkAppInstallQuarantineActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            LinkAppInstallQuarantineActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            LinkAppInstallQuarantineActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            LinkAppInstallQuarantineActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            LinkAppInstallQuarantineActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            LinkAppInstallQuarantineActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            LinkAppInstallQuarantineActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            LinkAppInstallQuarantineActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            LinkAppInstallQuarantineActionId.NEW_NUMBER_QUARANTINE_COACH ->
+                show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            LinkAppInstallQuarantineActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            LinkAppInstallQuarantineActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            LinkAppInstallQuarantineActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            LinkAppInstallQuarantineActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            LinkAppInstallQuarantineActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            LinkAppInstallQuarantineActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            LinkAppInstallQuarantineActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            LinkAppInstallQuarantineActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            LinkAppInstallQuarantineActionId.GIFT_CARD_CODE_PAUSE_COACH ->
+                show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
+            LinkAppInstallQuarantineActionId.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
+                show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+            LinkAppInstallQuarantineActionId.RECOVERY_PROMISE_REALITY_CHECK_COACH ->
+                show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+            LinkAppInstallQuarantineActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            LinkAppInstallQuarantineActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            LinkAppInstallQuarantineActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            LinkAppInstallQuarantineActionId.PRIVACY_CENTER ->
+                show(Screen.PRIVACY_CENTER)
+            LinkAppInstallQuarantineActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            LinkAppInstallQuarantineActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            LinkAppInstallQuarantineActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            LinkAppInstallQuarantineActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+            LinkAppInstallQuarantineActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            LinkAppInstallQuarantineActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            LinkAppInstallQuarantineActionId.SAFETY_FLOW_ROUTER ->
+                show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareLinkAppInstallQuarantineCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 링크·앱 설치 격리 안내 공유"))
     }
 
     private fun LinearLayout.giftCardCodePauseCoachScreen() {
@@ -178,6 +370,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("상품권·코드 링크나 설치 지시도 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -356,6 +551,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복 링크·앱 설치 지시를 열기 전 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("회복 비용을 상품권·코드로 요구하면 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -538,6 +736,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭 링크·앱 설치 압박 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 요구를 따르기 전 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -721,6 +922,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("로그인·인증값 입력 링크와 설치 지시 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 요구를 따르기 전 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -907,6 +1111,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 연락수단이 건넨 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("새 연락수단의 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -1094,6 +1301,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("목소리로 받은 링크·앱 설치 지시 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("목소리로 받은 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -1446,6 +1656,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("링크·앱 값을 넘기지 않고 격리 경계 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 값 없이 증거 전달 멈춤 점검") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -1624,6 +1837,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("재연락의 링크·앱 설치 압박 다시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("재연락의 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -1807,6 +2023,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("확인 결과와 별개로 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("확인 결과와 별개로 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -1987,6 +2206,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("별도 확인 전 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("별도 확인 전 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -2159,6 +2381,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("원격 지시의 링크·앱 설치 단계 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("앱·화면 공유 중 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -2330,6 +2555,9 @@ class MainActivity : Activity() {
 
         title(gate.title)
         subtitle(gate.intro)
+        primaryButton("송금 링크·앱 설치 지시를 따르기 전 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         primaryButton("상품권·기프티콘·코드 요구도 송금처럼 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -2499,6 +2727,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        primaryButton("링크·앱 설치 압박 연락을 끝내고 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         primaryButton("상품권·코드 요구 연락을 끝내고 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -2664,6 +2895,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("링크를 붙여넣거나 열지 않고 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 값을 붙여넣지 않고 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -2819,6 +3053,9 @@ class MainActivity : Activity() {
 
         title(agenda.title)
         subtitle(agenda.intro)
+        secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 요구를 가족과 값 없이 점검") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -2991,6 +3228,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("링크·앱 설치 압박 대응 역할 전에 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 요구 대응 역할 전에 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -3190,6 +3430,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.home() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        primaryButton("링크를 열거나 앱을 설치하기 전 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         primaryButton("상품권·기프티콘·코드 요구를 따르기 전 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -3271,6 +3514,9 @@ class MainActivity : Activity() {
 
         title(mode.title)
         subtitle(mode.intro)
+        primaryButton("링크·앱 설치 압박 즉시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         primaryButton("상품권·기프티콘·코드를 사거나 보내기 전 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -3408,6 +3654,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("링크·앱 설치 격리 경로") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         primaryButton("상품권·코드 요구 멈춤 경로") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -3514,6 +3763,9 @@ class MainActivity : Activity() {
 
         title(pack.title)
         subtitle(pack.intro)
+        secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 요구를 가족과 값 없이 점검") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -3629,6 +3881,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("계정·기기 조치 전에 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("계정·기기 조치 전에 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -3876,6 +4131,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 링크를 열거나 앱을 설치하기 전 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         primaryButton("이 상품권·기프티콘·코드 요구를 따르기 전 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -4000,6 +4258,9 @@ class MainActivity : Activity() {
 
         title(briefing.title)
         subtitle(briefing.intro)
+        secondaryButton("저장 내용 값을 읽히지 않고 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("저장 내용 값을 읽히지 않고 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -4102,6 +4363,9 @@ class MainActivity : Activity() {
 
         title(privacyCenter.title)
         subtitle(privacyCenter.intro)
+        secondaryButton("값·열기·조회·스캔 없이 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("값·조회·스캔 없이 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -4241,6 +4505,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.evidencePreservationScreen() {
         title("증거 보존 체크리스트")
         subtitle("상황에 맞는 항목을 골라, 메시지나 앱을 지우기 전에 직접 보관할 내용을 차분히 확인하세요.")
+        secondaryButton("링크·앱 값을 다루지 않고 설치 압박 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 값 없이 멈춤 경계 점검") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -4300,6 +4567,9 @@ class MainActivity : Activity() {
         val directory = OfficialHelpDirectoryBuilder.build()
         title(directory.title)
         subtitle(directory.intro)
+        secondaryButton("공식 도움과 분리해 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("공식 도움과 분리해 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -4357,6 +4627,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.officialReportPrepScreen() {
         title("신고용 상담 준비 카드")
         subtitle("현재 AI 보호자 분석을 개인정보 가림 단서, 추천 공식 연락처, 상담 대사와 전화 전 체크리스트로 정리합니다.")
+        secondaryButton("신고 준비와 분리해 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("신고 준비와 분리해 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -4511,6 +4784,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("준비 상태와 별개로 링크·앱 설치 지시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("준비 상태와 별개로 상품권·코드 요구 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -5010,6 +5286,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("보호자와 링크·앱 설치 압박 격리 점검") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("보호자와 상품권·코드 요구 멈춤 점검") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -5772,6 +6051,9 @@ class MainActivity : Activity() {
 
         title(triage.title)
         subtitle(triage.intro)
+        secondaryButton("링크·앱 설치 압박과 실제 행동을 분리해 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("상품권·코드 요구와 실제 행동을 분리해 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }
@@ -5928,6 +6210,9 @@ class MainActivity : Activity() {
 
         title(planner.title)
         subtitle(planner.intro)
+        secondaryButton("후속 연락의 링크·앱 설치 지시 다시 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
         secondaryButton("후속 연락의 상품권·코드 요구 다시 멈춤") {
             show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
         }

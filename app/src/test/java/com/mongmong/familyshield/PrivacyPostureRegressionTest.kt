@@ -7602,7 +7602,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(16, entryRouteSources.size)
         assertEquals(
-            24,
+            25,
             Regex("show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -8380,7 +8380,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(21, entryRouteSources.size)
         assertEquals(
-            27,
+            28,
             Regex("show\\(Screen\\.VOICE_IMPERSONATION_REALITY_CHECK\\)")
                 .findAll(activitySource)
                 .count()
@@ -9219,7 +9219,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            27,
+            28,
             Regex("show\\(Screen\\.NEW_NUMBER_QUARANTINE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -9942,7 +9942,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            27,
+            29,
             Regex("show\\(Screen\\.CREDENTIAL_SECRET_FREEZE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -10726,7 +10726,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(26, entryRouteSources.size)
         assertEquals(
-            28,
+            29,
             Regex("show\\(Screen\\.OFFICIAL_PRESSURE_REALITY_CHECK_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -11494,7 +11494,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(29, entryRouteSources.size)
         assertEquals(
-            30,
+            31,
             Regex("show\\(Screen\\.RECOVERY_PROMISE_REALITY_CHECK_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -12217,7 +12217,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(30, entryRouteSources.size)
         assertEquals(
-            30,
+            31,
             Regex("show\\(Screen\\.GIFT_CARD_CODE_PAUSE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -12613,6 +12613,627 @@ class PrivacyPostureRegressionTest {
             "redeem_status",
             "balance_status",
             "purchase_status"
+        ).forEach { forbiddenStoredState ->
+            assertFalse(
+                persistenceSources.contains(forbiddenStoredState, ignoreCase = true)
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "SEND_SMS",
+            "RECEIVE_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(manifest.contains(forbiddenPermission))
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun linkAppInstallQuarantineCoachUsesBoundedValueFreeInputsAndRoutesOnly() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/LinkAppInstallQuarantineCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.linkAppInstallQuarantineCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.linkAppInstallQuarantineCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openLinkAppInstallQuarantineAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareLinkAppInstallQuarantineCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.LINK_APP_INSTALL_QUARANTINE_COACH -> " +
+                    "linkAppInstallQuarantineCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.readinessSection()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.credentialSecretFreezeCoachScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.exposureImpactTriageScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.giftCardCodePauseCoachScreen",
+            "private fun LinearLayout.recoveryPromiseRealityCheckCoachScreen",
+            "private fun LinearLayout.officialPressureRealityCheckCoachScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.newNumberQuarantineCoachScreen",
+            "private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen",
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen",
+            "private fun LinearLayout.evidencePreservationScreen",
+            "private fun LinearLayout.incidentTimelineBriefingScreen",
+            "private fun LinearLayout.helpDirectoryScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        assertEquals(31, entryMarkers.size)
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.LINK_APP_INSTALL_QUARANTINE_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.map { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "link/app entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(
+            31,
+            Regex("show\\(Screen\\.LINK_APP_INSTALL_QUARANTINE_COACH\\)")
+                .findAll(activitySource)
+                .count()
+        )
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear()",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "Uri.parse",
+            "startActivity("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(entryRouteSource.contains(forbiddenEntrySideEffect))
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "analysis.redactedClue",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "SafetyPlanStore",
+            "SafetyPlan(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "IncidentStore",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incident.body",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "dialNumber",
+            "urlValue",
+            "domainValue",
+            "shortenedLinkValue",
+            "qrValue",
+            "barcodeValue",
+            "apkValue",
+            "packageName",
+            "appLabel",
+            "installedApps",
+            "permissionState",
+            "deviceId",
+            "callerId",
+            "caseId",
+            "reportStatus",
+            "submissionStatus",
+            "receiptId",
+            "accountNumber",
+            "cardNumber",
+            "bankValue",
+            "walletValue",
+            "transactionValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "securityAnswer",
+            "residentId",
+            "clipboardText",
+            "loginState",
+            "verificationResult",
+            "recoveryResult",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "link/app model used forbidden value or source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource, ignoreCase = true)
+            )
+        }
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource))
+        }
+
+        val builderCallPattern = Regex(
+            "LinkAppInstallQuarantineCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("LinkAppInstallQuarantineCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertEquals(1, Regex("safetyPlan\\.load\\(\\)").findAll(coachScreen).count())
+        assertEquals(1, Regex("incidents\\.count\\(\\)").findAll(coachScreen).count())
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(
+            coachScreen
+                .replace("FamilyReadinessBuilder.build(safetyPlan.load())", "")
+                .contains("safetyPlan.")
+        )
+        assertFalse(coachScreen.replace("incidents.count()", "").contains("incidents."))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(incidentCountHelper.contains(forbiddenIncidentRead))
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareLinkAppInstallQuarantineCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue("link/app UI omitted $renderedField", coachScreen.contains(renderedField))
+        }
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.linkAppPressureScenario",
+            "card.valueFreeActionSentence",
+            "card.whyItMatters",
+            "card.doNotOpenInstallEnterScanGrantOrShareBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(cardRenderer.contains(renderedCardField))
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "pendingSharedText",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "callerId",
+            "callState",
+            "clipboardText",
+            "autofillState",
+            "loginState",
+            "recipientName",
+            "urlValue",
+            "domainValue",
+            "qrValue",
+            "barcodeValue",
+            "apkValue",
+            "packageName",
+            "appLabel",
+            "installedApps",
+            "permissionState",
+            "malwareStatus",
+            "deviceId",
+            "accountNumber",
+            "cardNumber",
+            "bankValue",
+            "walletValue",
+            "transactionValue",
+            "giftCardCodeValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "caseId",
+            "reportStatus",
+            "submissionStatus",
+            "receiptId",
+            "verificationResult",
+            "recoveryResult"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "link/app UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+
+        val expectedActionRoutes = linkedMapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFETY_PLAN" to "show(Screen.PLAN)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "SAFE_PASTE_PRIVACY_COACH" to "show(Screen.SAFE_PASTE_PRIVACY_COACH)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "FAMILY_SAFE_WORD_RESET_COACH" to "show(Screen.FAMILY_SAFE_WORD_RESET_COACH)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "VOICE_IMPERSONATION_REALITY_CHECK_COACH" to
+                "show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)",
+            "NEW_NUMBER_QUARANTINE_COACH" to "show(Screen.NEW_NUMBER_QUARANTINE_COACH)",
+            "CREDENTIAL_SECRET_FREEZE_COACH" to
+                "show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "RECONTACT_BOUNDARY_COACH" to "show(Screen.RECONTACT_BOUNDARY_COACH)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to
+                "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "GIFT_CARD_CODE_PAUSE_COACH" to "show(Screen.GIFT_CARD_CODE_PAUSE_COACH)",
+            "OFFICIAL_PRESSURE_REALITY_CHECK_COACH" to
+                "show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)",
+            "RECOVERY_PROMISE_REALITY_CHECK_COACH" to
+                "show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EVIDENCE_HANDOFF_PRIVACY_COACH" to
+                "show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "INCIDENT_TIMELINE_BRIEFING" to "show(Screen.TIMELINE_BRIEFING)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        )
+        assertEquals(36, expectedActionRoutes.size)
+        val actionIdBlock = functionBlock(
+            modelSource,
+            "enum class LinkAppInstallQuarantineActionId"
+        )
+        val declaredActionIds = Regex("(?m)^\\s*([A-Z][A-Z_]+),?\\s*$")
+            .findAll(actionIdBlock)
+            .map { match -> match.groupValues[1] }
+            .toSet()
+        assertEquals(expectedActionRoutes.keys, declaredActionIds)
+        expectedActionRoutes.forEach { (actionId, destination) ->
+            assertTrue(
+                normalizedActionRouter.contains(
+                    "LinkAppInstallQuarantineActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            36,
+            Regex("LinkAppInstallQuarantineActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        assertEquals(1, Regex("openHelpDirectory\\(").findAll(actionRouter).count())
+        assertFalse((coachScreen + cardRenderer + modelSource).contains("openHelpDirectory("))
+
+        val shareArguments = Regex("shareLinkAppInstallQuarantineCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertEquals(1, Regex("Intent\\.ACTION_SEND").findAll(shareHelper).count())
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "NotificationManager",
+            "PackageManager",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(shareHelper.contains(forbiddenShareSource, ignoreCase = true))
+        }
+
+        val boundedImplementationSource = coachScreen + cardRenderer + actionRouter + modelSource
+        listOf(
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Intent.ACTION_VIEW",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "URLUtil",
+            "InetAddress",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PhoneNumberUtils",
+            "Patterns.PHONE",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "ACTION_SENDTO",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "CallLog",
+            "SmsManager",
+            "ContactsContract",
+            "NotificationManager",
+            "NotificationCompat",
+            "NotificationListenerService",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "android.credentials",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "MessageDigest",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_PICK",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "BarcodeScanner",
+            "BarcodeScanning",
+            "QRCodeReader",
+            "TextRecognition",
+            "ImageAnalysis",
+            "ImageCapture",
+            "CameraManager",
+            "BitmapFactory",
+            "ExifInterface",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "PackageInstaller",
+            "deletePackage",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "ACTION_REQUEST_INSTALL_PACKAGE",
+            "ACTION_UNINSTALL_PACKAGE",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "AccessibilityManager",
+            "VpnService",
+            "UsageStatsManager",
+            "AppOpsManager",
+            "BillingClient",
+            "NfcAdapter",
+            "WalletConnect",
+            "BlockchainClient",
+            "PaymentClient",
+            "BankingClient",
+            "CardClient",
+            "RefundClient",
+            "ChargebackClient",
+            "GiftCardClient",
+            "BalanceClient",
+            "RedeemClient",
+            "MalwareScanner",
+            "AntivirusClient",
+            "VirusTotal",
+            "AlarmManager",
+            "WorkManager",
+            "JobScheduler",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear()",
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load("
+        ).forEach { forbiddenSliceApi ->
+            assertFalse(
+                "link/app slice used forbidden API/source: $forbiddenSliceApi",
+                boundedImplementationSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
+
+        val persistenceSources = incidentStoreSource + safetyPlanStoreSource
+        listOf(
+            "LinkAppInstallQuarantine",
+            "link_app_install_quarantine",
+            "link_quarantine_status",
+            "app_install_status",
+            "permission_status",
+            "malware_status",
+            "package_status",
+            "link_validation_status"
         ).forEach { forbiddenStoredState ->
             assertFalse(
                 persistenceSources.contains(forbiddenStoredState, ignoreCase = true)

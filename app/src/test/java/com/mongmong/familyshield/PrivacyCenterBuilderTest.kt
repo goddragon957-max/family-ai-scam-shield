@@ -1487,6 +1487,99 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun linkAppInstallQuarantineCoachIsInventoriedAsManualNoOpenInstallOrMutation() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "링크·앱 설치 격리 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·받는 사람·링크·URL·도메인·단축 주소·QR·" +
+                "바코드·APK·파일·앱·패키지·권한·설치·제거·설정·악성코드·기기·로그인·계정·" +
+                "결제·상품권·신고·검증·결과 상태·체크 표시·메모·리마인더·진행·이력"
+
+        assertTrue(transientInventory.detail.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("만들거나 기록하지 않"))
+
+        listOf(
+            "새 Android 권한·네트워크·저장소",
+            "로컬 전용·무상태 수동 안내",
+            "기존 안전 붙여넣기·자격 비밀값·원격지시 중단·계정 보호·노출 분류·돈 멈춤·상품권 멈춤·회복 약속·기관 압박·증거·공식 도움·신고 준비·가족·보호자·후속 점검",
+            "실제 링크·URL·도메인·단축 주소",
+            "열기·미리 보기·복사·공유·해석·정규화·확장·가져오기·따라가기·해결·조회·평판 확인·검사·검증·스캔·샌드박스 실행하지 않고",
+            "QR·바코드 촬영·스캔·해독",
+            "APK·앱·패키지·파일 검사",
+            "앱 스토어 조회",
+            "설치 앱·앱 라벨·패키지 목록 조회",
+            "APK·앱·패키지·프로필을 설치·제거·삭제·비활성화·강제 종료",
+            "권한을 허용·철회하지 않고",
+            "패키지 설치 관리자·권한 관리자·앱 작업·MDM",
+            "기기 관리자·접근성 서비스·VPN·사용 통계·알림 리스너",
+            "원격 접근·화면공유를 변경·차단·종료하지 않습니다",
+            "악성코드·백신 검사·제거 또는 기기 청소",
+            "공식·실제·안전·보안·검증·유효·신뢰·접수·제출·수신·설치·제거·비활성화·청소·차단·해제·허용·철회·스캔·검사·확인·해결·완료·회복·환급·동결·보호·적법·악성코드 없음·보장·문제없음",
+            "판정하거나 증명하지 않습니다",
+            "기관 번호·공식 경로·법률 사건·앱 스토어·발신자 표시·전화번호·문서·사건·신고·URL·도메인·앱·패키지·권한·기기·로그인·계정·결제·상품권 상태",
+            "신고 제출·접수·영수증 확인",
+            "연락처·주소록·통화 기록·통화 상태·문자·SMS·알림·클립보드",
+            "텍스트 감시기·자동완성·Credential Manager·Android 계정 관리자·로그인·인증·키 저장소·암호화 API",
+            "전화 앱 열기·다이얼·발신·통화·통화 종료·통화 선별·차단·SMS",
+            "받는 사람 선택·자동 전송·네트워크·웹·브라우저·지도·위치",
+            "파일·문서·사진·이미지·오디오·미디어·저장소를 읽지 않고",
+            "카메라·화면 캡처·스크린샷 가져오기·QR·바코드 스캔·OCR·이미지 분석·선택기·첨부·업로드·스트림·URI 공유",
+            "알림·알람·일정·리마인더·스케줄러·백그라운드 작업",
+            "결제·은행 API·NFC·지갑·블록체인·상품권 구매·사용·잔액 확인·환급·차지백·복구 기능",
+            "카드·추천·진행·공유·결과 상태를 저장하거나 자동으로 변경하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "link-app boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "원문·가린 단서·링크·URL·도메인·단축 주소·QR·바코드·APK·앱·패키지",
+            "파일·미디어·URI·권한·설치·제거·설정·악성코드·기기",
+            "발신자·번호·문서·사건·신고·제출·접수·영수증 상태",
+            "연락처·주소록·통화·문자·SMS·알림·클립보드·자동완성·자격 증명",
+            "계정·로그인·카드·은행·결제·거래·지갑·상품권·코드·구매·잔액·사용",
+            "환급·차지백·취소·동결·차단·추적·복구·법률·금융 결과 상태",
+            "사건 기록·가족 안전 계획의 실제 값·공식 도움 기관 목록",
+            "접근성·네트워크·VPN·알림 설정·검증 상태",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "link-app mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(summary.contains("${featureName}는 새 Android 권한·네트워크·저장소 없는"))
+        assertTrue(summary.contains("실제 링크·URL·도메인·단축 주소를 열기·미리 보기"))
+        assertTrue(summary.contains("패키지 설치 관리자·권한 관리자·앱 작업·MDM"))
+        assertTrue(summary.contains("악성코드 없음·보장·문제없음 상태라고 판정하거나 증명하지 않습니다"))
+        assertTrue(summary.contains("${featureName} 화면"))
+        assertTrue(summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다"))
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"
