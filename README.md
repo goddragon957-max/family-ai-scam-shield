@@ -23,20 +23,21 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 17. "무엇이 노출됐는지 고르기"에서 실제로 한 행동을 직접 확인하고 해당할 수 있는 기존 멈춤·콜백·수습·계정 보호·증거·공식 도움 흐름 선택
 18. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
 19. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-20. 상황별 신고·상담 연락처와 말할 내용 확인
-21. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
-22. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
-23. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
-24. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
-25. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
-26. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
-27. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
-28. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
-29. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
-30. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
-31. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
-32. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
-33. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
+20. 증거 전달 개인정보 코치에서 원문·스크린샷·파일을 앱에 넣지 않고 가족·보호자·상담 창구에 말할 행동 종류, 전달하지 않을 민감값과 다음 기존 앱 경로를 확인
+21. 상황별 신고·상담 연락처와 말할 내용 확인
+22. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+23. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
+24. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
+25. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
+26. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
+27. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
+28. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
+29. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
+30. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
+31. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
+32. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
+33. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
+34. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
 
 ## Share Entry
 
@@ -316,6 +317,60 @@ SMS 전송/읽기, 받는 사람 선택·자동 전송, 알림 감시·필터링
 일반 문장만 들어갑니다. 원문·가린 단서·안전 계획 값·이름·연락처·전화번호·계정·카드·OTP/PIN·
 비밀번호·URL/도메인·신분·기기·기관 번호·앱/패키지 이름·통화/SMS/알림 상태·재연락 결과값은
 포함하지 않으며 앱이 받는 사람을 고르거나 자동 전송하지 않습니다.
+
+## Evidence Handoff Privacy Coach (증거 전달 개인정보 코치)
+
+홈, 분석 결과, 증거 보존 체크리스트, 신고용 상담 준비 카드, 개인정보 센터, 안전 붙여넣기 개인정보
+코치, 확인 결과 다음 행동 보드, 재연락 경계 코치, 가족 경고, 보호자 검토, 후속 점검, 안전 흐름,
+송금 전 멈춤, 원격지시 끊기와 계정 잠금 화면에서 증거를 보내기 전 개인정보 경계를 열 수 있습니다.
+`EvidenceHandoffPrivacyCoachBuilder`는 현재 `ScamAnalysis?`의 위험도·일치 신호,
+`FamilyReadiness.level`과 저장 사건의 0개/1개 이상 범주만 사용해 같은 상태에 항상 같은 카드와
+기존 앱 경로를 추천합니다. 붙여넣은 원문·점수·행동 계획·요약·가린 단서·사건 본문·안전 계획 실제
+값·연락처·번호·URL/도메인·계정/카드·OTP/PIN·주민·기기 식별자·기관 번호·앱/패키지 이름·파일/
+미디어 값·통화/SMS/알림 상태·확인/재연락/전달 결과는 읽거나 추천문에 넣지 않습니다.
+
+항상 같은 순서로 보이는 여섯 수동 카드는 원문·스크린샷을 보내기 전 민감값을 빼고 원본 보관과
+설명을 분리하기, 가족·보호자에게 행동 종류만 공유하기, 사용자가 직접 고른 기관·상담 창구에 말할
+내용만 준비하기, 돈·계정·인증 비밀이 보이는 증거는 값을 말하지 않고 멈춤·계정 보호 경로로 이동하기,
+링크·앱·원격지시 증거의 주소·앱·기기값을 퍼뜨리지 않기, 받는 사람과 전달물을 저장하지 않고 가족과
+후속 행동만 다시 보기입니다. 각 카드에는 직접 읽을 전달 상황, 짧은 값 없는 개인정보 행동 문장,
+이유, 첨부·기록·공유하지 않을 경계와 기존 화면으로 가는 주요·보조 버튼이 있습니다.
+
+고위험, 가족·딥페이크·번호 변경, 비밀 유지·기관 사칭, 송금·금융·결제, 인증 비밀, 링크·스미싱,
+앱 설치·진행 중 통화 제어, 저장 사건 유무와 가족 준비 수준에 따라 추천만 결정적으로 달라집니다.
+분석이 없어도 여섯 카드를 모두 보수적으로 보여 주며 증거가 가려졌거나 보내도 되는 상태, 업로드·
+제출·접수·확인·해결·복구·차단·완료 상태라고 판정하지 않습니다. 저장 사건은 존재 여부만 반영하고
+사건 내용이나 미리보기를 읽지 않습니다.
+
+행동 버튼은 기존 긴급 멈춤·검사/현재 결과·붙여넣기 전 개인정보 가리기·개인정보 센터·노출 분류·
+평소 가족 콜백·별도 경로 확인·결과별 다음 단계·값 없는 확인 전화·가족 경고·보호자 검토·준비
+로드맵·송금 멈춤·계정 잠금·원격지시 끊기·증거 보존·사건 타임라인·신고·상담 연락처·신고 준비·
+24시간 수습·후속 점검·가족 차분 대화·안전 흐름으로만 이동합니다. 증거 저장, 가리기, 기관 목록,
+신고 준비, 보호자 검토, 계정 보호나 후속 점검 구현을 이 코치 안에 복제하지 않습니다.
+
+이 코치는 기기에서 직접 읽는 로컬 전용·무상태 수동 안내입니다. 새 Android 권한·네트워크·웹·
+지도·기관 번호/공식 경로 조회·전화번호 검증·링크/URL/도메인 검증·링크 스캔을 사용하지 않습니다.
+파일·사진·이미지·미디어·저장소를 읽지 않고 카메라, 화면 캡처, 스크린샷 가져오기, OCR·이미지 분석,
+파일/문서/사진 선택기, 첨부·업로드·스트림·URI 공유를 사용하지 않습니다. 연락처·통화 기록·문자·
+메시지·통화 상태·알림·클립보드를 읽거나 감시하지 않고 연락처 읽기·쓰기·고르기, 전화 앱 열기·
+자동 다이얼·발신·통화·종료, SMS 전송/읽기, 받는 사람 선택·자동 전송, 알림 리스너·모니터링을 하지
+않습니다. 알림·알람·일정·스케줄러·백그라운드 작업, 결제·은행·NFC·계정 관리자, 기기 관리자·
+접근성·VPN·앱 목록 조회·설치·제거·설정 변경도 사용하지 않습니다.
+
+카드 선택·추천·읽음·공유·이름·담당자·받는 사람·파일 경로·미디어 이름·첨부/보낸/전달/접수 상태·
+체크·메모·진행·이력을 저장하지 않습니다. 화면·카드·경로·공유 버튼은 원문·화면·파일·사진·미디어·
+통화 기록·연락처·SMS·알림·사건 기록·가족 계획·기관 목록·계정·카드·은행·기기·앱·패키지·설정·
+네트워크/VPN·돈의 움직임·확인/재연락/증거 전달 상태를 추가·수정·삭제하지 않습니다. 자동 가림,
+OCR, 스캔, 모니터링, 삭제, 차단, 조회, 검증, 저장, 업로드, 제출, 첨부, 악성 프로그램 제거, 원격
+연결 종료, 기기 정리, 계정·카드 정지, 결제 취소, 환급·회수·회복 또는 법률·금융 결과를 수행하거나
+보장하지 않습니다.
+
+"가족에게 값 없는 증거 전달 경계 공유"는 사용자가 직접 눌렀을 때만 Android `ACTION_SEND`의
+`text/plain` 공유 화면을 열고 빌더가 만든 `EvidenceHandoffPrivacyCoach.familyShareSummary`만
+전달합니다. 공유문에는 추천된 고정 카드 제목, 기존 경로·행동 라벨과 원본을 따로 보관하고 행동
+종류만 함께 고른다는 일반 문장만 들어갑니다. 원문·가린 단서·안전 계획 값·이름·연락처·전화번호·
+계정·카드·OTP/PIN·비밀번호·URL/도메인·신분·기기·기관 번호·앱/패키지·파일/미디어 이름·URI/경로·
+통화/SMS/알림·받는 사람·전달 결과값은 포함하지 않으며 파일이나 스트림을 첨부하지 않습니다.
 
 ## Active Contact Exit Scripts (진행 중 연락 종료 문장)
 
@@ -692,7 +747,7 @@ Android 권한을 사용하지 않습니다. 계정 복구, 사기 차단, 피�
 - `safety_plan` `SharedPreferences`에 저장된 안전단어, 콜백 스크립트, 사용자가 직접 입력한 신뢰 연락처와 값 없는 가족 준비도·연락처 개수
 - `incident_log` `SharedPreferences`에 현재 버전이 저장하는 사건 개수와 위험도·탐지 신호·점수·저장 시각·개인정보를 가린 짧은 미리보기 필드 (이전 버전 미리보기는 사건 기록 화면에서 불러올 때 다시 가림)
 - 사건 기록에 붙여넣은 전체 원문을 보관하지 않는다는 상태
-- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 화면공유·원격지시 끊기 코치의 카드 선택·추천·읽음·공유·체크·메모·원격 접근 상태·앱 목록·기기 상태·진행·이력, 별도 경로 확인 코치의 카드 선택·추천·읽음·공유·확인 상태·채널 값·공식 번호·앱 이름·기기 상태·체크·메모·진행·이력, 확인 결과 다음 행동 보드의 결과·상태·카드 선택·추천·읽음·공유·체크 표시·메모·진행·이력, 재연락 경계 코치의 카드 선택·추천·읽음·공유·재연락 상태·경계 상태·차단·음소거 상태·채널 값·체크 표시·메모·진행·이력, 진행 중 연락 종료 문장의 카드 선택·추천·읽음·공유·말하기·답장·통화 종료·체크 상태·메모·이력, 송금 전 멈춤 확인의 카드 선택·추천·읽음·공유·체크·메모·결제 상태·진행·이력, 안전 흐름 선택, 안전 붙여넣기 개인정보 코치의 카드 선택·진행·읽음·공유·가림 이력·체크 상태·메모, 노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·공유·보호자 검토 이력, 후속 점검의 시점 선택·답변·메모·완료·진행·공유 이력, 가족 역할 보드의 이름·담당자·역할 선택·체크·메모·완료·진행·공유 이력, 가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·읽음·진행·공유·대화 이력, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
+- 붙여넣은 입력의 현재 분석, 긴급 멈춤 모드 버튼 선택·공유 이력·체크 상태, 화면공유·원격지시 끊기 코치의 카드 선택·추천·읽음·공유·체크·메모·원격 접근 상태·앱 목록·기기 상태·진행·이력, 별도 경로 확인 코치의 카드 선택·추천·읽음·공유·확인 상태·채널 값·공식 번호·앱 이름·기기 상태·체크·메모·진행·이력, 확인 결과 다음 행동 보드의 결과·상태·카드 선택·추천·읽음·공유·체크 표시·메모·진행·이력, 재연락 경계 코치의 카드 선택·추천·읽음·공유·재연락 상태·경계 상태·차단·음소거 상태·채널 값·체크 표시·메모·진행·이력, 증거 전달 개인정보 코치의 카드 선택·추천·읽음·공유·이름·담당자·받는 사람·파일 경로·미디어 이름·첨부/보낸/전달/접수 상태·체크 표시·메모·진행·이력, 진행 중 연락 종료 문장의 카드 선택·추천·읽음·공유·말하기·답장·통화 종료·체크 상태·메모·이력, 송금 전 멈춤 확인의 카드 선택·추천·읽음·공유·체크·메모·결제 상태·진행·이력, 안전 흐름 선택, 안전 붙여넣기 개인정보 코치의 카드 선택·진행·읽음·공유·가림 이력·체크 상태·메모, 노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·공유·보호자 검토 이력, 후속 점검의 시점 선택·답변·메모·완료·진행·공유 이력, 가족 역할 보드의 이름·담당자·역할 선택·체크·메모·완료·진행·공유 이력, 가족 차분 대화 안건의 안건·카드 선택·대화 답변·메모·담당자·날짜·체크·완료·점수·읽음·진행·공유·대화 이력, 가족 콜백/신고용 상담 준비 카드, 체크리스트, 가족 경고 메시지 템플릿 선택·공유 이력, 가족 안전 연습 코치의 드릴 선택·통과 여부·체크·점수·읽음·진행·공유·연습 이력, 가족 준비 로드맵의 카드 선택·완료·체크·점수·읽음·진행·공유·로드맵 이력과 샘플 선택을 앱의 영구 저장소에 저장하지 않는다는 상태
 
 권한 목록에는 `READ_SMS`, `CALL_PHONE`, `READ_CALL_LOG`, `READ_CONTACTS`, `RECORD_AUDIO`,
 `INTERNET` 권한이 없음을 각각 표시합니다. 전화 버튼은 기존과 같이 `ACTION_DIAL`로 전화 앱만
@@ -1053,6 +1108,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Evidence Handoff Privacy Coach is deterministic, local-only, stateless manual guidance for separating evidence retention from a value-free family/helper/consultation handoff. It uses only current risk/signals, readiness level, and saved-incident presence; reads no pasted text, redacted clue, incident body/preview, safety-plan literal, contact/phone/URL/domain/account/card/OTP/PIN/resident/device/official-number/app/package/file/media/call/SMS/notification/recipient/handoff-result value; and adds no permission, file/photo/media/storage read, camera, screenshot capture, OCR/image analysis, picker, attachment, stream/URI share, upload/submission, network/browser/map/official lookup, number/link validation or scan, call-log/contact/clipboard access, dial/call/SMS/notification monitoring, recipient selection, scheduler/background work, financial integration, or device control. It stores no card/recommendation/read/share/name/assignment/recipient/path/media/attachment/sent/handoff/checkmark/note/progress/history state, mutates no pasted text, screen/file/media, call/contact/SMS/notification, incident, safety-plan, directory, account/card/bank/device/app/package/settings/network/VPN/money/verification/recontact/handoff state, and makes no sanitization/redaction, evidence readiness/acceptance, malware-removal, remote-disconnect, device-cleaning, freeze, cancellation, refund, recovery, legal, financial, or safety guarantee. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced fixed card and existing route/action labels and attaches no file or stream.
 - Recontact Boundary Coach is deterministic, local-only, stateless manual guidance for keeping the current attacker-controlled channel closed after another call, message, number, profile, link, secrecy threat, money/credential request, or remote-control demand. It uses only current risk/signals, readiness level, and saved-incident presence; reads no pasted text, redacted clue, incident body, safety-plan literal, contact/phone/URL/domain/account/card/OTP/PIN/resident/device/official-number/app/package/call/SMS/notification/recontact-result value; and adds no permission, network/browser/map/official lookup, number/link validation or scan, call-log/contact/clipboard access, dial/call/SMS/call-screening/blocking/muting/notification monitoring, recipient selection, scheduler/background work, financial integration, or device control. It auto-sends nothing, stores no recontact/boundary/blocked/muted/card/recommendation/read/share/checkmark/note/progress/history state, mutates no pasted text, call log/state, contact, SMS, notification, incident, safety-plan, directory, account/card/bank/device/app/package/settings/network/VPN/money/verification/recontact state, and makes no identity/number/link/institution, blocking, malware-removal, remote-disconnect, device-cleaning, freeze, cancellation, refund, recovery, legal, financial, or safety guarantee. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic fixed card and route/action labels.
 - Verification Outcome Next Steps Board is deterministic, local-only, stateless manual guidance that maps hypothetical, value-free verification outcome conditions to existing app routes. It uses only current risk/signals, readiness level, and saved-incident presence; reads no pasted text, redacted clue, incident body, safety-plan literal, actual outcome/status, contact/phone/URL/domain/account/card/OTP/PIN/resident/device/official-number/app/package value; asks for no outcome entry; and adds no permission, network/browser/map/official lookup, number/link validation or scan, contact/clipboard access, dial/call/SMS automation, recipient selection, scheduler/background work, financial integration, or device control. It auto-sends nothing, stores no outcome/status/card/recommendation/read/share/checkmark/note/progress/history, mutates no pasted text, call/contact/incident/safety-plan/directory/account/card/bank/device/app/package/settings/network/VPN/notification/money/outcome state, and makes no identity/number/link/institution, malware-removal, remote-disconnect, device-cleaning, freeze, cancellation, refund, recovery, legal, financial, or safety guarantee. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic card and route/action labels.
 - Separate Channel Verification Coach is deterministic, local-only, stateless manual guidance for abandoning the current contact/link/number/account/profile and choosing a known family path, a user-found institutional path, a separate account/device review, or a value-free family update. It uses only current risk/signals, value-less readiness level, and saved-incident presence; reads no pasted text, redacted clue, incident body, safety-plan literal, contact/phone/URL/domain/account/card/OTP/PIN/device/app/package/official-number value; and adds no permission, network/browser/map/lookup/validation/scan, contact access, dial/call/SMS automation, clipboard access, scheduler, financial integration, device control, or persistence. It auto-sends nothing, stores no selection/recommendation/read/share/verification/channel/official-number/app/device/check/note/progress/history state, never mutates pasted text, calls, contacts, incidents, safety plans, directories, accounts, cards, banks, devices/apps/settings, network/VPN/notifications, or money movement, and makes no identity/number/link/institution, malware-removal, remote-disconnect, freeze, cancellation, refund, recovery, legal, financial, or safety guarantee. Its user-triggered `ACTION_SEND` `text/plain` share passes only the builder-produced generic card/route labels and value-free status sentence.

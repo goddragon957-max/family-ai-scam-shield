@@ -26,7 +26,7 @@ class MainActivity : Activity() {
         FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH, ACTIVE_CONTACT_EXIT_SCRIPTS,
         MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH,
         SEPARATE_CHANNEL_VERIFICATION_COACH, VERIFICATION_OUTCOME_NEXT_STEPS_BOARD,
-        RECONTACT_BOUNDARY_COACH
+        RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -143,12 +143,174 @@ class MainActivity : Activity() {
                 Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
                     verificationOutcomeNextStepsBoardScreen()
                 Screen.RECONTACT_BOUNDARY_COACH -> recontactBoundaryCoachScreen()
+                Screen.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                    evidenceHandoffPrivacyCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.evidenceHandoffPrivacyCoachScreen() {
+        val coach = EvidenceHandoffPrivacyCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 증거 전달 경계\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.handoffScenario}\n${card.privacyActionSentence}"
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openEvidenceHandoffPrivacyAction(action) }
+            } else {
+                secondaryButton(action.label) { openEvidenceHandoffPrivacyAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 증거 전달 개인정보 카드",
+            "카드는 항상 같은 순서입니다. 증거 원본을 이 앱에 넣지 말고, 보내기 전에 값 없는 " +
+                "문장과 필요한 기존 앱 경로만 가족이 직접 고르세요. 선택·읽음·체크·첨부·전달 " +
+                "상태는 남지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            evidenceHandoffPrivacyCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 증거 전달 경계 공유") {
+            shareEvidenceHandoffPrivacyCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("증거 보존 체크리스트") { openEvidenceKit(null) }
+        secondaryButton("신고용 상담 준비 카드") {
+            show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+        }
+        secondaryButton("붙여넣기 전 개인정보 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.evidenceHandoffPrivacyCard(
+        card: EvidenceHandoffPrivacyCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 전달 상황\n")
+                append(card.handoffScenario)
+                append("\n\n값 없는 개인정보 행동 문장\n")
+                append(card.privacyActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n첨부·기록·공유하지 않을 것\n")
+                card.doNotAttachRecordOrShareBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openEvidenceHandoffPrivacyAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openEvidenceHandoffPrivacyAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openEvidenceHandoffPrivacyAction(action) }
+        }
+    }
+
+    private fun openEvidenceHandoffPrivacyAction(action: EvidenceHandoffPrivacyAction) {
+        when (action.id) {
+            EvidenceHandoffPrivacyActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            EvidenceHandoffPrivacyActionId.CHECKER -> show(Screen.CHECKER)
+            EvidenceHandoffPrivacyActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            EvidenceHandoffPrivacyActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            EvidenceHandoffPrivacyActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            EvidenceHandoffPrivacyActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            EvidenceHandoffPrivacyActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            EvidenceHandoffPrivacyActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            EvidenceHandoffPrivacyActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            EvidenceHandoffPrivacyActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            EvidenceHandoffPrivacyActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            EvidenceHandoffPrivacyActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            EvidenceHandoffPrivacyActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            EvidenceHandoffPrivacyActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            EvidenceHandoffPrivacyActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            EvidenceHandoffPrivacyActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            EvidenceHandoffPrivacyActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            EvidenceHandoffPrivacyActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            EvidenceHandoffPrivacyActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            EvidenceHandoffPrivacyActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            EvidenceHandoffPrivacyActionId.RECOVERY_PLAN -> show(Screen.RECOVERY_PLAN)
+            EvidenceHandoffPrivacyActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            EvidenceHandoffPrivacyActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            EvidenceHandoffPrivacyActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareEvidenceHandoffPrivacyCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 증거 전달 경계 공유"))
     }
 
     private fun LinearLayout.recontactBoundaryCoachScreen() {
@@ -212,6 +374,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("별도 확인 뒤 결과별 다음 단계") {
             show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         secondaryButton("진행 중 연락 종료 문장") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
@@ -371,6 +536,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("다시 연락할 때 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
         secondaryButton("홈으로") { show(Screen.HOME) }
@@ -682,6 +850,9 @@ class MainActivity : Activity() {
         secondaryButton("다시 연락할 때 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
         secondaryButton("진행 중 연락 종료 문장") {
             show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
         }
@@ -829,6 +1000,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("다시 연락할 때 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         secondaryButton("화면공유·원격지시도 끊기") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
@@ -1126,6 +1300,9 @@ class MainActivity : Activity() {
         }
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         secondaryButton("의심 내용 검사로") { show(Screen.CHECKER) }
         secondaryButton("홈으로") { show(Screen.HOME) }
@@ -1581,6 +1758,9 @@ class MainActivity : Activity() {
         secondaryButton("붙여넣기 전 개인정보 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
         }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("위험 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
@@ -1771,6 +1951,9 @@ class MainActivity : Activity() {
         secondaryButton("붙여넣기 전 개인정보 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
         }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
         primaryButton("가족에게 안전 흐름 요약 공유") {
             shareSafetyFlowRouter(router.familyShareSummary)
         }
@@ -1862,6 +2045,9 @@ class MainActivity : Activity() {
         secondaryButton("다시 연락할 때 경계 문장 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
         primaryButton("추천 메시지 묶음 직접 공유") {
             shareFamilyAlertText(pack.combinedShareSummary)
         }
@@ -1901,6 +2087,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
             show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         section(
             checklist.recommendationTitle,
@@ -2136,6 +2325,9 @@ class MainActivity : Activity() {
         }
         primaryButton("다시 연락할 때 경계 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         secondaryButton("다음부터 붙여넣기 전 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
@@ -2378,6 +2570,9 @@ class MainActivity : Activity() {
         secondaryButton("값 없이 재연락 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
         secondaryButton("붙여넣기 전 개인정보 가리기") {
             show(Screen.SAFE_PASTE_PRIVACY_COACH)
         }
@@ -2456,6 +2651,9 @@ class MainActivity : Activity() {
         if (kit.officialReportPrepNotes.isNotEmpty()) {
             section("신고·상담 전에 준비", kit.officialReportPrepNotes.joinToString("\n") { "• $it" })
         }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
         secondaryButton("신고·상담 연락처 보기") { openHelpDirectory(Screen.EVIDENCE) }
         section("가족에게 보낼 안전 요약", kit.familyShareSummary)
         primaryButton("가족에게 증거 보존 요약 공유") { shareEvidenceKit(kit) }
@@ -2533,6 +2731,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("확인 뒤 결과별 다음 단계") {
             show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
 
         val analysis = currentAnalysis
@@ -3188,6 +3389,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("함께 본 뒤 5분 가족 대화") {
             show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         primaryButton("가족에게 보호자 검토 요약 공유") {
             shareTrustedHelperReview(review.familyShareSummary)
@@ -4065,6 +4269,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("다시 연락할 때 경계 문장 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         primaryButton("가족에게 후속 점검 공유") {
             shareFollowUpCheckInPlanner(planner.familyShareSummary)

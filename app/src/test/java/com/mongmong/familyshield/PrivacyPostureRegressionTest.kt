@@ -23,6 +23,11 @@ class PrivacyPostureRegressionTest {
             "android.permission.READ_CONTACTS",
             "android.permission.WRITE_CONTACTS",
             "android.permission.RECORD_AUDIO",
+            "android.permission.CAMERA",
+            "android.permission.READ_MEDIA_IMAGES",
+            "android.permission.READ_MEDIA_VIDEO",
+            "android.permission.READ_EXTERNAL_STORAGE",
+            "android.permission.WRITE_EXTERNAL_STORAGE",
             "android.permission.INTERNET",
             "android.permission.ACCESS_FINE_LOCATION",
             "android.permission.ACCESS_COARSE_LOCATION",
@@ -6645,6 +6650,826 @@ class PrivacyPostureRegressionTest {
             "READ_PHONE_STATE",
             "ANSWER_PHONE_CALLS",
             "RECORD_AUDIO",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun evidenceHandoffPrivacyCoachIsPureStatelessAndSharesOnlyBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/EvidenceHandoffPrivacyCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.evidencePreservationScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.privacyCenterScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen"
+        )
+        listOf(
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen",
+            "private fun LinearLayout.evidenceHandoffPrivacyCard",
+            "private fun openEvidenceHandoffPrivacyAction",
+            "private fun shareEvidenceHandoffPrivacyCoach"
+        ).forEach { marker ->
+            assertTrue(
+                "evidence-handoff source marker missing: $marker",
+                activitySource.contains(marker)
+            )
+        }
+
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.EVIDENCE_HANDOFF_PRIVACY_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.mapIndexed { index, marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "evidence-handoff entry must have one exact show-only button at index $index",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(15, entryRouteSources.size)
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "ClipboardManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "evidence-handoff entry button used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.evidenceHandoffPrivacyCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openEvidenceHandoffPrivacyAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareEvidenceHandoffPrivacyCoach"
+        )
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource))
+        assertTrue(Regex("analysis\\s*\\?\\.\\s*riskLevel").containsMatchIn(modelSource))
+        assertTrue(Regex("analysis\\s*\\?\\.\\s*matchedSignals").containsMatchIn(modelSource))
+        assertTrue(Regex("readiness\\s*\\.\\s*level").containsMatchIn(modelSource))
+        assertTrue(
+            Regex("incidentCount\\s*\\.\\s*coerceAtLeast\\(0\\)")
+                .containsMatchIn(modelSource)
+        )
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "ScamAnalyzer",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "dialNumber",
+            "contact.number",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "TelecomManager",
+            "TelephonyManager",
+            "PhoneStateListener",
+            "MediaStore",
+            "FileProvider",
+            "Uri.parse",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "TextRecognition",
+            "TextRecognizer",
+            "InputImage",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "ANDROID_ID",
+            "Build.SERIAL",
+            "AdvertisingIdClient",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "evidence-handoff model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        assertFalse(
+            Regex("analysis\\s*\\??\\s*\\.\\s*(?:input|score|actionPlan|summary)")
+                .containsMatchIn(modelSource)
+        )
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                "evidence-handoff model embedded official number: $exactOfficialNumber",
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        assertTrue(activitySource.contains("EVIDENCE_HANDOFF_PRIVACY_COACH"))
+        assertTrue(activitySource.contains("Screen.EVIDENCE_HANDOFF_PRIVACY_COACH ->"))
+        assertTrue(activitySource.contains("evidenceHandoffPrivacyCoachScreen()"))
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:evidenceHandoff|handoffStatus|attachmentState|" +
+                    "shareRecipient|recipientName|sentStatus|cardProgress|checkmark)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:EVIDENCE_HANDOFF|HANDOFF_STATUS|ATTACHMENT_STATE|SHARE_RECIPIENT|" +
+                    "RECIPIENT_NAME|SENT_STATUS|CARD_PROGRESS|CHECKMARK)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+        listOf("EvidenceHandoffPrivacy", "evidence_handoff", "handoff_status", "attachment_state")
+            .forEach { forbiddenStoredState ->
+                assertFalse(incidentStoreSource.contains(forbiddenStoredState, ignoreCase = true))
+                assertFalse(safetyPlanStoreSource.contains(forbiddenStoredState, ignoreCase = true))
+            }
+
+        assertTrue(coachScreen.contains("EvidenceHandoffPrivacyCoachBuilder.build("))
+        assertTrue(coachScreen.contains("analysis = currentAnalysis"))
+        assertTrue(
+            coachScreen.contains(
+                "readiness = FamilyReadinessBuilder.build(safetyPlan.load())"
+            )
+        )
+        assertTrue(coachScreen.contains("incidentCount = incidents.count()"))
+        assertFalse(coachScreen.contains("incidents.load("))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "evidence-handoff incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareEvidenceHandoffPrivacyCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "evidence-handoff UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(
+            coachScreen.contains("primaryButton(\"가족에게 값 없는 증거 전달 경계 공유\")")
+        )
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.handoffScenario",
+            "card.privacyActionSentence",
+            "card.whyItMatters",
+            "card.doNotAttachRecordOrShareBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { field ->
+            assertTrue(
+                "evidence-handoff card UI omitted $field",
+                cardRenderer.contains(field)
+            )
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "incidents.add(",
+            "incidents.clear(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaStore",
+            "FileProvider",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "TextRecognition",
+            "ImageAnalysis",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "handoffStatus",
+            "attachmentState",
+            "recipientName",
+            "sentStatus",
+            "cardProgress",
+            "checkmark"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "evidence-handoff UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        mapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFE_PASTE_PRIVACY_COACH" to "show(Screen.SAFE_PASTE_PRIVACY_COACH)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "INCIDENT_TIMELINE_BRIEFING" to "show(Screen.TIMELINE_BRIEFING)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "RECOVERY_PLAN" to "show(Screen.RECOVERY_PLAN)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        ).forEach { (actionId, destination) ->
+            assertTrue(
+                "evidence-handoff route omitted branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "EvidenceHandoffPrivacyActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            24,
+            Regex("EvidenceHandoffPrivacyActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaStore",
+            "FileProvider",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "TextRecognition",
+            "ImageAnalysis",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "TelecomManager",
+            "TelephonyManager",
+            "PhoneStateListener",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "evidence-handoff router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareEvidenceHandoffPrivacyCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertTrue(shareHelper.contains("가족에게 증거 전달 경계 공유"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "handoffStatus",
+            "attachmentState",
+            "recipientName",
+            "sentStatus"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "evidence-handoff share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource, ignoreCase = true)
+            )
+        }
+
+        val sliceSource = coachScreen + cardRenderer + actionRouter + shareHelper + modelSource
+        val forbiddenSliceApis = listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "android.permission.CAMERA",
+            "android.hardware.camera",
+            "androidx.camera",
+            "CameraManager",
+            "ImageCapture",
+            "PhotoPicker",
+            "PickVisualMedia",
+            "DocumentsContract",
+            "ContentResolver",
+            "openInputStream",
+            "java.io.File",
+            "com.google.mlkit",
+            "MlKit",
+            "MLKit",
+            "TextRecognition",
+            "TextRecognizer",
+            "InputImage",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "NotificationListenerService",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Intent.ACTION_DELETE",
+            "ACTION_UNINSTALL_PACKAGE",
+            "ACTION_INSTALL_PACKAGE",
+            "REQUEST_INSTALL_PACKAGES",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "Settings.",
+            "ANDROID_ID",
+            "Build.SERIAL",
+            "AdvertisingIdClient",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "queryIntentActivities",
+            "getPackageInfo",
+            "getApplicationInfo",
+            "canRequestPackageInstalls",
+            "installPackage",
+            "setApplicationEnabledSetting",
+            "clearApplicationUserData",
+            "AppOpsManager",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "Patterns.PHONE",
+            "PhoneNumberUtils",
+            "URLUtil",
+            "InetAddress",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "analysis.input",
+            "analysis.score",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save(",
+            "handoffStatus",
+            "attachmentState",
+            "recipientName",
+            "sentStatus",
+            "cardProgress",
+            "checkmark"
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "evidence-handoff slice used forbidden API/source: $forbiddenSliceApi",
+                sliceSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
+
+        val productionSources = findProjectPath("app/src/main")
+            .walkTopDown()
+            .filter { file ->
+                file.isFile && (file.extension == "kt" || file.name == "AndroidManifest.xml")
+            }
+            .toList()
+        val repoWideForbiddenTokens = listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "android.permission.CAMERA",
+            "androidx.camera",
+            "CameraManager",
+            "ImageCapture",
+            "PhotoPicker",
+            "PickVisualMedia",
+            "DocumentsContract",
+            "com.google.mlkit",
+            "TextRecognition",
+            "TextRecognizer",
+            "InputImage",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "NotificationListenerService",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "AppOpsManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "OkHttpClient",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Intent.ACTION_VIEW"
+        )
+        repoWideForbiddenTokens.forEach { forbiddenProductionToken ->
+            val hits = productionSources.filter { file ->
+                file.readText().contains(forbiddenProductionToken)
+            }
+            assertTrue(
+                "production source used forbidden token $forbiddenProductionToken in " +
+                    hits.joinToString { it.path },
+                hits.isEmpty()
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
             "INTERNET",
             "ACCESS_FINE_LOCATION",
             "ACCESS_COARSE_LOCATION",
