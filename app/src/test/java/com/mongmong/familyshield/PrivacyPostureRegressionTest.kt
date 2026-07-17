@@ -7494,6 +7494,778 @@ class PrivacyPostureRegressionTest {
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
     }
 
+    @Test
+    fun familySafeWordResetCoachIsPureStatelessRoutesOnlyAndSharesBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/FamilySafeWordResetCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familySafeWordResetCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.familySafeWordResetCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openFamilySafeWordResetAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareFamilySafeWordResetCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+        val normalizedModelSource = modelSource.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        listOf(
+            "private fun LinearLayout.familySafeWordResetCoachScreen",
+            "private fun LinearLayout.familySafeWordResetCard",
+            "private fun openFamilySafeWordResetAction",
+            "private fun shareFamilySafeWordResetCoach"
+        ).forEach { marker ->
+            assertTrue(
+                "safe-word reset source marker missing: $marker",
+                activitySource.contains(marker)
+            )
+        }
+        assertTrue(activitySource.contains("FAMILY_SAFE_WORD_RESET_COACH"))
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.FAMILY_SAFE_WORD_RESET_COACH -> familySafeWordResetCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.readinessSection()",
+            "private fun LinearLayout.safetyPlanScreen()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.safeVerificationCallScriptsScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.familyCallbackCardScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.map { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "safe-word reset entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(16, entryRouteSources.size)
+        assertEquals(
+            16,
+            Regex("show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)")
+                .findAll(activitySource)
+                .count()
+        )
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "ClipboardManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "safe-word reset entry button used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        assertTrue(
+            normalizedModelSource.contains(
+                "fun build( analysis: ScamAnalysis?, readiness: FamilyReadiness, " +
+                    "incidentCount: Int = 0 ): FamilySafeWordResetCoach"
+            )
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+        assertEquals(2, Regex("\\bincidentCount\\b").findAll(modelSource).count())
+        assertFalse(Regex("analysis\\s*\\.\\s*[A-Za-z]").containsMatchIn(modelSource))
+
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "analysis.redactedClue",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "SafetyPlanStore",
+            "SafetyPlan(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "IncidentStore",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incident.body",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "dialNumber",
+            "ScamAnalyzer",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "MediaStore",
+            "FileProvider",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "SecureRandom",
+            "KeyGenerator",
+            "MessageDigest",
+            "Cipher",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "safe-word reset model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                "safe-word reset model embedded official number: $exactOfficialNumber",
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        val builderCallPattern = Regex(
+            "FamilySafeWordResetCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("FamilySafeWordResetCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(coachScreen.contains("val plan ="))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "safe-word reset incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareFamilySafeWordResetCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "safe-word reset UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(
+            coachScreen.contains("primaryButton(\"가족에게 값 없는 재정비 안내 공유\")")
+        )
+        assertTrue(coachScreen.contains("secondaryButton(\"가족 안전 계획 직접 편집\")"))
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.resetScenario",
+            "card.valueFreeFamilySentence",
+            "card.whyItMatters",
+            "card.doNotSayRecordOrShareBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(
+                "safe-word reset card UI omitted $renderedCardField",
+                cardRenderer.contains(renderedCardField)
+            )
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaStore",
+            "FileProvider",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "resetStatus",
+            "rotationStatus",
+            "oldSecretStatus",
+            "newSecretStatus",
+            "resetProgress",
+            "recipientName",
+            "sentStatus",
+            "cardProgress",
+            "checkmark"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "safe-word reset UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        val expectedActionRoutes = linkedMapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFETY_PLAN" to "show(Screen.PLAN)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "RECONTACT_BOUNDARY_COACH" to "show(Screen.RECONTACT_BOUNDARY_COACH)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to
+                "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EVIDENCE_HANDOFF_PRIVACY_COACH" to
+                "show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.FAMILY_SAFE_WORD_RESET_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        )
+        val actionIdBlock = functionBlock(
+            modelSource,
+            "enum class FamilySafeWordResetActionId"
+        )
+        val declaredActionIds = Regex("(?m)^\\s*([A-Z][A-Z_]+),?\\s*$")
+            .findAll(actionIdBlock)
+            .map { match -> match.groupValues[1] }
+            .toSet()
+        assertEquals(expectedActionRoutes.keys, declaredActionIds)
+        expectedActionRoutes.forEach { (actionId, destination) ->
+            assertTrue(
+                "safe-word reset route omitted branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "FamilySafeWordResetActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            expectedActionRoutes.size,
+            Regex("FamilySafeWordResetActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "TelecomManager",
+            "TelephonyManager",
+            "PhoneStateListener",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "safe-word reset router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareFamilySafeWordResetCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertEquals(1, Regex("Intent\\.ACTION_SEND").findAll(shareHelper).count())
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "PackageManager",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "resetStatus",
+            "oldSecretStatus",
+            "newSecretStatus",
+            "recipientName",
+            "sentStatus"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "safe-word reset share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource, ignoreCase = true)
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:safeWordReset|oldSecret|newSecret|resetStatus|" +
+                    "rotationStatus|resetProgress|resetRecipient)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:SAFE_WORD_RESET|OLD_SECRET|NEW_SECRET|RESET_STATUS|" +
+                    "ROTATION_STATUS|RESET_PROGRESS|RESET_RECIPIENT)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+        val persistenceSources = incidentStoreSource + safetyPlanStoreSource
+        listOf(
+            "FamilySafeWordReset",
+            "family_safe_word_reset",
+            "safe_word_reset",
+            "reset_status",
+            "rotation_status",
+            "old_secret_status",
+            "new_secret_status",
+            "reset_progress",
+            "reset_recipient"
+        ).forEach { forbiddenStoredState ->
+            assertFalse(
+                "safe-word reset state was added to persistence: $forbiddenStoredState",
+                persistenceSources.contains(forbiddenStoredState, ignoreCase = true)
+            )
+        }
+
+        val sliceSource = coachScreen + cardRenderer + actionRouter + shareHelper + modelSource
+        val forbiddenSliceApis = listOf(
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "CoroutineWorker",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ACTION_SEND_MULTIPLE",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "android.permission.CAMERA",
+            "android.hardware.camera",
+            "androidx.camera",
+            "CameraManager",
+            "ImageCapture",
+            "PhotoPicker",
+            "PickVisualMedia",
+            "DocumentsContract",
+            "ContentResolver",
+            "openInputStream",
+            "java.io.File",
+            "com.google.mlkit",
+            "MlKit",
+            "TextRecognition",
+            "TextRecognizer",
+            "InputImage",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "NotificationListenerService",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Intent.ACTION_DELETE",
+            "ACTION_UNINSTALL_PACKAGE",
+            "ACTION_INSTALL_PACKAGE",
+            "REQUEST_INSTALL_PACKAGES",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "Settings.",
+            "ANDROID_ID",
+            "Build.SERIAL",
+            "AdvertisingIdClient",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "queryIntentActivities",
+            "getPackageInfo",
+            "getApplicationInfo",
+            "canRequestPackageInstalls",
+            "installPackage",
+            "setApplicationEnabledSetting",
+            "clearApplicationUserData",
+            "AppOpsManager",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "Patterns.PHONE",
+            "PhoneNumberUtils",
+            "URLUtil",
+            "InetAddress",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "SecureRandom",
+            "KeyGenerator",
+            "MessageDigest",
+            "Cipher",
+            "PasswordGenerator",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save(",
+            "resetStatus",
+            "rotationStatus",
+            "oldSecretStatus",
+            "newSecretStatus",
+            "resetProgress",
+            "recipientName",
+            "sentStatus",
+            "cardProgress",
+            "checkmark"
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "safe-word reset slice used forbidden API/source: $forbiddenSliceApi",
+                sliceSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
     private fun functionBlock(source: String, marker: String): String {
         val start = source.indexOf(marker)
         require(start >= 0) { "Source marker missing: $marker" }

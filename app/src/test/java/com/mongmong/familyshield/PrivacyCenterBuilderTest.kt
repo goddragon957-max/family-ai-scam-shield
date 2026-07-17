@@ -763,6 +763,117 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun familySafeWordResetCoachIsInventoriedAsLocalManualValueFreeAndNonAutomated() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "가족 안전단어 재설정 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·받는 사람·재정비 상태·이전 값 상태·" +
+                "새 값 상태·연락처·채널 값·체크 표시·메모·진행·이력"
+
+        assertTrue(transientInventory.detail.contains(featureName))
+        assertTrue(
+            transientInventory.detail.contains("${featureName}의 $nonStoredState") &&
+                transientInventory.detail.contains("만들거나 기록하지 않")
+        )
+        assertTrue(
+            persistenceStatement.contains("${featureName}의 $nonStoredState") &&
+                persistenceStatement.contains("만들거나 기록하지 않")
+        )
+
+        listOf(
+            "로컬 전용·무상태 수동 안내",
+            "새 Android 권한·네트워크·저장소",
+            "가족 안전 계획으로 이동",
+            "사용자가 직접 편집",
+            "계획의 실제 안전단어·콜백 문장·연락처 이름·번호",
+            "열어 보거나 표시·공유·수정·저장·삭제하지 않습니다",
+            "생성·추천·추론·변환·검사·검증·복사·동기화",
+            "자동 교체하지 않고",
+            "연락처·통화 기록·문자·메시지·통화 상태·클립보드·알림",
+            "읽거나 감시하지 않고",
+            "연락처 읽기·쓰기·고르기",
+            "전화 앱 열기·자동 다이얼·발신·통화·종료",
+            "SMS·받는 사람 선택·자동 전송",
+            "파일·사진·이미지·미디어·저장소",
+            "카메라·화면 캡처·스크린샷 가져오기·OCR·이미지 분석",
+            "파일·문서·사진 선택기·첨부·스트림·URI 공유",
+            "웹 탐색·지도·위치",
+            "기관 번호 조회·공식 경로 조회·전화번호 검증",
+            "URL·도메인 검증·링크 스캔",
+            "알림·알람·일정·리마인더·스케줄러·백그라운드 작업",
+            "결제·은행 기능",
+            "기기 제어 기능"
+        ).forEach { boundary ->
+            assertTrue(
+                "safe-word-reset boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+        assertTrue(
+            boundaryStatement.contains(nonStoredState) &&
+                boundaryStatement.contains("만들거나 기록하지 않습니다")
+        )
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "붙여넣은 텍스트",
+            "통화 상태·통화 기록",
+            "연락처",
+            "문자·SMS",
+            "알림·클립보드",
+            "화면·파일·사진·이미지·미디어",
+            "사건 기록",
+            "가족 안전 계획의 실제 값",
+            "공식 도움 기관 목록",
+            "계정·카드·은행·기기 설정",
+            "설치 앱·패키지 상태",
+            "접근성·네트워크·VPN·알림 설정",
+            "확인·재연락·전달·재정비 상태",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "safe-word-reset mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(
+            summary.contains("${featureName}는") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("사용자가 직접 편집") &&
+                summary.contains("비밀 생성·추천·추론·변환·검사·검증·복사·동기화·자동 교체") &&
+                summary.contains("카메라·화면 캡처·스크린샷·OCR·이미지 분석") &&
+                summary.contains("자동 전송") &&
+                summary.contains("스케줄러·백그라운드 작업") &&
+                summary.contains("결제·은행·기기 제어")
+        )
+        assertTrue(
+            summary.contains("${featureName} 화면") &&
+                summary.contains("가족 안전 계획의 실제 값") &&
+                summary.contains("확인·재연락·전달·재정비 상태") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"

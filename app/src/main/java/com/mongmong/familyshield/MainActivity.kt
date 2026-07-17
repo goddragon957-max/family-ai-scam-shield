@@ -26,7 +26,8 @@ class MainActivity : Activity() {
         FAMILY_CALM_DEBRIEF_AGENDA, SAFE_PASTE_PRIVACY_COACH, ACTIVE_CONTACT_EXIT_SCRIPTS,
         MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH,
         SEPARATE_CHANNEL_VERIFICATION_COACH, VERIFICATION_OUTCOME_NEXT_STEPS_BOARD,
-        RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH
+        RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH,
+        FAMILY_SAFE_WORD_RESET_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -145,12 +146,170 @@ class MainActivity : Activity() {
                 Screen.RECONTACT_BOUNDARY_COACH -> recontactBoundaryCoachScreen()
                 Screen.EVIDENCE_HANDOFF_PRIVACY_COACH ->
                     evidenceHandoffPrivacyCoachScreen()
+                Screen.FAMILY_SAFE_WORD_RESET_COACH -> familySafeWordResetCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.familySafeWordResetCoachScreen() {
+        val coach = FamilySafeWordResetCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 재정비 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.resetScenario}\n${card.valueFreeFamilySentence}"
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openFamilySafeWordResetAction(action) }
+            } else {
+                secondaryButton(action.label) { openFamilySafeWordResetAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 가족 확인 재정비 카드",
+            "카드는 항상 같은 순서입니다. 실제 안전단어·확인 답·콜백 문장·연락처를 이 " +
+                "코치에 입력하지 말고 값 없는 문장과 필요한 기존 앱 경로만 가족이 직접 " +
+                "고르세요. 선택·읽음·체크·재정비 상태는 남지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            familySafeWordResetCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 재정비 안내 공유") {
+            shareFamilySafeWordResetCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("가족 안전 계획 직접 편집") { show(Screen.PLAN) }
+        secondaryButton("가상 문장으로 가족 안전 연습") { openDrill() }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.familySafeWordResetCard(
+        card: FamilySafeWordResetCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 재정비 상황\n")
+                append(card.resetScenario)
+                append("\n\n값 없는 가족 문장\n")
+                append(card.valueFreeFamilySentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n말하거나 기록·공유하지 않을 것\n")
+                card.doNotSayRecordOrShareBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openFamilySafeWordResetAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openFamilySafeWordResetAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openFamilySafeWordResetAction(action) }
+        }
+    }
+
+    private fun openFamilySafeWordResetAction(action: FamilySafeWordResetAction) {
+        when (action.id) {
+            FamilySafeWordResetActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            FamilySafeWordResetActionId.CHECKER -> show(Screen.CHECKER)
+            FamilySafeWordResetActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            FamilySafeWordResetActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            FamilySafeWordResetActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            FamilySafeWordResetActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            FamilySafeWordResetActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            FamilySafeWordResetActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            FamilySafeWordResetActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            FamilySafeWordResetActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            FamilySafeWordResetActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            FamilySafeWordResetActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            FamilySafeWordResetActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            FamilySafeWordResetActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            FamilySafeWordResetActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            FamilySafeWordResetActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            FamilySafeWordResetActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            FamilySafeWordResetActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            FamilySafeWordResetActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            FamilySafeWordResetActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            FamilySafeWordResetActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            FamilySafeWordResetActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            FamilySafeWordResetActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            FamilySafeWordResetActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            FamilySafeWordResetActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            FamilySafeWordResetActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareFamilySafeWordResetCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 값 없는 재정비 안내 공유"))
     }
 
     private fun LinearLayout.evidenceHandoffPrivacyCoachScreen() {
@@ -375,6 +534,9 @@ class MainActivity : Activity() {
         secondaryButton("별도 확인 뒤 결과별 다음 단계") {
             show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
         }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
@@ -537,6 +699,9 @@ class MainActivity : Activity() {
         secondaryButton("다시 연락할 때 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
@@ -691,6 +856,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("다시 연락할 때 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
@@ -1449,6 +1617,9 @@ class MainActivity : Activity() {
         if (currentAnalysis != null) {
             secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
         }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -1594,6 +1765,9 @@ class MainActivity : Activity() {
         )
         secondaryButton("역할을 나눈 뒤 5분 가족 대화") {
             show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         primaryButton("가족에게 역할 보드 공유") {
             shareFamilyResponseRoleBoard(board.familyShareSummary)
@@ -1808,6 +1982,9 @@ class MainActivity : Activity() {
         primaryButton("멈춘 뒤 재연락 경계 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        primaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         section(
             mode.recommendationTitle,
             buildString {
@@ -1917,6 +2094,9 @@ class MainActivity : Activity() {
         }
         primaryButton("다시 연락할 때 경계 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        primaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         section(
             router.recommendationTitle,
@@ -2044,6 +2224,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("다시 연락할 때 경계 문장 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
@@ -2326,6 +2509,9 @@ class MainActivity : Activity() {
         primaryButton("다시 연락할 때 경계 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        primaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
@@ -2570,6 +2756,9 @@ class MainActivity : Activity() {
         secondaryButton("값 없이 재연락 경계 문장 보기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
         }
+        secondaryButton("값 없이 가족 확인 비밀 재정비 보기") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
@@ -2789,6 +2978,9 @@ class MainActivity : Activity() {
 
         title(card.title)
         subtitle("의심 대화를 멈추고, 새로 받은 번호가 아닌 가족 안전 계획에 직접 저장한 번호로 확인하세요.")
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("값 없이 별도 확인 경로부터 고르기") {
             show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
@@ -2862,6 +3054,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         secondaryButton("가족 준비 로드맵") { show(Screen.FAMILY_READINESS_ROADMAP) }
         if (readiness.level == ReadinessLevel.READY) {
             secondaryButton("가족 안전 연습 코치") { openDrill() }
@@ -3094,6 +3289,9 @@ class MainActivity : Activity() {
         title("가족 안전 계획")
         subtitle("안전단어와 연락처는 직접 입력하며, 이 기기에만 저장됩니다. 서버로 전송되지 않습니다.")
         section("사용 방법", "위급한 메시지를 받으면 아래 안전단어를 묻고, 저장된 번호로 직접 전화해 확인하세요.")
+        secondaryButton("값 없이 재정비 순서 먼저 보기") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
 
         label("안전 확인 질문 / 단어")
         val safeWordInput = EditText(this@MainActivity).apply {
@@ -3389,6 +3587,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("함께 본 뒤 5분 가족 대화") {
             show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
@@ -3969,6 +4170,9 @@ class MainActivity : Activity() {
         secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
             show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
         section(
             scripts.recommendationTitle,
             buildString {
@@ -4269,6 +4473,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("다시 연락할 때 경계 문장 정하기") {
             show(Screen.RECONTACT_BOUNDARY_COACH)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
