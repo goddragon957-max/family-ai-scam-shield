@@ -988,6 +988,121 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun newNumberQuarantineCoachIsInventoriedAsManualContactFreeAndNonAuthoritative() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "새 번호 격리 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·받는 사람·저장 상태·교체 상태·" +
+                "업데이트 상태·확인 상태·검증 상태·연락처·새 번호·이전 번호·프로필·채널 값·" +
+                "공식 번호·앱·패키지 이름·기기 상태·차단·음소거·통화·문자·알림 상태·체크 표시·" +
+                "메모·리마인더·진행·이력"
+
+        assertTrue(transientInventory.detail.contains(featureName))
+        assertTrue(
+            transientInventory.detail.contains("${featureName}의 $nonStoredState") &&
+                transientInventory.detail.contains("만들거나 기록하지 않")
+        )
+        assertTrue(
+            persistenceStatement.contains("${featureName}의 $nonStoredState") &&
+                persistenceStatement.contains("만들거나 기록하지 않")
+        )
+
+        listOf(
+            "로컬 전용·무상태 수동 안내",
+            "새 Android 권한·네트워크·저장소",
+            "기존 별도 경로 확인·가족 콜백·안전 확인 전화",
+            "목소리 현실 점검·안전단어 재설정·송금 멈춤·계정 보호·원격지시 중단·증거·가족·개인정보",
+            "화면으로만 이동",
+            "그 경로와 이 코치는 새 번호·프로필·채널이 가족이나 공식 기관 소유",
+            "판정·검증·확인·증명하지 않습니다",
+            "연락처·주소록·통화 기록·문자·SMS·통화 상태·클립보드·알림",
+            "읽거나 감시하지 않고",
+            "연락처·주소록 읽기·쓰기·편집·삽입·삭제·고르기·저장·교체·업데이트",
+            "라벨링·병합·차단·음소거·동기화",
+            "전화 앱 열기·다이얼·발신·통화·종료·통화 선별·차단·SMS",
+            "받는 사람 선택·자동 전송",
+            "전화번호·프로필·채널·신원·공식 계정·스팸·통신사·기관",
+            "링크·URL·도메인을 검증하거나 조회하지 않고",
+            "웹 탐색·지도·위치·기관 번호·공식 경로 조회·링크 스캔",
+            "파일·사진·이미지·오디오·미디어·저장소",
+            "카메라·화면 캡처·스크린샷 가져오기·OCR·이미지 분석",
+            "파일·문서·사진·오디오 선택기·첨부·업로드·스트림·URI 공유",
+            "알림 리스너·알림 모니터링·알림·알람·일정·리마인더·스케줄러·백그라운드 작업",
+            "결제·은행·NFC·Android 계정 관리자",
+            "기기 관리자·접근성 서비스·VPN·사용 통계·앱·패키지 조회·설치·제거·설정 변경",
+            "기기 제어 기능을 사용하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "new-number-quarantine boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+        assertTrue(
+            boundaryStatement.contains(nonStoredState) &&
+                boundaryStatement.contains("만들거나 기록하지 않습니다")
+        )
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "붙여넣은 텍스트",
+            "새 번호·이전 번호·프로필·채널 값",
+            "연락처·주소록",
+            "통화 상태·통화 기록·문자·SMS·알림·클립보드",
+            "화면·파일·사진·이미지·오디오·미디어",
+            "사건 기록",
+            "가족 안전 계획의 실제 값",
+            "공식 도움 기관 목록·번호",
+            "확인·검증·저장·교체·업데이트·차단·음소거 상태",
+            "계정·카드·은행·기기 설정",
+            "설치 앱·패키지 상태",
+            "접근성·네트워크·VPN·알림 설정",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "new-number-quarantine mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(
+            summary.contains("${featureName}는") &&
+                summary.contains("로컬 전용·무상태 수동 안내") &&
+                summary.contains("가족이나 공식 기관 소유") &&
+                summary.contains("연락처·주소록 읽기·쓰기·편집·삽입·삭제·고르기·저장") &&
+                summary.contains("전화 앱 열기·다이얼·발신·통화·종료") &&
+                summary.contains("전화번호·프로필·채널·신원·공식 계정·스팸") &&
+                summary.contains("첨부·업로드·스트림·URI 공유") &&
+                summary.contains("알림 리스너·알림 모니터링") &&
+                summary.contains("스케줄러·백그라운드 작업") &&
+                summary.contains("결제·은행·기기 제어")
+        )
+        assertTrue(
+            summary.contains("${featureName} 화면") &&
+                summary.contains("새 번호·이전 번호·프로필·채널 값") &&
+                summary.contains("확인·검증·저장·교체·업데이트·차단·음소거 상태") &&
+                summary.contains("돈의 움직임을 추가·수정·삭제하지 않습니다")
+        )
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"

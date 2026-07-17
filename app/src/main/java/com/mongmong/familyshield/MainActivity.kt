@@ -27,7 +27,8 @@ class MainActivity : Activity() {
         MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH,
         SEPARATE_CHANNEL_VERIFICATION_COACH, VERIFICATION_OUTCOME_NEXT_STEPS_BOARD,
         RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH,
-        FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK
+        FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK,
+        NEW_NUMBER_QUARANTINE_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -149,12 +150,188 @@ class MainActivity : Activity() {
                 Screen.FAMILY_SAFE_WORD_RESET_COACH -> familySafeWordResetCoachScreen()
                 Screen.VOICE_IMPERSONATION_REALITY_CHECK ->
                     voiceImpersonationRealityCheckCoachScreen()
+                Screen.NEW_NUMBER_QUARANTINE_COACH -> newNumberQuarantineCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.newNumberQuarantineCoachScreen() {
+        val coach = NewNumberQuarantineCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 새 연락수단 격리 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.quarantineScenario}\n" +
+                            card.valueFreeActionSentence
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openNewNumberQuarantineAction(action) }
+            } else {
+                secondaryButton(action.label) { openNewNumberQuarantineAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 새 연락수단 격리 카드",
+            "카드는 항상 같은 순서입니다. 새 번호·프로필·채널의 실제 값을 이 앱에 넣지 말고, " +
+                "바깥의 기존 경로에서 확인하기 전까지 값 없는 행동 문장과 기존 앱 경로만 직접 " +
+                "고르세요. 선택·읽음·확인·연락처 상태는 남지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            newNumberQuarantineCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 새 연락수단 격리 안내 공유") {
+            shareNewNumberQuarantineCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("현재 연락 밖의 기존 경로에서 확인") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
+        secondaryButton("가족 콜백 확인 카드") {
+            openFamilyCallbackCard(currentAnalysis)
+        }
+        secondaryButton("목소리를 증거로 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.newNumberQuarantineCard(
+        card: NewNumberQuarantineCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 격리 상황\n")
+                append(card.quarantineScenario)
+                append("\n\n값 없는 다음 행동\n")
+                append(card.valueFreeActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n저장·연락처·실제 값 경계\n")
+                card.doNotSaveContactOrValueBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openNewNumberQuarantineAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openNewNumberQuarantineAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openNewNumberQuarantineAction(action) }
+        }
+    }
+
+    private fun openNewNumberQuarantineAction(action: NewNumberQuarantineAction) {
+        when (action.id) {
+            NewNumberQuarantineActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            NewNumberQuarantineActionId.CHECKER -> show(Screen.CHECKER)
+            NewNumberQuarantineActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            NewNumberQuarantineActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            NewNumberQuarantineActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            NewNumberQuarantineActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            NewNumberQuarantineActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            NewNumberQuarantineActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            NewNumberQuarantineActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            NewNumberQuarantineActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            NewNumberQuarantineActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            NewNumberQuarantineActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            NewNumberQuarantineActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            NewNumberQuarantineActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            NewNumberQuarantineActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            NewNumberQuarantineActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            NewNumberQuarantineActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            NewNumberQuarantineActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            NewNumberQuarantineActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            NewNumberQuarantineActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            NewNumberQuarantineActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            NewNumberQuarantineActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            NewNumberQuarantineActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            NewNumberQuarantineActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            NewNumberQuarantineActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            NewNumberQuarantineActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            NewNumberQuarantineActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            NewNumberQuarantineActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            NewNumberQuarantineActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareNewNumberQuarantineCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 새 연락수단 격리 안내 공유"))
     }
 
     private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen() {
@@ -167,6 +344,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 번호·새 프로필을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -341,6 +521,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 번호·새 프로필을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("익숙한 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -501,6 +684,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 연락수단을 격리한 채 증거 경계 확인") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리 자료 없이 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -664,6 +850,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 연락수단을 믿지 않고 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("다시 들린 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -832,6 +1021,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("새 연락수단 격리 원칙 먼저 보기") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리를 증거로 삼지 않는 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -997,6 +1189,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 번호·새 프로필 격리 원칙") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("익숙한 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -1154,6 +1349,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 연락수단에서 원격지시를 이어가기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("통화 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -1310,6 +1508,9 @@ class MainActivity : Activity() {
 
         title(gate.title)
         subtitle(gate.intro)
+        secondaryButton("새 연락수단에서 돈 이야기를 이어가기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리 요청을 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -1464,6 +1665,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        primaryButton("새 번호·새 프로필을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         primaryButton("화면공유·원격지시 중단 코치") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -1757,6 +1961,9 @@ class MainActivity : Activity() {
 
         title(agenda.title)
         subtitle(agenda.intro)
+        secondaryButton("새 연락수단 격리 약속 함께 보기") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("가족 대화 전 목소리 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -1914,6 +2121,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("새 연락수단 격리 역할 함께 보기") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리를 증거로 믿지 않는 역할 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2099,6 +2309,9 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        primaryButton("새 번호·새 프로필을 저장하기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         primaryButton("익숙한 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2164,6 +2377,9 @@ class MainActivity : Activity() {
 
         title(mode.title)
         subtitle(mode.intro)
+        primaryButton("새 번호·새 프로필을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         primaryButton("목소리를 증거로 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2286,6 +2502,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("새 번호·새 프로필 격리 순서") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         primaryButton("익숙한 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2377,6 +2596,9 @@ class MainActivity : Activity() {
 
         title(pack.title)
         subtitle(pack.intro)
+        secondaryButton("새 연락수단 값 없이 격리 안내 보기") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("가족에게 알리기 전 목소리 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2477,6 +2699,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("새 연락수단을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리 요청을 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2709,6 +2934,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 새 번호·새 프로필을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         primaryButton("이 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -2914,6 +3142,9 @@ class MainActivity : Activity() {
 
         title(privacyCenter.title)
         subtitle(privacyCenter.intro)
+        secondaryButton("값 없이 새 연락수단 격리 안내 보기") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리 자료 없이 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -3202,6 +3433,9 @@ class MainActivity : Activity() {
 
         title(card.title)
         subtitle("의심 대화를 멈추고, 새로 받은 번호가 아닌 가족 안전 계획에 직접 저장한 번호로 확인하세요.")
+        secondaryButton("새 번호·새 프로필을 믿기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("익숙한 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -3281,6 +3515,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("새 번호·새 프로필 격리 순서") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("목소리를 증거로 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -3765,6 +4002,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("보호자와 새 연락수단 격리 원칙 보기") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("보호자와 목소리 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -4400,6 +4640,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        secondaryButton("새 번호가 아닌 기존 경로로 확인하기 전 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("전화 전 목소리 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
@@ -4653,6 +4896,9 @@ class MainActivity : Activity() {
 
         title(planner.title)
         subtitle(planner.intro)
+        secondaryButton("후속 점검 중에도 새 연락수단 격리") {
+            show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+        }
         secondaryButton("다시 들린 목소리를 믿기 전 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
