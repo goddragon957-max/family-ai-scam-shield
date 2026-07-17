@@ -1699,6 +1699,130 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun bankAtmStaffDisclosureCoachIsInventoriedAsManualNoLookupMoneyOrMutation() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "은행·ATM 직원 공개 문구 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·받는 사람·직원·보안요원·도우미·기관·은행·" +
+                "ATM·지점·상점·카운터·위치·주소·경로·금액·현금·계좌·카드·통장·기기·문서·" +
+                "사건·신고·제출·접수·인출·거래·결제·전달·인계·배달·수거·입금·예약·확인·검증·" +
+                "결과 상태·체크 표시·메모·리마인더·진행·이력"
+
+        assertTrue(transientInventory.detail.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("만들거나 기록하지 않"))
+
+        listOf(
+            "새 Android 권한·네트워크·저장소",
+            "로컬 전용·무상태 수동 안내",
+            "값 없는 고정 문구 카드",
+            "현금·대면 전달 멈춤·송금 멈춤·기관 압박·진행 중 연락 종료·별도 경로 확인",
+            "가족 콜백·안전단어·안전 확인 전화·보호자 검토·가족 알림·역할·차분 대화",
+            "사용자가 직접 읽을 짧은 문구",
+            "금액·위치·주소·경로·지점·카운터·사람·기사·기관·은행·상점",
+            "입력하도록 요구하거나 읽기·표시·저장·공유·첨부·녹음하지 않습니다",
+            "현금 인출·입금·송금·결제·취소·동결·환급·차지백·복구·계정·카드·통장·은행·ATM 동작",
+            "직원·보안요원·도우미·기사·수사관·기관의 신원을 조회·확인·검증하지 않습니다",
+            "지도·위치·주소·경로·길 안내·내비게이션·지오코딩·주소 검증·지점 조회",
+            "택배·퀵·우편·보관함·기사 추적",
+            "이동·만남·전달·수거·배차·예약·일정 만들기를 하지 않습니다",
+            "기관 번호·공식 경로·발신자 표시·전화번호·문서·사건·신고·접수·영수증·법률·금융 상태",
+            "신고 제출을 하지 않습니다",
+            "연락처·주소록·통화 기록·통화 상태·문자·SMS·알림을 읽거나 감시하지 않고",
+            "전화 앱 열기·다이얼·발신·통화·통화 종료·선별·차단·SMS·받는 사람 선택·자동 전송",
+            "QR·바코드·OCR·카메라·이미지 분석·화면 캡처",
+            "파일·문서·사진·스크린샷·오디오·미디어·저장소",
+            "녹음·전사·첨부·업로드·스트림·URI 공유하지 않습니다",
+            "클립보드·텍스트 감시기·자동완성·자격 증명·계정·로그인·인증·생체 인증",
+            "키가드·키 저장소·암호화 API",
+            "결제·은행·카드·지갑·블록체인·상품권·환급·차지백·취소·동결·차단·추적·복구·NFC",
+            "앱·패키지·설치 앱 목록·앱 이름·권한·기기 상태",
+            "설치·제거·비활성화·강제 종료·권한 허용·철회·설정 변경",
+            "기기 관리자·접근성 서비스·VPN·사용 통계·알림 수신 서비스",
+            "알림·알람·캘린더 일정·리마인더·스케줄러·서비스·방송 수신기·백그라운드 작업",
+            "공식·실제·안전·보안·검증·유효·신뢰·접수·제출·수신·보호·적법",
+            "차단·취소·역전·회복·환급·동결·추적·배달·수거·입금·예약·보장·문제없음",
+            "판정하거나 증명하지 않습니다",
+            "저장하거나 자동으로 변경하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "bank/ATM staff boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "원문·가린 단서·직원·보안요원·도우미·기사·수사관·기관·은행·ATM·지점·상점·카운터",
+            "위치·주소·경로·만남 장소·목적지·보관함·택배·퀵·우편·현금·금액·권종·일련값",
+            "계좌·카드·통장·거래·결제·지갑·OTP·PIN·비밀번호·보안 답·주민·기기",
+            "링크·URL·도메인·QR·바코드·코드·문서·사건·신고·제출·접수·영수증",
+            "인출·입금·전달·인계·배달·수거·예약·확인·검증",
+            "환급·차지백·취소·동결·차단·추적·복구·법률·금융 결과 상태",
+            "연락처·주소록·통화·통화 기록·문자·SMS·알림·클립보드·자동완성·자격 증명",
+            "파일·사진·스크린샷·오디오·미디어·첨부·URI",
+            "사건 기록·가족 안전 계획의 실제 값·공식 도움 기관 목록",
+            "지도·위치·경로·내비게이션·지오코딩·지점 조회·택배·배송·보관함·만남·예약",
+            "앱·패키지·권한·기기·접근성·네트워크·VPN·알림 설정·검증 상태",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "bank/ATM staff mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(summary.contains(boundaryStatement))
+        assertTrue(summary.contains(mutationStatement))
+
+        val allCopy = center.noCollectionStatements.joinToString("\n") + "\n" + summary
+        listOf(
+            "공식 직원입니다",
+            "검증된 보안요원입니다",
+            "안전한 은행입니다",
+            "안전한 ATM입니다",
+            "신뢰할 수 있는 도우미입니다",
+            "유효한 요청입니다",
+            "현금이 보호됩니다",
+            "사건이 접수됐습니다",
+            "신고가 제출됐습니다",
+            "신고가 수신됐습니다",
+            "배달됐습니다",
+            "수거됐습니다",
+            "입금됐습니다",
+            "예약됐습니다",
+            "결제가 취소됐습니다",
+            "환급이 보장됩니다",
+            "차지백이 접수됐습니다",
+            "회복됐습니다",
+            "환급됐습니다",
+            "동결됐습니다",
+            "추적됐습니다",
+            "100%"
+        ).forEach { unsafeClaim ->
+            assertFalse(allCopy.contains(unsafeClaim))
+        }
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"
