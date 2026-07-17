@@ -30,7 +30,8 @@ class MainActivity : Activity() {
         FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK,
         NEW_NUMBER_QUARANTINE_COACH, CREDENTIAL_SECRET_FREEZE_COACH,
         OFFICIAL_PRESSURE_REALITY_CHECK_COACH, RECOVERY_PROMISE_REALITY_CHECK_COACH,
-        GIFT_CARD_CODE_PAUSE_COACH, LINK_APP_INSTALL_QUARANTINE_COACH
+        GIFT_CARD_CODE_PAUSE_COACH, LINK_APP_INSTALL_QUARANTINE_COACH,
+        CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -162,12 +163,216 @@ class MainActivity : Activity() {
                 Screen.GIFT_CARD_CODE_PAUSE_COACH -> giftCardCodePauseCoachScreen()
                 Screen.LINK_APP_INSTALL_QUARANTINE_COACH ->
                     linkAppInstallQuarantineCoachScreen()
+                Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH ->
+                    cashWithdrawalCourierHandoffPauseCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.cashWithdrawalCourierHandoffPauseCoachScreen() {
+        val coach = CashWithdrawalCourierHandoffPauseCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 현금 인출·전달 멈춤 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.cashCourierPressureScenario}\n" +
+                            card.valueFreeActionSentence
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) {
+                    openCashWithdrawalCourierHandoffPauseAction(action)
+                }
+            } else {
+                secondaryButton(action.label) {
+                    openCashWithdrawalCourierHandoffPauseAction(action)
+                }
+            }
+        }
+
+        section(
+            "전체 수동 현금 인출·전달 멈춤 카드",
+            "카드는 항상 같은 순서입니다. 현금을 인출하거나 이동·만남·전달·보관 지시를 " +
+                "따르지 말고, 현금·카드·통장·기기·서류 또는 장소·금액·경로·인물 값을 " +
+                "이 화면에 넣지 마세요. 앱은 값 없는 행동 문장과 기존 앱 경로만 보여 주며 " +
+                "선택·읽음·확인 상태도 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            cashWithdrawalCourierHandoffPauseCard(
+                card,
+                recommended = card.id in recommendedIds
+            )
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 현금 인출·전달 멈춤 안내 공유") {
+            shareCashWithdrawalCourierHandoffPauseCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("송금 전 멈춤 확인") { show(Screen.MONEY_TRANSFER_PAUSE_GATE) }
+        secondaryButton("기관 사칭·압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
+        secondaryButton("현재 연락을 끝내는 문장") {
+            show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.cashWithdrawalCourierHandoffPauseCard(
+        card: CashWithdrawalCourierHandoffPauseCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 현금 인출·전달 압박 상황\n")
+                append(card.cashCourierPressureScenario)
+                append("\n\n값 없는 다음 행동\n")
+                append(card.valueFreeActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n인출·이동·만남·전달·공유·첨부 경계\n")
+                card.doNotWithdrawTravelMeetHandoffShareOrAttachBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openCashWithdrawalCourierHandoffPauseAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openCashWithdrawalCourierHandoffPauseAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) {
+                openCashWithdrawalCourierHandoffPauseAction(action)
+            }
+        }
+    }
+
+    private fun openCashWithdrawalCourierHandoffPauseAction(
+        action: CashWithdrawalCourierHandoffPauseAction
+    ) {
+        when (action.id) {
+            CashWithdrawalCourierHandoffPauseActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            CashWithdrawalCourierHandoffPauseActionId.CHECKER -> show(Screen.CHECKER)
+            CashWithdrawalCourierHandoffPauseActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            CashWithdrawalCourierHandoffPauseActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            CashWithdrawalCourierHandoffPauseActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            CashWithdrawalCourierHandoffPauseActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            CashWithdrawalCourierHandoffPauseActionId.NEW_NUMBER_QUARANTINE_COACH ->
+                show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            CashWithdrawalCourierHandoffPauseActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            CashWithdrawalCourierHandoffPauseActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            CashWithdrawalCourierHandoffPauseActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            CashWithdrawalCourierHandoffPauseActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            CashWithdrawalCourierHandoffPauseActionId.GIFT_CARD_CODE_PAUSE_COACH ->
+                show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.LINK_APP_INSTALL_QUARANTINE_COACH ->
+                show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
+                show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.RECOVERY_PROMISE_REALITY_CHECK_COACH ->
+                show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            CashWithdrawalCourierHandoffPauseActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            CashWithdrawalCourierHandoffPauseActionId.PRIVACY_CENTER ->
+                show(Screen.PRIVACY_CENTER)
+            CashWithdrawalCourierHandoffPauseActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            CashWithdrawalCourierHandoffPauseActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            CashWithdrawalCourierHandoffPauseActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+            CashWithdrawalCourierHandoffPauseActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            CashWithdrawalCourierHandoffPauseActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            CashWithdrawalCourierHandoffPauseActionId.SAFETY_FLOW_ROUTER ->
+                show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareCashWithdrawalCourierHandoffPauseCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 현금 인출·전달 멈춤 안내 공유"))
     }
 
     private fun LinearLayout.linkAppInstallQuarantineCoachScreen() {
@@ -180,6 +385,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("링크·앱 지시가 현금 인출·전달로 이어지면 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -370,6 +578,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("상품권 대신 현금·카드·통장 전달을 요구해도 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("상품권·코드 링크나 설치 지시도 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -551,6 +762,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("회복 조건의 현금 인출·전달 지시도 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("회복 링크·앱 설치 지시를 열기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -736,6 +950,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 직함으로 현금 인출·전달을 지시하면 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("기관 사칭 링크·앱 설치 압박 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -922,6 +1139,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("비밀값과 함께 현금·카드·기기 전달도 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("로그인·인증값 입력 링크와 설치 지시 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1111,6 +1331,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("새 연락수단의 현금 인출·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("새 연락수단이 건넨 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1301,6 +1524,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("목소리로 받은 현금 인출·만남·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("목소리로 받은 링크·앱 설치 지시 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1656,6 +1882,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("증거 전달과 현금·카드·기기 전달을 분리해 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 값을 넘기지 않고 격리 경계 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1837,6 +2066,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("재연락의 현금 인출·전달 지시 다시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("재연락의 링크·앱 설치 압박 다시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2023,6 +2255,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("확인 결과와 별개로 현금 인출·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("확인 결과와 별개로 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2206,6 +2441,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("별도 확인 전 현금 인출·이동·전달 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("별도 확인 전 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2381,6 +2619,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("원격 지시의 현금 인출·이동·전달도 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("원격 지시의 링크·앱 설치 단계 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2555,6 +2796,9 @@ class MainActivity : Activity() {
 
         title(gate.title)
         subtitle(gate.intro)
+        primaryButton("현금 인출·직접 전달도 돈 행동처럼 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         primaryButton("송금 링크·앱 설치 지시를 따르기 전 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2727,6 +2971,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        primaryButton("현금 인출·만남·전달 지시 연락을 끝내고 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         primaryButton("링크·앱 설치 압박 연락을 끝내고 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3053,6 +3300,9 @@ class MainActivity : Activity() {
 
         title(agenda.title)
         subtitle(agenda.intro)
+        secondaryButton("현금 인출·이동·전달 지시를 숨기지 않고 가족과 점검") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3228,6 +3478,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("현금 인출·전달을 멈추는 가족 역할 함께 보기") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 설치 압박 대응 역할 전에 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3430,6 +3683,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.home() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        primaryButton("현금 인출·만남·직접 전달 전에 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         primaryButton("링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3514,6 +3770,9 @@ class MainActivity : Activity() {
 
         title(mode.title)
         subtitle(mode.intro)
+        primaryButton("현금 인출·이동·직접 전달 즉시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         primaryButton("링크·앱 설치 압박 즉시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3654,6 +3913,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("현금 인출·직접 전달 멈춤 경로") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         primaryButton("링크·앱 설치 격리 경로") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3763,6 +4025,9 @@ class MainActivity : Activity() {
 
         title(pack.title)
         subtitle(pack.intro)
+        secondaryButton("현금 인출·이동·전달 지시를 가족과 값 없이 점검") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3881,6 +4146,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("계정 대응과 현금 인출·이동·전달 지시를 분리해 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("계정·기기 조치 전에 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4131,6 +4399,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 현금 인출·이동·전달 지시를 따르기 전 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         primaryButton("이 링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4258,6 +4529,9 @@ class MainActivity : Activity() {
 
         title(briefing.title)
         subtitle(briefing.intro)
+        secondaryButton("저장 내용 값을 읽히지 않고 현금 인출·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("저장 내용 값을 읽히지 않고 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4363,6 +4637,9 @@ class MainActivity : Activity() {
 
         title(privacyCenter.title)
         subtitle(privacyCenter.intro)
+        secondaryButton("값·위치·경로 없이 현금 인출·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("값·열기·조회·스캔 없이 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4505,6 +4782,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.evidencePreservationScreen() {
         title("증거 보존 체크리스트")
         subtitle("상황에 맞는 항목을 골라, 메시지나 앱을 지우기 전에 직접 보관할 내용을 차분히 확인하세요.")
+        secondaryButton("증거 보존 전 현금 인출·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 값을 다루지 않고 설치 압박 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4567,6 +4847,9 @@ class MainActivity : Activity() {
         val directory = OfficialHelpDirectoryBuilder.build()
         title(directory.title)
         subtitle(directory.intro)
+        secondaryButton("공식 도움과 상대의 현금 인출·전달 지시를 분리") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("공식 도움과 분리해 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4627,6 +4910,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.officialReportPrepScreen() {
         title("신고용 상담 준비 카드")
         subtitle("현재 AI 보호자 분석을 개인정보 가림 단서, 추천 공식 연락처, 상담 대사와 전화 전 체크리스트로 정리합니다.")
+        secondaryButton("신고 준비와 현금 인출·전달 지시를 분리") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("신고 준비와 분리해 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4784,6 +5070,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("준비 상태와 별개로 현금 인출·전달 지시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("준비 상태와 별개로 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5286,6 +5575,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("보호자와 현금 인출·전달 지시를 값 없이 점검") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("보호자와 링크·앱 설치 압박 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -6051,6 +6343,9 @@ class MainActivity : Activity() {
 
         title(triage.title)
         subtitle(triage.intro)
+        secondaryButton("노출 대응과 현금 인출·이동·전달 지시를 분리해 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 설치 압박과 실제 행동을 분리해 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -6210,6 +6505,9 @@ class MainActivity : Activity() {
 
         title(planner.title)
         subtitle(planner.intro)
+        secondaryButton("후속 연락의 현금 인출·전달 지시 다시 멈춤") {
+            show(Screen.CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH)
+        }
         secondaryButton("후속 연락의 링크·앱 설치 지시 다시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
