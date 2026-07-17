@@ -27,7 +27,7 @@ class MainActivity : Activity() {
         MONEY_TRANSFER_PAUSE_GATE, REMOTE_ACCESS_CUTOFF_COACH,
         SEPARATE_CHANNEL_VERIFICATION_COACH, VERIFICATION_OUTCOME_NEXT_STEPS_BOARD,
         RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH,
-        FAMILY_SAFE_WORD_RESET_COACH
+        FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -147,12 +147,188 @@ class MainActivity : Activity() {
                 Screen.EVIDENCE_HANDOFF_PRIVACY_COACH ->
                     evidenceHandoffPrivacyCoachScreen()
                 Screen.FAMILY_SAFE_WORD_RESET_COACH -> familySafeWordResetCoachScreen()
+                Screen.VOICE_IMPERSONATION_REALITY_CHECK ->
+                    voiceImpersonationRealityCheckCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen() {
+        val coach = VoiceImpersonationRealityCheckCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 목소리 현실 확인 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.realityCheckScenario}\n" +
+                            card.valueFreeActionSentence
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openVoiceImpersonationRealityCheckAction(action) }
+            } else {
+                secondaryButton(action.label) { openVoiceImpersonationRealityCheckAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 목소리 현실 확인 카드",
+            "카드는 항상 같은 순서입니다. 목소리나 통화 내용을 이 앱에 넣지 말고, " +
+                "값 없는 문장과 필요한 기존 앱 경로만 가족이 직접 고르세요. " +
+                "선택·읽음·체크·통화 상태는 남지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            voiceImpersonationRealityCheckCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 목소리 현실 확인 안내 공유") {
+            shareVoiceImpersonationRealityCheckCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("현재 연락과 분리해 가족 확인") {
+            show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+        }
+        secondaryButton("가족 콜백 확인 카드") {
+            openFamilyCallbackCard(currentAnalysis)
+        }
+        secondaryButton("가족 확인 비밀 재정비 순서") {
+            show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.voiceImpersonationRealityCheckCard(
+        card: VoiceImpersonationRealityCheckCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 현실 확인 상황\n")
+                append(card.realityCheckScenario)
+                append("\n\n값 없는 다음 행동\n")
+                append(card.valueFreeActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n녹음·공유·질문하지 않을 것\n")
+                card.doNotRecordShareOrAskBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openVoiceImpersonationRealityCheckAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openVoiceImpersonationRealityCheckAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openVoiceImpersonationRealityCheckAction(action) }
+        }
+    }
+
+    private fun openVoiceImpersonationRealityCheckAction(
+        action: VoiceImpersonationRealityCheckAction
+    ) {
+        when (action.id) {
+            VoiceImpersonationRealityCheckActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            VoiceImpersonationRealityCheckActionId.CHECKER -> show(Screen.CHECKER)
+            VoiceImpersonationRealityCheckActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            VoiceImpersonationRealityCheckActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            VoiceImpersonationRealityCheckActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            VoiceImpersonationRealityCheckActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            VoiceImpersonationRealityCheckActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            VoiceImpersonationRealityCheckActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            VoiceImpersonationRealityCheckActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            VoiceImpersonationRealityCheckActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            VoiceImpersonationRealityCheckActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            VoiceImpersonationRealityCheckActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            VoiceImpersonationRealityCheckActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            VoiceImpersonationRealityCheckActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            VoiceImpersonationRealityCheckActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            VoiceImpersonationRealityCheckActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            VoiceImpersonationRealityCheckActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            VoiceImpersonationRealityCheckActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            VoiceImpersonationRealityCheckActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            VoiceImpersonationRealityCheckActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            VoiceImpersonationRealityCheckActionId.PRIVACY_CENTER ->
+                show(Screen.PRIVACY_CENTER)
+            VoiceImpersonationRealityCheckActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            VoiceImpersonationRealityCheckActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            VoiceImpersonationRealityCheckActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            VoiceImpersonationRealityCheckActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            VoiceImpersonationRealityCheckActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            VoiceImpersonationRealityCheckActionId.SAFETY_FLOW_ROUTER ->
+                show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareVoiceImpersonationRealityCheckCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 목소리 현실 확인 안내 공유"))
     }
 
     private fun LinearLayout.familySafeWordResetCoachScreen() {
@@ -165,6 +341,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("익숙한 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -322,6 +501,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("목소리 자료 없이 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -482,6 +664,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("다시 들린 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -647,6 +832,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("목소리를 증거로 삼지 않는 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${board.modeLabel} · ${board.recommendationTitle}",
             buildString {
@@ -809,6 +997,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("익숙한 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -963,6 +1154,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("통화 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -1116,6 +1310,9 @@ class MainActivity : Activity() {
 
         title(gate.title)
         subtitle(gate.intro)
+        secondaryButton("목소리 요청을 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "${gate.modeLabel} · ${gate.recommendationTitle}",
             buildString {
@@ -1560,6 +1757,9 @@ class MainActivity : Activity() {
 
         title(agenda.title)
         subtitle(agenda.intro)
+        secondaryButton("가족 대화 전 목소리 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             agenda.durationLabel,
             "타이머나 기록 없이 아래 순서를 가족이 직접 읽고, 필요한 기존 앱 경로만 골라 이어가세요."
@@ -1714,6 +1914,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("목소리를 증거로 믿지 않는 역할 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             board.recommendationTitle,
             buildString {
@@ -1896,6 +2099,9 @@ class MainActivity : Activity() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        primaryButton("익숙한 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         primaryButton("화면공유·원격지시 끊기") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -1958,6 +2164,9 @@ class MainActivity : Activity() {
 
         title(mode.title)
         subtitle(mode.intro)
+        primaryButton("목소리를 증거로 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             mode.stopScriptTitle,
             mode.stopScriptSteps.joinToString("\n") { step ->
@@ -2077,6 +2286,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("익숙한 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         primaryButton("화면공유·원격지시 끊기") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -2165,6 +2377,9 @@ class MainActivity : Activity() {
 
         title(pack.title)
         subtitle(pack.intro)
+        secondaryButton("가족에게 알리기 전 목소리 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             pack.recommendationTitle,
             buildString {
@@ -2262,6 +2477,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("목소리 요청을 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         secondaryButton("화면공유·원격지시 먼저 끊기") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -2491,6 +2709,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         primaryButton("이 상황에서 화면공유·원격지시 끊기") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -2693,6 +2914,9 @@ class MainActivity : Activity() {
 
         title(privacyCenter.title)
         subtitle(privacyCenter.intro)
+        secondaryButton("목소리 자료 없이 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             "기기 안에 있는 데이터",
             privacyCenter.localDataInventoryItems.joinToString("\n\n") { item ->
@@ -2978,6 +3202,9 @@ class MainActivity : Activity() {
 
         title(card.title)
         subtitle("의심 대화를 멈추고, 새로 받은 번호가 아닌 가족 안전 계획에 직접 저장한 번호로 확인하세요.")
+        secondaryButton("익숙한 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         secondaryButton("가족 확인 비밀 재정비 순서") {
             show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
@@ -3054,6 +3281,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("목소리를 증거로 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         secondaryButton("가족 확인 비밀 재정비 순서") {
             show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
@@ -3535,6 +3765,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("보호자와 목소리 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         secondaryButton("화면공유·원격지시 중단 코치") {
             show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
         }
@@ -4167,6 +4400,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        secondaryButton("전화 전 목소리 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         secondaryButton("현재 연락과 분리해 확인 경로 고르기") {
             show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
@@ -4417,6 +4653,9 @@ class MainActivity : Activity() {
 
         title(planner.title)
         subtitle(planner.intro)
+        secondaryButton("다시 들린 목소리를 믿기 전 현실 확인") {
+            show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
         section(
             planner.recommendationTitle,
             buildString {

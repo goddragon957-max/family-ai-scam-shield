@@ -7582,7 +7582,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(16, entryRouteSources.size)
         assertEquals(
-            16,
+            18,
             Regex("show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -8231,6 +8231,845 @@ class PrivacyPostureRegressionTest {
         listOf(
             "CALL_PHONE",
             "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun voiceImpersonationRealityCheckCoachIsPureStatelessRoutesOnlyAndSharesBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/VoiceImpersonationRealityCheckCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.voiceImpersonationRealityCheckCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openVoiceImpersonationRealityCheckAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareVoiceImpersonationRealityCheckCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+        val normalizedModelSource = modelSource.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        listOf(
+            "private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen",
+            "private fun LinearLayout.voiceImpersonationRealityCheckCard",
+            "private fun openVoiceImpersonationRealityCheckAction",
+            "private fun shareVoiceImpersonationRealityCheckCoach"
+        ).forEach { marker ->
+            assertTrue(
+                "voice reality-check source marker missing: $marker",
+                activitySource.contains(marker)
+            )
+        }
+        assertTrue(activitySource.contains("VOICE_IMPERSONATION_REALITY_CHECK"))
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.VOICE_IMPERSONATION_REALITY_CHECK -> " +
+                    "voiceImpersonationRealityCheckCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.readinessSection()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.safeVerificationCallScriptsScreen",
+            "private fun LinearLayout.familyCallbackCardScreen",
+            "private fun LinearLayout.familySafeWordResetCoachScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.privacyCenterScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen"
+        )
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.VOICE_IMPERSONATION_REALITY_CHECK\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.map { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "voice reality-check entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(21, entryRouteSources.size)
+        assertEquals(
+            21,
+            Regex("show\\(Screen\\.VOICE_IMPERSONATION_REALITY_CHECK\\)")
+                .findAll(activitySource)
+                .count()
+        )
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "ClipboardManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "voice reality-check entry button used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        assertTrue(
+            normalizedModelSource.contains(
+                "fun build( analysis: ScamAnalysis?, readiness: FamilyReadiness, " +
+                    "incidentCount: Int = 0 ): VoiceImpersonationRealityCheckCoach"
+            )
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+        assertEquals(2, Regex("\\bincidentCount\\b").findAll(modelSource).count())
+        assertFalse(Regex("analysis\\s*\\.\\s*[A-Za-z]").containsMatchIn(modelSource))
+
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "analysis.redactedClue",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "SafetyPlanStore",
+            "SafetyPlan",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "IncidentStore",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incident.body",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "dialNumber",
+            "MediaRecorder",
+            "AudioRecord",
+            "AudioTrack",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "TextToSpeech",
+            "AudioManager",
+            "MediaPlayer",
+            "SoundPool",
+            "MicrophoneInfo",
+            "android.media",
+            "android.speech",
+            "RECORD_AUDIO",
+            "ScamAnalyzer",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "TelephonyCallback",
+            "MediaStore",
+            "FileProvider",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "voice reality-check model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                "voice reality-check model embedded official number: $exactOfficialNumber",
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        val builderCallPattern = Regex(
+            "VoiceImpersonationRealityCheckCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("VoiceImpersonationRealityCheckCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertEquals(1, Regex("safetyPlan\\.load\\(\\)").findAll(coachScreen).count())
+        assertEquals(1, Regex("incidents\\.count\\(\\)").findAll(coachScreen).count())
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(coachScreen.contains("val plan ="))
+        assertFalse(
+            coachScreen
+                .replace("FamilyReadinessBuilder.build(safetyPlan.load())", "")
+                .contains("safetyPlan.")
+        )
+        assertFalse(coachScreen.replace("incidents.count()", "").contains("incidents."))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "voice reality-check incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareVoiceImpersonationRealityCheckCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "voice reality-check UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.realityCheckScenario",
+            "card.valueFreeActionSentence",
+            "card.whyItMatters",
+            "card.doNotRecordShareOrAskBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(
+                "voice reality-check card UI omitted $renderedCardField",
+                cardRenderer.contains(renderedCardField)
+            )
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "TextToSpeech",
+            "MediaPlayer",
+            "MediaStore",
+            "FileProvider",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "voiceStatus",
+            "callerStatus",
+            "recordingStatus",
+            "audioName",
+            "transcriptValue",
+            "recipientName",
+            "sentStatus",
+            "cardProgress",
+            "checkmark"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "voice reality-check UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        val expectedActionRoutes = linkedMapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFETY_PLAN" to "show(Screen.PLAN)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "FAMILY_SAFE_WORD_RESET_COACH" to
+                "show(Screen.FAMILY_SAFE_WORD_RESET_COACH)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "RECONTACT_BOUNDARY_COACH" to "show(Screen.RECONTACT_BOUNDARY_COACH)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to
+                "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EVIDENCE_HANDOFF_PRIVACY_COACH" to
+                "show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.VOICE_IMPERSONATION_REALITY_CHECK)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        )
+        val actionIdBlock = functionBlock(
+            modelSource,
+            "enum class VoiceImpersonationRealityCheckActionId"
+        )
+        val declaredActionIds = Regex("(?m)^\\s*([A-Z][A-Z_]+),?\\s*$")
+            .findAll(actionIdBlock)
+            .map { match -> match.groupValues[1] }
+            .toSet()
+        assertEquals(expectedActionRoutes.keys, declaredActionIds)
+        expectedActionRoutes.forEach { (actionId, destination) ->
+            assertTrue(
+                "voice reality-check route omitted branch for $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "VoiceImpersonationRealityCheckActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            expectedActionRoutes.size,
+            Regex("VoiceImpersonationRealityCheckActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        listOf(
+            "dial(",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "TextToSpeech",
+            "AudioManager",
+            "MediaPlayer",
+            "SoundPool",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "CallScreeningService",
+            "TelecomManager",
+            "TelephonyManager",
+            "PhoneStateListener",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "voice reality-check router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex(
+            "shareVoiceImpersonationRealityCheckCoach\\(([^)]*)\\)"
+        )
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertEquals(1, Regex("Intent\\.ACTION_SEND").findAll(shareHelper).count())
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "MediaPlayer",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "NotificationManager",
+            "PackageManager",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "voiceStatus",
+            "callerStatus",
+            "recordingStatus",
+            "audioName",
+            "transcriptValue",
+            "recipientName",
+            "sentStatus"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "voice reality-check share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource, ignoreCase = true)
+            )
+        }
+
+        assertFalse(
+            Regex(
+                "private\\s+var\\s+\\w*(?:voiceImpersonation|voiceStatus|callerStatus|" +
+                    "recordingStatus|voiceReal|voiceFake|audioName|transcript|recipient)\\w*",
+                RegexOption.IGNORE_CASE
+            ).containsMatchIn(activitySource)
+        )
+        assertFalse(
+            Regex(
+                "KEY_\\w*(?:VOICE_IMPERSONATION|VOICE_STATUS|CALLER_STATUS|" +
+                    "RECORDING_STATUS|VOICE_REAL|VOICE_FAKE|AUDIO_NAME|TRANSCRIPT|RECIPIENT)\\w*"
+            ).containsMatchIn(activitySource)
+        )
+        val persistenceSources = incidentStoreSource + safetyPlanStoreSource
+        listOf(
+            "VoiceImpersonation",
+            "voice_impersonation",
+            "voice_status",
+            "caller_status",
+            "recording_status",
+            "voice_real_status",
+            "voice_fake_status",
+            "voice_check_progress",
+            "audio_name",
+            "transcript_value",
+            "voice_recipient",
+            "voice_share_status"
+        ).forEach { forbiddenStoredState ->
+            assertFalse(
+                "voice reality-check state was added to persistence: $forbiddenStoredState",
+                persistenceSources.contains(forbiddenStoredState, ignoreCase = true)
+            )
+        }
+
+        val nonShareSliceSource = coachScreen + cardRenderer + actionRouter + modelSource
+        val fullSliceSource = nonShareSliceSource + shareHelper
+        val forbiddenSliceApis = listOf(
+            "MediaRecorder",
+            "AudioRecord",
+            "AudioTrack",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "TextToSpeech",
+            "AudioManager",
+            "MediaPlayer",
+            "SoundPool",
+            "MicrophoneInfo",
+            "AudioDeviceInfo",
+            "android.media",
+            "android.speech",
+            "RECORD_AUDIO",
+            "AlarmManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "WorkManager",
+            "CoroutineWorker",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "sendTextMessage",
+            "Intent.EXTRA_STREAM",
+            "ACTION_SEND_MULTIPLE",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "android.permission.CAMERA",
+            "android.hardware.camera",
+            "androidx.camera",
+            "CameraManager",
+            "ImageCapture",
+            "PhotoPicker",
+            "PickVisualMedia",
+            "DocumentsContract",
+            "ContentResolver",
+            "openInputStream",
+            "java.io.File",
+            "com.google.mlkit",
+            "MlKit",
+            "TextRecognition",
+            "TextRecognizer",
+            "InputImage",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "TelephonyCallback",
+            "NotificationListenerService",
+            "BillingClient",
+            "NfcAdapter",
+            "AccountManager",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "deletePackage",
+            "Intent.ACTION_DELETE",
+            "ACTION_UNINSTALL_PACKAGE",
+            "ACTION_INSTALL_PACKAGE",
+            "REQUEST_INSTALL_PACKAGES",
+            "ACTION_MANAGE_UNKNOWN_APP_SOURCES",
+            "ACTION_APPLICATION_DETAILS_SETTINGS",
+            "Settings.",
+            "ANDROID_ID",
+            "Build.SERIAL",
+            "AdvertisingIdClient",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "queryIntentActivities",
+            "getPackageInfo",
+            "getApplicationInfo",
+            "canRequestPackageInstalls",
+            "installPackage",
+            "setApplicationEnabledSetting",
+            "clearApplicationUserData",
+            "AppOpsManager",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "java.net.Socket",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "Patterns.PHONE",
+            "PhoneNumberUtils",
+            "URLUtil",
+            "InetAddress",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            "plan.safeWord",
+            "plan.callbackScript",
+            "plan.contacts",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save(",
+            "voiceStatus",
+            "callerStatus",
+            "recordingStatus",
+            "audioName",
+            "transcriptValue",
+            "recipientName",
+            "sentStatus",
+            "cardProgress",
+            "checkmark"
+        )
+        forbiddenSliceApis.forEach { forbiddenSliceApi ->
+            assertFalse(
+                "voice reality-check slice used forbidden API/source: $forbiddenSliceApi",
+                fullSliceSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
+        assertFalse(nonShareSliceSource.contains("Intent.ACTION_SEND"))
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "SEND_SMS",
+            "RECEIVE_SMS",
             "READ_CALL_LOG",
             "READ_CONTACTS",
             "WRITE_CONTACTS",
