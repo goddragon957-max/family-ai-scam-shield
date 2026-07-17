@@ -7602,7 +7602,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(16, entryRouteSources.size)
         assertEquals(
-            21,
+            22,
             Regex("show\\(Screen\\.FAMILY_SAFE_WORD_RESET_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -8380,7 +8380,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(21, entryRouteSources.size)
         assertEquals(
-            24,
+            25,
             Regex("show\\(Screen\\.VOICE_IMPERSONATION_REALITY_CHECK\\)")
                 .findAll(activitySource)
                 .count()
@@ -9219,7 +9219,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            24,
+            25,
             Regex("show\\(Screen\\.NEW_NUMBER_QUARANTINE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -9942,7 +9942,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            23,
+            24,
             Regex("show\\(Screen\\.CREDENTIAL_SECRET_FREEZE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -10594,6 +10594,771 @@ class PrivacyPostureRegressionTest {
         forbiddenSliceApis.forEach { forbiddenSliceApi ->
             assertFalse(
                 "credential-secret-freeze slice used forbidden API/source: $forbiddenSliceApi",
+                fullSliceSource.contains(forbiddenSliceApi, ignoreCase = true)
+            )
+        }
+        assertFalse(nonShareSliceSource.contains("Intent.ACTION_SEND"))
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "SEND_SMS",
+            "RECEIVE_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "WRITE_CONTACTS",
+            "READ_PHONE_STATE",
+            "ANSWER_PHONE_CALLS",
+            "RECORD_AUDIO",
+            "CAMERA",
+            "READ_MEDIA_IMAGES",
+            "READ_MEDIA_VIDEO",
+            "READ_EXTERNAL_STORAGE",
+            "WRITE_EXTERNAL_STORAGE",
+            "INTERNET",
+            "ACCESS_FINE_LOCATION",
+            "ACCESS_COARSE_LOCATION",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED",
+            "PACKAGE_USAGE_STATS",
+            "QUERY_ALL_PACKAGES",
+            "BIND_ACCESSIBILITY_SERVICE",
+            "BIND_DEVICE_ADMIN",
+            "BIND_NOTIFICATION_LISTENER_SERVICE",
+            "BIND_VPN_SERVICE",
+            "REQUEST_INSTALL_PACKAGES"
+        ).forEach { forbiddenPermission ->
+            assertFalse(
+                "manifest declared forbidden permission token: $forbiddenPermission",
+                manifest.contains(forbiddenPermission)
+            )
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun officialPressureRealityCheckCoachIsPureStatelessRoutesOnlyAndSharesBuilderSummary() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/OfficialPressureRealityCheckCoach.kt"
+        )
+        val incidentStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/IncidentStore.kt"
+        )
+        val safetyPlanStoreSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/SafetyPlanStore.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.officialPressureRealityCheckCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.officialPressureRealityCheckCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openOfficialPressureRealityCheckAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareOfficialPressureRealityCheckCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+        val normalizedActionRouter = actionRouter.replace(Regex("\\s+"), " ")
+
+        assertTrue(activitySource.contains("OFFICIAL_PRESSURE_REALITY_CHECK_COACH"))
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH -> " +
+                    "officialPressureRealityCheckCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.readinessSection()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.quickStopModeScreen",
+            "private fun LinearLayout.helpDirectoryScreen",
+            "private fun LinearLayout.officialReportPrepScreen",
+            "private fun LinearLayout.moneyTransferPauseGateScreen",
+            "private fun LinearLayout.credentialSecretFreezeCoachScreen",
+            "private fun LinearLayout.accountLockdownChecklistScreen",
+            "private fun LinearLayout.remoteAccessCutoffCoachScreen",
+            "private fun LinearLayout.exposureImpactTriageScreen",
+            "private fun LinearLayout.evidenceHandoffPrivacyCoachScreen",
+            "private fun LinearLayout.activeContactExitScriptsScreen",
+            "private fun LinearLayout.safePastePrivacyCoachScreen",
+            "private fun LinearLayout.separateChannelVerificationCoachScreen",
+            "private fun LinearLayout.verificationOutcomeNextStepsBoardScreen",
+            "private fun LinearLayout.recontactBoundaryCoachScreen",
+            "private fun LinearLayout.newNumberQuarantineCoachScreen",
+            "private fun LinearLayout.voiceImpersonationRealityCheckCoachScreen",
+            "private fun LinearLayout.familyAlertMessagePackScreen",
+            "private fun LinearLayout.trustedHelperReviewModeScreen",
+            "private fun LinearLayout.familyResponseRoleBoardScreen",
+            "private fun LinearLayout.familyCalmDebriefAgendaScreen",
+            "private fun LinearLayout.followUpCheckInPlannerScreen",
+            "private fun LinearLayout.safetyFlowRouterScreen",
+            "private fun LinearLayout.privacyCenterScreen"
+        )
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.OFFICIAL_PRESSURE_REALITY_CHECK_COACH\\)\\s*}"
+        )
+        val entryRouteSources = entryMarkers.map { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "official-pressure entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+            exactRoutes.single().value
+        }
+        assertEquals(26, entryRouteSources.size)
+        assertEquals(
+            26,
+            Regex("show\\(Screen\\.OFFICIAL_PRESSURE_REALITY_CHECK_COACH\\)")
+                .findAll(activitySource)
+                .count()
+        )
+        val entryRouteSource = entryRouteSources.joinToString("\n")
+        listOf(
+            "incidents.add(",
+            "incidents.clear(",
+            "incidents.load(",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear()",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "startActivity(",
+            "setIntent("
+        ).forEach { forbiddenEntrySideEffect ->
+            assertFalse(
+                "official-pressure entry used side effect: $forbiddenEntrySideEffect",
+                entryRouteSource.contains(forbiddenEntrySideEffect)
+            )
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+        assertFalse(Regex("analysis\\s*\\.\\s*[A-Za-z]").containsMatchIn(modelSource))
+
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "analysis.redactedClue",
+            "readiness.title",
+            "readiness.completedCount",
+            "readiness.totalCount",
+            "readiness.checklist",
+            "readiness.nextAction",
+            "SafetyPlanStore",
+            "SafetyPlan(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "IncidentStore",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incident.body",
+            "OfficialHelpDirectoryBuilder",
+            "OfficialHelpEntry",
+            "directory.entries",
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "AutofillManager",
+            "CredentialManager",
+            "android.credentials",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "ContactsContract",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationListenerService",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "FileProvider",
+            "MediaStore",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Intent.ACTION_VIEW",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "URLUtil",
+            "InetAddress",
+            "PhoneNumberUtils",
+            "Patterns.PHONE",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "Settings.",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "official-pressure model used forbidden source: $forbiddenModelSource",
+                modelSource.contains(forbiddenModelSource)
+            )
+        }
+        listOf("112", "1394", "1332").forEach { exactOfficialNumber ->
+            assertFalse(
+                Regex("(?<!\\d)$exactOfficialNumber(?!\\d)").containsMatchIn(modelSource)
+            )
+        }
+
+        val builderCallPattern = Regex(
+            "OfficialPressureRealityCheckCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("OfficialPressureRealityCheckCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertEquals(1, Regex("safetyPlan\\.load\\(\\)").findAll(coachScreen).count())
+        assertEquals(1, Regex("incidents\\.count\\(\\)").findAll(coachScreen).count())
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(coachScreen.contains("val plan ="))
+        assertFalse(
+            coachScreen
+                .replace("FamilyReadinessBuilder.build(safetyPlan.load())", "")
+                .contains("safetyPlan.")
+        )
+        assertFalse(coachScreen.replace("incidents.count()", "").contains("incidents."))
+
+        val incidentCountHelper = functionBlock(incidentStoreSource, "fun count()")
+        assertTrue(incidentCountHelper.contains("lineSequence()"))
+        assertTrue(incidentCountHelper.contains(".count"))
+        listOf(
+            "decode",
+            "Base64",
+            "IncidentPreviewRedactor",
+            "preview",
+            "riskLabel",
+            "signals",
+            "score",
+            ".map",
+            "split("
+        ).forEach { forbiddenIncidentRead ->
+            assertFalse(
+                "official-pressure incident count decoded content: $forbiddenIncidentRead",
+                incidentCountHelper.contains(forbiddenIncidentRead)
+            )
+        }
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareOfficialPressureRealityCheckCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue(
+                "official-pressure UI omitted $renderedField",
+                coachScreen.contains(renderedField)
+            )
+        }
+        assertTrue(coachScreen.contains("secondaryButton(\"홈으로\")"))
+        assertEquals(1, Regex("coach\\.cards\\.forEach").findAll(coachScreen).count())
+        assertTrue(coachScreen.contains("recommended = card.id in recommendedIds"))
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.pressureScenario",
+            "card.valueFreeActionSentence",
+            "card.whyItMatters",
+            "card.doNotCallLookupShareOrSubmitBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(
+                "official-pressure card UI omitted $renderedCardField",
+                cardRenderer.contains(renderedCardField)
+            )
+        }
+
+        val statelessUiSource = coachScreen + cardRenderer + actionRouter
+        listOf(
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "text.toString(",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyStore",
+            "ScamAnalyzer.analyze(",
+            "pendingSharedText",
+            "CheckBox(",
+            "RadioButton(",
+            "Switch(",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "dialNumber",
+            "PackageManager",
+            "onSaveInstanceState",
+            ".save(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            "Intent.ACTION_SEND",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "callerId",
+            "callState",
+            "clipboardText",
+            "autofillState",
+            "loginState",
+            "recipientName",
+            "verificationStatus",
+            "reportStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "official-pressure UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+        assertFalse(Regex("currentAnalysis\\s*=(?!=)").containsMatchIn(statelessUiSource))
+
+        val expectedActionRoutes = linkedMapOf(
+            "QUICK_STOP" to "show(Screen.QUICK_STOP)",
+            "CHECKER" to "show(Screen.CHECKER)",
+            "ANALYSIS_RESULT" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)",
+            "SAFETY_PLAN" to "show(Screen.PLAN)",
+            "FAMILY_READINESS_ROADMAP" to "show(Screen.FAMILY_READINESS_ROADMAP)",
+            "FAMILY_SAFETY_DRILL_COACH" to "openDrill()",
+            "SAFE_PASTE_PRIVACY_COACH" to "show(Screen.SAFE_PASTE_PRIVACY_COACH)",
+            "ACTIVE_CONTACT_EXIT_SCRIPTS" to "show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)",
+            "FAMILY_CALLBACK_CARD" to "openFamilyCallbackCard(currentAnalysis)",
+            "FAMILY_SAFE_WORD_RESET_COACH" to
+                "show(Screen.FAMILY_SAFE_WORD_RESET_COACH)",
+            "SEPARATE_CHANNEL_VERIFICATION_COACH" to
+                "show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)",
+            "SAFE_CALL_SCRIPTS" to "show(Screen.SAFE_CALL_SCRIPTS)",
+            "VOICE_IMPERSONATION_REALITY_CHECK_COACH" to
+                "show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)",
+            "NEW_NUMBER_QUARANTINE_COACH" to "show(Screen.NEW_NUMBER_QUARANTINE_COACH)",
+            "CREDENTIAL_SECRET_FREEZE_COACH" to
+                "show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)",
+            "FAMILY_ALERT_MESSAGES" to "show(Screen.FAMILY_ALERT_MESSAGES)",
+            "VERIFICATION_OUTCOME_NEXT_STEPS_BOARD" to
+                "show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)",
+            "RECONTACT_BOUNDARY_COACH" to "show(Screen.RECONTACT_BOUNDARY_COACH)",
+            "TRUSTED_HELPER_REVIEW" to "show(Screen.TRUSTED_HELPER_REVIEW)",
+            "FAMILY_RESPONSE_ROLE_BOARD" to "show(Screen.FAMILY_RESPONSE_ROLE_BOARD)",
+            "FAMILY_CALM_DEBRIEF_AGENDA" to
+                "show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)",
+            "MONEY_TRANSFER_PAUSE_GATE" to "show(Screen.MONEY_TRANSFER_PAUSE_GATE)",
+            "ACCOUNT_LOCKDOWN" to "show(Screen.ACCOUNT_LOCKDOWN)",
+            "REMOTE_ACCESS_CUTOFF_COACH" to "show(Screen.REMOTE_ACCESS_CUTOFF_COACH)",
+            "EXPOSURE_IMPACT_TRIAGE" to "show(Screen.EXPOSURE_IMPACT_TRIAGE)",
+            "PRIVACY_CENTER" to "show(Screen.PRIVACY_CENTER)",
+            "EVIDENCE_HANDOFF_PRIVACY_COACH" to
+                "show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)",
+            "EVIDENCE_KIT" to "openEvidenceKit(null)",
+            "OFFICIAL_HELP_DIRECTORY" to
+                "openHelpDirectory(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)",
+            "REPORT_PREP" to
+                "show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)",
+            "FOLLOW_UP_CHECK_IN_PLANNER" to "show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)",
+            "SAFETY_FLOW_ROUTER" to "show(Screen.FLOW_ROUTER)"
+        )
+        val actionIdBlock = functionBlock(
+            modelSource,
+            "enum class OfficialPressureRealityCheckActionId"
+        )
+        val declaredActionIds = Regex("(?m)^\\s*([A-Z][A-Z_]+),?\\s*$")
+            .findAll(actionIdBlock)
+            .map { match -> match.groupValues[1] }
+            .toSet()
+        assertEquals(expectedActionRoutes.keys, declaredActionIds)
+        expectedActionRoutes.forEach { (actionId, destination) ->
+            assertTrue(
+                "official-pressure route omitted $actionId: $destination",
+                normalizedActionRouter.contains(
+                    "OfficialPressureRealityCheckActionId.$actionId -> $destination"
+                )
+            )
+        }
+        assertEquals(
+            expectedActionRoutes.size,
+            Regex("OfficialPressureRealityCheckActionId\\.[A-Z_]+\\s*->")
+                .findAll(actionRouter)
+                .count()
+        )
+        assertEquals(1, Regex("openHelpDirectory\\(").findAll(actionRouter).count())
+        assertFalse((coachScreen + cardRenderer + modelSource).contains("openHelpDirectory("))
+        listOf(
+            "dialNumber",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_SEND",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "Uri.parse",
+            "ClipboardManager",
+            "TextWatcher",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "PackageManager",
+            "HttpURLConnection",
+            "OkHttp",
+            "WebView",
+            "Geocoder",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenRouteApi ->
+            assertFalse(
+                "official-pressure router used forbidden API: $forbiddenRouteApi",
+                actionRouter.contains(forbiddenRouteApi)
+            )
+        }
+
+        val shareArguments = Regex("shareOfficialPressureRealityCheckCoach\\(([^)]*)\\)")
+            .findAll(activitySource)
+            .map { match -> match.groupValues[1].trim() }
+            .filterNot { argument -> argument.contains(": String") }
+            .toList()
+        assertEquals(listOf("coach.familyShareSummary"), shareArguments)
+        assertEquals(1, Regex("Intent\\.ACTION_SEND").findAll(shareHelper).count())
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertTrue(shareHelper.contains("Intent.createChooser"))
+        assertEquals(1, Regex("putExtra\\(").findAll(shareHelper).count())
+        listOf(
+            "Intent.EXTRA_SUBJECT",
+            "Intent.EXTRA_STREAM",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "ACTION_PICK",
+            "ScamAnalysis",
+            "currentAnalysis",
+            "analysis.input",
+            "IncidentPreviewRedactor",
+            "SafetyPlan",
+            "IncidentStore",
+            "incidents",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "ContactsContract",
+            "CallLog",
+            "SmsManager",
+            "ClipboardManager",
+            "AutofillManager",
+            "CredentialManager",
+            "AccountManager",
+            "NotificationManager",
+            "PackageManager",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "putString(",
+            "putBoolean(",
+            ".save(",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "callerId",
+            "callState",
+            "clipboardText",
+            "autofillState",
+            "loginState",
+            "recipientName",
+            "verificationStatus",
+            "reportStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenShareSource ->
+            assertFalse(
+                "official-pressure share used forbidden source: $forbiddenShareSource",
+                shareHelper.contains(forbiddenShareSource, ignoreCase = true)
+            )
+        }
+
+        val persistenceSources = incidentStoreSource + safetyPlanStoreSource
+        listOf(
+            "OfficialPressureRealityCheck",
+            "official_pressure_reality_check",
+            "official_pressure_status",
+            "caller_id_status",
+            "case_status",
+            "report_status",
+            "payment_status",
+            "account_status",
+            "device_status",
+            "recovery_status"
+        ).forEach { forbiddenStoredState ->
+            assertFalse(
+                "official-pressure state was persisted: $forbiddenStoredState",
+                persistenceSources.contains(forbiddenStoredState, ignoreCase = true)
+            )
+        }
+
+        val nonShareSliceSource = coachScreen + cardRenderer + actionRouter + modelSource
+        val fullSliceSource = nonShareSliceSource + shareHelper
+        listOf(
+            "ClipboardManager",
+            "getPrimaryClip",
+            "setPrimaryClip",
+            "TextWatcher",
+            "addTextChangedListener",
+            "AutofillManager",
+            "CredentialManager",
+            "android.credentials",
+            "AccountManager",
+            "BiometricPrompt",
+            "KeyguardManager",
+            "KeyStore",
+            "javax.crypto",
+            "ContactsContract",
+            "ACTION_SENDTO",
+            "smsto:",
+            "tel:",
+            "PhoneNumberUtils",
+            "Patterns.PHONE",
+            "Intent.ACTION_CALL",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_VIEW",
+            "TelecomManager",
+            "TelephonyManager",
+            "CallScreeningService",
+            "PhoneStateListener",
+            "CallLog",
+            "SmsManager",
+            "NotificationManager",
+            "NotificationCompat",
+            "NotificationListenerService",
+            "MediaRecorder",
+            "AudioRecord",
+            "SpeechRecognizer",
+            "RecognizerIntent",
+            "TextToSpeech",
+            "android.media",
+            "android.speech",
+            "Intent.EXTRA_STREAM",
+            "ACTION_SEND_MULTIPLE",
+            "ClipData",
+            "FLAG_GRANT_READ_URI_PERMISSION",
+            "FLAG_GRANT_WRITE_URI_PERMISSION",
+            "Uri.parse",
+            "FileProvider",
+            "MediaStore",
+            "ACTION_IMAGE_CAPTURE",
+            "ACTION_PICK",
+            "ACTION_GET_CONTENT",
+            "ACTION_OPEN_DOCUMENT",
+            "DocumentsContract",
+            "ContentResolver",
+            "openInputStream",
+            "java.io.File",
+            "MlKit",
+            "TextRecognition",
+            "ImageAnalysis",
+            "BitmapFactory",
+            "ExifInterface",
+            "AlarmManager",
+            "WorkManager",
+            "JobScheduler",
+            "CalendarContract",
+            "ForegroundService",
+            "BroadcastReceiver",
+            "OfficialHelpDirectoryBuilder",
+            "directory.entries",
+            "PackageManager",
+            "getInstalledPackages",
+            "getInstalledApplications",
+            "HttpURLConnection",
+            "HttpsURLConnection",
+            "java.net.URL",
+            "OkHttp",
+            "Retrofit",
+            "ktor.client",
+            "WebView",
+            "Geocoder",
+            "Patterns.WEB_URL",
+            "URLUtil",
+            "InetAddress",
+            "BillingClient",
+            "NfcAdapter",
+            "DevicePolicyManager",
+            "AccessibilityService",
+            "VpnService",
+            "UsageStatsManager",
+            "PackageInstaller",
+            "Settings.",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incident.preview",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "contact.label",
+            "contact.number",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "putString(",
+            "putBoolean(",
+            "putInt(",
+            ".save(",
+            "officialNumber",
+            "directoryValue",
+            "callerId",
+            "callState",
+            "urlValue",
+            "domainValue",
+            "caseId",
+            "accountValue",
+            "cardValue",
+            "otpValue",
+            "pinValue",
+            "passwordValue",
+            "securityAnswerValue",
+            "clipboardValue",
+            "autofillState",
+            "loginState",
+            "packageName",
+            "appName",
+            "deviceId",
+            "recipientName",
+            "verificationStatus",
+            "reportStatus",
+            "submissionStatus",
+            "recoveryStatus"
+        ).forEach { forbiddenSliceApi ->
+            assertFalse(
+                "official-pressure slice used forbidden API/source: $forbiddenSliceApi",
                 fullSliceSource.contains(forbiddenSliceApi, ignoreCase = true)
             )
         }

@@ -28,7 +28,8 @@ class MainActivity : Activity() {
         SEPARATE_CHANNEL_VERIFICATION_COACH, VERIFICATION_OUTCOME_NEXT_STEPS_BOARD,
         RECONTACT_BOUNDARY_COACH, EVIDENCE_HANDOFF_PRIVACY_COACH,
         FAMILY_SAFE_WORD_RESET_COACH, VOICE_IMPERSONATION_REALITY_CHECK,
-        NEW_NUMBER_QUARANTINE_COACH, CREDENTIAL_SECRET_FREEZE_COACH
+        NEW_NUMBER_QUARANTINE_COACH, CREDENTIAL_SECRET_FREEZE_COACH,
+        OFFICIAL_PRESSURE_REALITY_CHECK_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -153,12 +154,191 @@ class MainActivity : Activity() {
                 Screen.NEW_NUMBER_QUARANTINE_COACH -> newNumberQuarantineCoachScreen()
                 Screen.CREDENTIAL_SECRET_FREEZE_COACH ->
                     credentialSecretFreezeCoachScreen()
+                Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
+                    officialPressureRealityCheckCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.officialPressureRealityCheckCoachScreen() {
+        val coach = OfficialPressureRealityCheckCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 기관 사칭·압박 현실 점검 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.pressureScenario}\n" +
+                            card.valueFreeActionSentence
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openOfficialPressureRealityCheckAction(action) }
+            } else {
+                secondaryButton(action.label) { openOfficialPressureRealityCheckAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 기관 사칭·압박 현실 점검 카드",
+            "카드는 항상 같은 순서입니다. 직함·기관명·발신번호·링크·문서 화면을 증거로 " +
+                "단정하지 말고, 실제 이름·번호·주소·사건·계정·결제 값을 이 화면에 넣지 " +
+                "마세요. 앱은 값 없는 행동 문장과 기존 앱 경로만 보여 주며 선택·읽음·확인 " +
+                "상태를 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            officialPressureRealityCheckCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 기관 사칭·압박 점검 안내 공유") {
+            shareOfficialPressureRealityCheckCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("신고 준비 화면으로 이동") {
+            show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.officialPressureRealityCheckCard(
+        card: OfficialPressureRealityCheckCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("직접 읽을 압박 상황\n")
+                append(card.pressureScenario)
+                append("\n\n값 없는 다음 행동\n")
+                append(card.valueFreeActionSentence)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n전화·조회·공유·제출 경계\n")
+                card.doNotCallLookupShareOrSubmitBoundaries.forEach { boundary ->
+                    append("• ").append(boundary).append('\n')
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openOfficialPressureRealityCheckAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openOfficialPressureRealityCheckAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openOfficialPressureRealityCheckAction(action) }
+        }
+    }
+
+    private fun openOfficialPressureRealityCheckAction(
+        action: OfficialPressureRealityCheckAction
+    ) {
+        when (action.id) {
+            OfficialPressureRealityCheckActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            OfficialPressureRealityCheckActionId.CHECKER -> show(Screen.CHECKER)
+            OfficialPressureRealityCheckActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            OfficialPressureRealityCheckActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            OfficialPressureRealityCheckActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            OfficialPressureRealityCheckActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            OfficialPressureRealityCheckActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            OfficialPressureRealityCheckActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            OfficialPressureRealityCheckActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            OfficialPressureRealityCheckActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            OfficialPressureRealityCheckActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            OfficialPressureRealityCheckActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            OfficialPressureRealityCheckActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            OfficialPressureRealityCheckActionId.NEW_NUMBER_QUARANTINE_COACH ->
+                show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            OfficialPressureRealityCheckActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            OfficialPressureRealityCheckActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            OfficialPressureRealityCheckActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            OfficialPressureRealityCheckActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            OfficialPressureRealityCheckActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            OfficialPressureRealityCheckActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            OfficialPressureRealityCheckActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            OfficialPressureRealityCheckActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            OfficialPressureRealityCheckActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            OfficialPressureRealityCheckActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            OfficialPressureRealityCheckActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            OfficialPressureRealityCheckActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            OfficialPressureRealityCheckActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            OfficialPressureRealityCheckActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            OfficialPressureRealityCheckActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+            OfficialPressureRealityCheckActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            OfficialPressureRealityCheckActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            OfficialPressureRealityCheckActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareOfficialPressureRealityCheckCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(Intent.createChooser(shareIntent, "가족에게 기관 사칭·압박 점검 안내 공유"))
     }
 
     private fun LinearLayout.credentialSecretFreezeCoachScreen() {
@@ -171,6 +351,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("직함·기관명·문서 압박을 믿기 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -348,6 +531,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭·압박이 붙은 새 연락수단 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("비밀값을 말하거나 붙여넣기 전 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -526,6 +712,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 직함·위협과 목소리를 증거로 믿기 전 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("목소리 요청에 비밀값을 주기 전 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -869,6 +1058,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭·압박 자료를 넘기기 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("증거에 비밀값을 넣기 전 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -1038,6 +1230,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭·압박 재연락을 믿기 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("재연락에서 비밀값을 요구하면 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -1212,6 +1407,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("기관 사칭·압박의 말과 결과를 분리해 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("확인 결과와 관계없이 비밀값 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -1383,6 +1581,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭·압박을 별도 확인 전에 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("별도 확인 전 비밀값 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -1546,6 +1747,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭·앱 설치 압박을 믿기 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("원격지시 중 비밀값 입력도 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -1708,6 +1912,9 @@ class MainActivity : Activity() {
 
         title(gate.title)
         subtitle(gate.intro)
+        secondaryButton("기관 사칭·안전계좌·환급 압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         primaryButton("송금 전에 비밀값 전달도 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -1868,6 +2075,9 @@ class MainActivity : Activity() {
 
         title(scripts.title)
         subtitle(scripts.intro)
+        primaryButton("기관 사칭·위협 압박을 믿지 않고 멈춤") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         primaryButton("연락을 끝내고 비밀값 전달 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2024,6 +2234,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("기관 사칭·링크·문서 압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("비밀값은 붙여넣지 않고 먼저 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2170,6 +2383,9 @@ class MainActivity : Activity() {
 
         title(agenda.title)
         subtitle(agenda.intro)
+        secondaryButton("기관 사칭·압박을 가족과 숨기지 않고 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("가족 대화에도 비밀값 없이 멈춤 순서 공유") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2333,6 +2549,9 @@ class MainActivity : Activity() {
 
         title(board.title)
         subtitle(board.intro)
+        secondaryButton("기관 사칭·압박 대응 역할 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("비밀값 없이 대응 역할 고르기") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2523,6 +2742,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.home() {
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
+        primaryButton("경찰·검찰·은행·배송 사칭 압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         primaryButton("OTP·PIN·비밀번호를 주기 전 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2595,6 +2817,9 @@ class MainActivity : Activity() {
 
         title(mode.title)
         subtitle(mode.intro)
+        primaryButton("기관 사칭·위협 압박을 증거로 믿지 않고 멈춤") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         primaryButton("비밀값을 말하거나 입력하기 전 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2723,6 +2948,9 @@ class MainActivity : Activity() {
 
         title(router.title)
         subtitle(router.intro)
+        primaryButton("기관 사칭·압박 현실 점검 경로") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         primaryButton("비밀값 전달 전 멈춤 경로") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2820,6 +3048,9 @@ class MainActivity : Activity() {
 
         title(pack.title)
         subtitle(pack.intro)
+        secondaryButton("기관 사칭·비밀 유지 압박을 가족과 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("가족에게 비밀값 대신 행동만 알리기") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -2926,6 +3157,9 @@ class MainActivity : Activity() {
 
         title(checklist.title)
         subtitle(checklist.intro)
+        secondaryButton("기관 사칭·계정 보호 압박을 믿기 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("계정 조치 전에 비밀값 전달 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -3164,6 +3398,9 @@ class MainActivity : Activity() {
             return
         }
         riskCard(analysis)
+        primaryButton("이 기관 사칭·압박 요청을 믿기 전 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         primaryButton("이 요청에 비밀값을 주기 전 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -3375,6 +3612,9 @@ class MainActivity : Activity() {
 
         title(privacyCenter.title)
         subtitle(privacyCenter.intro)
+        secondaryButton("값·조회 없이 기관 사칭·압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("비밀값을 보지 않는 멈춤 코치") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -3558,6 +3798,9 @@ class MainActivity : Activity() {
         val directory = OfficialHelpDirectoryBuilder.build()
         title(directory.title)
         subtitle(directory.intro)
+        secondaryButton("이 안내와 상대의 주장을 분리해 압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         section(
             "로컬·수동 안내",
             "연락처와 말할 내용은 앱에 내장되어 있으며 네트워크에서 조회하지 않습니다. " +
@@ -3606,6 +3849,9 @@ class MainActivity : Activity() {
     private fun LinearLayout.officialReportPrepScreen() {
         title("신고용 상담 준비 카드")
         subtitle("현재 AI 보호자 분석을 개인정보 가림 단서, 추천 공식 연락처, 상담 대사와 전화 전 체크리스트로 정리합니다.")
+        secondaryButton("신고 준비 전에 기관 사칭·압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("현재 상대와 분리된 확인 경로 고르기") {
             show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
         }
@@ -3751,6 +3997,9 @@ class MainActivity : Activity() {
             append("\n다음 할 일: ").append(readiness.nextAction)
         }
         section("${readiness.title} (${readiness.completedCount}/${readiness.totalCount})", body)
+        secondaryButton("기관 사칭·압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("비밀값 전달 전 멈춤 순서") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -4241,6 +4490,9 @@ class MainActivity : Activity() {
 
         title(review.title)
         subtitle(review.intro)
+        secondaryButton("보호자와 기관 사칭·압박 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("보호자와 비밀값 없는 멈춤 순서 보기") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -4994,6 +5246,9 @@ class MainActivity : Activity() {
 
         title(triage.title)
         subtitle(triage.intro)
+        secondaryButton("기관 사칭·압박과 실제 행동을 분리해 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("노출됐을 수 있는 비밀값부터 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
@@ -5141,6 +5396,9 @@ class MainActivity : Activity() {
 
         title(planner.title)
         subtitle(planner.intro)
+        secondaryButton("기관 사칭·압박이 이어질 때 다시 현실 점검") {
+            show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+        }
         secondaryButton("후속 점검에도 비밀값을 적지 않고 멈춤") {
             show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
         }
