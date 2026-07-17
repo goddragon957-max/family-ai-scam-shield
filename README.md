@@ -17,33 +17,34 @@ Korean Android Kotlin MVP for a family AI voice-phishing prevention app. Suspici
 11. 자격 비밀값 멈춤 코치에서 OTP·PIN·비밀번호·보안 답·상품권 비밀값을 말하거나 입력·붙여넣기·캡처·전달·재사용하기 전에 멈추고 값 없는 카드에서 기존 돈·계정·원격지시·노출·개인정보·가족·증거·후속 경로 선택
 12. 기관 사칭 압박 현실 점검 코치에서 직함·기관명·배지·발신번호·링크·문서·협박 표현을 증거로 단정하지 않고 같은 연락 안의 돈·인증·앱 행동을 멈춘 뒤 값 없는 기존 공식 도움·신고 준비·돈·계정·기기·증거·가족·후속 경로 선택
 13. 회복 약속 현실 점검 코치에서 환급·취소·계정 동결·지갑 추적·신고 대행 같은 약속을 결과로 믿지 않고 수수료·비밀값·앱 설치·화면공유 요구를 멈춘 뒤 값 없는 기존 돈·자격 비밀값·기관 압박·계정·기기·증거·가족·공식 도움·후속 경로 선택
-14. 송금 전 멈춤 확인에서 송금·결제·상품권·기프티콘·가상자산·계좌 이동·금융 비밀 제공을 별도 확인 전까지 멈추고 기존 가족·계정·증거·공식 도움 경로 선택
-15. 진행 중 연락 종료 문장에서 통화·문자·카톡·영상통화·화면공유·앱 설치 압박을 끝낼 짧은 수동 문장을 읽고 기존 가족·보호 경로로 이동
-16. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
-17. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
-18. 안전 붙여넣기 개인정보 코치에서 원문을 읽거나 자동으로 바꾸지 않는 수동 가림 순서와 기존 검사·가족 보호 경로 확인
-19. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
-20. 로컬 규칙 기반 AI 보호자 분석
-21. 위험 신호 설명 카드에서 일치한 신호가 왜 의심스러운지, 흔한 압박 목표와 즉시 할 안전 행동을 원문 없이 확인
-22. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
-23. "무엇이 노출됐는지 고르기"에서 실제로 한 행동을 직접 확인하고 해당할 수 있는 기존 멈춤·콜백·수습·계정 보호·증거·공식 도움 흐름 선택
-24. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
-25. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
-26. 증거 전달 개인정보 코치에서 원문·스크린샷·파일을 앱에 넣지 않고 가족·보호자·상담 창구에 말할 행동 종류, 전달하지 않을 민감값과 다음 기존 앱 경로를 확인
-27. 상황별 신고·상담 연락처와 말할 내용 확인
-28. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
-29. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
-30. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
-31. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
-32. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
-33. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
-34. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
-35. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
-36. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
-37. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
-38. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
-39. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
-40. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
+14. 상품권·코드 멈춤 코치에서 상품권·기프티콘·선불카드 구매, PIN·바코드·QR·교환 코드 말하기·촬영·캡처·전달·사용·잔액 확인을 모두 멈추고 값 없는 기존 돈·자격 비밀값·회복 약속·기관 압박·계정·기기·증거·가족·공식 도움·후속 경로 선택
+15. 송금 전 멈춤 확인에서 송금·결제·상품권·기프티콘·가상자산·계좌 이동·금융 비밀 제공을 별도 확인 전까지 멈추고 기존 가족·계정·증거·공식 도움 경로 선택
+16. 진행 중 연락 종료 문장에서 통화·문자·카톡·영상통화·화면공유·앱 설치 압박을 끝낼 짧은 수동 문장을 읽고 기존 가족·보호 경로로 이동
+17. 안전 흐름 길잡이에서 현재 분석과 가족 준비 상태에 맞는 기존 대응 화면 선택
+18. 개인정보 센터에서 로컬 데이터 목록, 사용하지 않는 권한, 항목별 삭제 제어 확인
+19. 안전 붙여넣기 개인정보 코치에서 원문을 읽거나 자동으로 바꾸지 않는 수동 가림 순서와 기존 검사·가족 보호 경로 확인
+20. 의심 SMS/Kakao/통화 녹취 붙여넣기 또는 다른 앱에서 텍스트 공유로 바로 불러오기
+21. 로컬 규칙 기반 AI 보호자 분석
+22. 위험 신호 설명 카드에서 일치한 신호가 왜 의심스러운지, 흔한 압박 목표와 즉시 할 안전 행동을 원문 없이 확인
+23. 위험도, 탐지 신호, 즉시 중단 행동, 가족 콜백/안전단어 루틴, 긴급 대응 안내, 원문 없는 가족 공유 리포트
+24. "무엇이 노출됐는지 고르기"에서 실제로 한 행동을 직접 확인하고 해당할 수 있는 기존 멈춤·콜백·수습·계정 보호·증거·공식 도움 흐름 선택
+25. 현재 분석과 저장된 안전 계획으로 가족 콜백 확인 카드 실행
+26. 현재 분석에서 개인정보를 가린 신고용 상담 준비 카드 만들기
+27. 증거 전달 개인정보 코치에서 원문·스크린샷·파일을 앱에 넣지 않고 가족·보호자·상담 창구에 말할 행동 종류, 전달하지 않을 민감값과 다음 기존 앱 경로를 확인
+28. 상황별 신고·상담 연락처와 말할 내용 확인
+29. 기기 로컬 사건 기록 저장(전체 원문 대신 개인정보 가림 미리보기)
+30. 저장된 사건의 위험도·탐지 신호·시간 순서를 사건 타임라인 요약에서 확인하고 집계만 안전하게 가족 공유
+31. 계정·기기 잠금 체크리스트에서 노출 가능성에 맞는 수동 보호 순서와 기존 대응 화면 확인
+32. 가족 경고 메시지 팩에서 상황별 개인정보 보호 경고문을 골라 Android 공유 화면으로 직접 공유
+33. 24시간 수습 계획에서 지금~15분·1시간 안·오늘 안·이번 주 시간대별로 무엇을 할지 확인하고 기존 대응 화면으로 이동
+34. 며칠 뒤 다시 확인할 것에서 오늘 밤·내일 오전·2~3일·이번 주·1~2주·이번 달에 가족이 직접 다시 확인할 항목과 기존 안전 화면을 확인
+35. 보호자 도움 요청 카드에서 역할별 도우미에게 무엇을 부탁하고 무엇을 부탁하지 말지 확인한 뒤 비밀 없는 요청 문구를 공유
+36. 보호자와 함께 안전 검토에서 비밀값·원문을 묻지 않고 실제 행동 종류만 분류한 뒤 콜백·수습·증거·공식 도움·다음 가족 준비 화면으로 이동
+37. 안전 확인 전화 스크립트에서 가족 기존 번호, 은행·카드사, 1394/112/1332, 통신사·계정 지원, 기기·원격제어 도움, 증거·신고 준비, 예방 점검 전화별로 무엇을 물어보고 무엇을 절대 말하지 않을지 확인
+38. 가족 안전 연습 코치에서 현재 분석 신호와 값 없는 가족 준비도에 맞춘 가상 역할극, 멈춤 문구, 대응 순서와 기존 안전 화면을 함께 연습
+39. 가족 준비 로드맵에서 값 없는 준비 수준과 현재 분석 신호에 맞춰 다음에 준비할 단계를 고르고 기존 안전 화면으로 이동
+40. 가족 역할 보드에서 이름이나 연락처를 적지 않고 멈춤·본인확인·노출 분류·계정 보호·증거·공식 도움·가족 경고·후속 점검의 일반 역할을 나눠 기존 대응 화면으로 이동
+41. 가족 차분 대화 안건에서 무서운 연락 뒤 5분 동안 비난 없이 추가 행동을 멈추고 행동 종류·별도 콜백·보호·증거·공식 도움·후속 약속을 말로 정한 뒤 기존 대응 화면으로 이동
 
 ## Share Entry
 
@@ -643,6 +644,57 @@ OCR·이미지 분석·선택기·첨부·업로드·스트림·URI 공유를 �
 카드·은행·결제·거래·지갑·비밀값·기기·앱·파일·받는 사람·환급/차지백/취소/동결/추적/복구 결과를
 넣지 않습니다. 파일·스트림을 첨부하거나 URI를 공유하거나 대상을 미리 고르거나 자동 전송하지
 않습니다.
+
+## Gift Card Code Pause Coach (상품권·코드 멈춤 코치)
+
+홈 준비도, 분석 결과, 긴급 멈춤, 송금 멈춤, 자격 비밀값, 회복 약속, 기관 압박, 계정·기기 잠금,
+원격지시 중단, 노출 분류, 증거·사건 타임라인, 공식 도움·신고 준비, 진행 중 연락 종료, 안전 붙여넣기,
+별도 경로 확인·확인 후속·재연락·새 번호·목소리 점검, 가족 경고·보호자 검토·역할·차분 대화·후속
+계획·안전 흐름·개인정보 센터에서 상품권 구매나 코드 전달 전에 여는 수동 멈춤 화면입니다. 버튼은
+기존 돈, 자격 비밀값, 회복 약속, 기관 압박, 계정·원격 접근·노출, 증거, 공식 도움·신고 준비,
+가족·보호자·후속 화면으로만 이동하며 그 기능을 이 코치 안에 복제하지 않습니다.
+
+`GiftCardCodePauseCoachBuilder`는 현재 `ScamAnalysis?`의 `riskLevel`과 `matchedSignals`, 실제 안전단어·
+콜백 문장·연락처 값이 없는 `FamilyReadiness.level`, 저장 사건의 음수가 아닌 개수 범주만 사용해 같은
+상태에 항상 같은 카드와 기존 경로를 추천합니다. 분석 원문·점수·행동 계획·요약·가린 단서, 사건
+본문/미리보기, 안전 계획 실제 값, 연락처·번호·채널, 기관/상점/브랜드 목록·번호, URL/도메인,
+사건/신고/제출/접수 값, 계정·카드·은행·결제·거래·지갑·환급/차지백 값, 실제 상품권·바우처·PIN·
+바코드·QR·일련번호·교환 코드, OTP/PIN/비밀번호/보안 답, 주민·기기 식별자, 앱/패키지·파일/미디어,
+클립보드·자동완성·로그인/인증·통화/SMS/알림·받는 사람·도우미/변호사/수사관·검증/복구 결과값을
+읽거나 카드·추천·공유문에 넣지 않습니다.
+
+항상 같은 순서의 여섯 값 없는 수동 카드는 상품권·기프티콘 구매를 송금보다 가볍게 보지 않기,
+코드·PIN·바코드·QR을 말하거나 사진·캡처·전달하지 않기, 여러 장으로 나눠 사라는 지시 멈추기,
+환급·수수료·보증금·벌금·가족 위급을 상품권으로 해결하지 않기, 앱 설치·링크·통화·화면공유로
+코드 확인을 돕겠다는 흐름 끊기, 증거·가족·공식 도움은 코드값 없이 기존 화면에서 정리하기입니다.
+고위험, 상품권/금융/결제, 자격 비밀·OTP, 사칭·비밀 유지·기관 압박, 회복 약속, 링크·스미싱, 앱
+설치·통화 유지·화면공유, 가족 위급·합성 음성·번호 변경, 저장 사건 개수와 준비 수준은 추천 경로만
+결정적으로 바꿉니다. 분석이 없어도 모든 카드를 보수적으로 보여 주며 준비 수준이 높아도 어떤
+상품권·코드 요청이나 구매·결제·사용 상태가 실제이거나 안전하다는 근거로 삼지 않습니다.
+
+이 코치는 새 Android 권한·네트워크·기능별 저장소 없는 로컬 전용·무상태 수동 안내입니다. 상품권·
+바우처·코드·PIN·바코드·QR·일련번호를 읽기·촬영·캡처·스캔·OCR·해독·검증·구매·사용·잔액 확인·
+전달·업로드·첨부하지 않으며 환급·차지백·취소·동결·차단·추적·복구를 처리하지 않습니다. 공식
+번호/경로·상점/브랜드·전화번호·발신자 표시·URL/도메인·문서·사건·신고·신원·자격 증명·계정·카드·
+은행·결제·지갑·블록체인/거래소·기기·앱을 조회·검증하지 않고 신고 제출·법률/금융 결과 확인도 하지
+않습니다. 다이얼·발신·통화·통화 종료/선별/차단·SMS·받는 사람 선택·자동 전송·웹/브라우저·지도,
+연락처·주소록·통화 기록/상태·문자·알림·클립보드·`TextWatcher`·자동완성·Credential Manager·
+AccountManager·인증·암호화 API를 사용하지 않습니다.
+
+파일·사진·이미지·오디오·미디어·저장소·카메라·스크린샷·바코드/QR 스캐너·OCR·이미지 분석·선택기·
+첨부·업로드·스트림·URI 공유, 알림·알람·일정·리마인더·스케줄러·백그라운드 작업, 상품권·결제·은행
+API·NFC, 기기 관리자·접근성·VPN·앱 목록 조회·설치·제거·설정 변경을 사용하지 않습니다. 카드·추천·
+읽음·공유·코드/구매/잔액/사용/환급/차지백/취소/동결/차단/추적/복구·검증 상태·체크·메모·진행·이력을
+저장하지 않고, 화면·카드·경로·공유 버튼은 분석·사건·안전 계획·공식 목록·연락처·통신·계정·결제·
+상품권·기기·신고·검증 상태나 돈의 움직임을 추가·수정·삭제하지 않습니다.
+
+"가족에게 값 없는 상품권·코드 멈춤 안내 공유"는 사용자가 직접 눌렀을 때만 Android
+`ACTION_SEND`의 `text/plain` 선택 화면을 열고 빌더가 만든
+`GiftCardCodePauseCoach.familyShareSummary`만 전달합니다. 공유문에는 고정된 카드와 기존 경로·행동
+종류 라벨만 들어가며 원문·가린 단서·계획/사건 값·기관/공식 번호·상점/브랜드·사람·연락처·채널·
+계정·카드·은행·결제·지갑·상품권/코드값·기기·앱·파일·받는 사람·구매/잔액/사용/환급/차지백/취소/
+동결/차단/추적/복구/법률/금융 결과를 넣지 않습니다. 파일·스트림을 첨부하거나 URI를 공유하거나
+대상을 미리 고르거나 자동 전송하지 않습니다.
 
 ## Evidence Handoff Privacy Coach (증거 전달 개인정보 코치)
 
@@ -1437,6 +1489,7 @@ run and result.
 ## Privacy And Limitations
 
 - No server and no network analysis.
+- Gift Card Code Pause Coach is deterministic, local-only, stateless manual guidance for stopping a pressured gift-card/voucher purchase or code/PIN/barcode/QR handoff and moving only to existing money-pause, credential, recovery-promise, official-pressure, account, remote-cutoff, exposure, evidence, official-help/report-prep, family/helper, and follow-up routes. It uses only current risk/signals, readiness level, and saved-incident count category; reads no pasted text, redacted clue, incident body/preview, safety-plan literal, contact/phone/channel/caller-ID/URL/domain/directory/store/brand/case/report/receipt/account/card/bank/payment/transaction/wallet/gift-card/voucher/PIN/barcode/QR/serial/redeem-code/OTP/password/security-answer/resident/device/app/package/file/media/clipboard/autofill/login/call/SMS/notification/recipient/helper/lawyer/investigator/result value; and never establishes or performs a purchase, redemption, balance check, refund, chargeback, cancellation, freeze, block, trace, recovery, report, case, legal, or financial result. It adds no permission, network/browser/map/geocoder, official/number/URL/caller-ID/document/report/identity/credential/device/code/payment/recovery lookup or validation, gift-card/payment/banking/card/wallet/blockchain/exchange processing, dial/call/SMS/contact/notification, clipboard/text-watcher/autofill/credential/account/auth/crypto, file/photo/media/camera/barcode/QR/OCR/picker/attachment/stream/URI/upload, scheduler/background, NFC, or device-control capability. It stores no coach, code, or result state, mutates no analysis/incident/safety-plan/directory/contact/call/message/account/payment/wallet/gift-card/device/report/verification/recovery state, auto-sends and submits nothing, and its user-triggered `ACTION_SEND` `text/plain` share passes only builder-produced fixed card and existing route/action labels without an attachment.
 - Recovery Promise Reality Check Coach is deterministic, local-only, stateless manual guidance for rejecting an advance-fee, secret-sharing, app-install, or screen-share condition attached to a promised recovery and moving only to existing money-pause, credential, official-pressure, account, remote-cutoff, exposure, evidence, official-help/report-prep, family/helper, and follow-up routes. It uses only current risk/signals, readiness level, and saved-incident count category; reads no pasted text, redacted clue, incident body/preview, safety-plan literal, contact/phone/channel/caller-ID/URL/domain/directory/case/report/receipt/account/card/bank/payment/transaction/wallet/refund/chargeback/OTP/PIN/password/security-answer/resident/device/app/package/file/media/clipboard/autofill/login/call/SMS/notification/recipient/helper/lawyer/investigator/result value; and never establishes or performs a recovery, refund, chargeback, cancellation, freeze, block, trace, report, case, legal, or financial result. It adds no permission, network/browser/map/geocoder, official/number/URL/caller-ID/document/report/case/identity/credential/device/recovery lookup or validation, blockchain/exchange/wallet lookup, payment/banking/card processing, dial/call/SMS/contact/notification, clipboard/text-watcher/autofill/credential/account/auth/crypto, file/photo/media/camera/OCR/picker/attachment/stream/URI/upload, scheduler/background, NFC, or device-control capability. It stores no coach or result state, mutates no analysis/incident/safety-plan/directory/contact/call/message/account/payment/wallet/device/report/verification/recovery state, auto-sends and submits nothing, and its user-triggered `ACTION_SEND` `text/plain` share passes only builder-produced fixed card and existing route/action labels without an attachment.
 - Official Pressure Reality Check Coach is deterministic, local-only, stateless manual guidance for treating a claimed institution, title, badge, caller ID, link, document, case, or threat as insufficient proof and moving only to existing official-help, report-prep, money-pause, credential, account, remote-cutoff, exposure, evidence, family, and follow-up routes. It uses only current risk/signals, readiness level, and saved-incident count category; reads no pasted text, redacted clue, incident body/preview, safety-plan literal, contact/phone/caller-ID/URL/domain/directory/account/card/OTP/PIN/password/security-answer/resident/device/app/package/file/media/clipboard/autofill/login/call/SMS/notification/recipient/submission/result value; and never establishes whether a person, institution, title, number, link, document, case, report, payment, account, device, bank action, or recovery state is official, real, safe, secure, verified, valid, trusted, accepted, submitted, received, blocked, resolved, complete, recovered, refunded, frozen, protected, legal, or problem-free. It adds no permission, network/browser/map/geocoder, official/number/case/account/caller-ID/URL/domain/document/report/identity/payment/device/recovery lookup or validation, dial/call/SMS/contact/notification, clipboard/text-watcher/autofill/credential/account/auth/crypto, file/photo/media/camera/OCR/picker/attachment/stream/URI/upload, scheduler/background, payment/banking/NFC, or device-control capability. It stores no coach or result state, mutates no analysis/incident/safety-plan/directory/contact/call/message/account/payment/device/report/verification state, auto-sends and submits nothing, and its user-triggered `ACTION_SEND` `text/plain` share passes only builder-produced fixed card and existing route/action labels without an attachment.
 - Family Safe-Word Reset Coach is deterministic, local-only, stateless manual guidance for treating a possibly exposed family check as insufficient on its own, choosing a new offline rule, manually editing the existing safety plan, sharing only the changed rule category, and rehearsing with fictional wording. It uses only current risk/signals, readiness level, and saved-incident presence; never reads, displays, shares, or mutates a safety-plan literal, pasted text, incident body/preview, redacted clue, contact/phone/URL/domain/account/card/OTP/PIN/password/resident/device/official-number/app/package/file/media/call/SMS/notification/recipient/reset-result value; and does not generate, validate, copy, infer, synchronize, or automatically rotate a secret. The plan route only opens the existing editor for an explicit manual choice. It adds no permission, persistence, contact/call/SMS/clipboard/notification/file/photo/media/camera/OCR/attachment/URI/network/browser/map/lookup/validation/scanning/scheduler/payment/banking/device-control capability, auto-sends nothing, selects no recipient, and makes no reset, identity, safety, financial, legal, recovery, or device-cleaning guarantee. Its user-triggered `ACTION_SEND` `text/plain` share passes only builder-produced fixed card and existing route/action labels.

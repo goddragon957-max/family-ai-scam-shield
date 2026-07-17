@@ -1405,6 +1405,88 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun giftCardCodePauseCoachIsInventoriedAsManualNoCodeAccessAndNonAuthoritative() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "상품권·코드 멈춤 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·받는 사람·상품권·기프티콘·선불카드·바우처·코드·" +
+                "PIN·바코드·QR·일련번호·교환 코드·구매·결제·잔액·사용·환급·차지백·취소·동결·차단·" +
+                "추적·복구·검증 상태·체크 표시·메모·리마인더·진행·이력"
+
+        assertTrue(transientInventory.detail.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("만들거나 기록하지 않"))
+
+        listOf(
+            "새 Android 권한·네트워크·저장소",
+            "로컬 전용·무상태 수동 안내",
+            "기존 돈 멈춤·자격 비밀값·회복 약속·기관 압박·계정 보호·원격지시 중단·노출 분류·증거·공식 도움·신고 준비·가족·보호자·후속 점검",
+            "화면으로만 이동",
+            "상품권·기프티콘·선불카드·바우처·코드·PIN·바코드·QR·일련번호·교환 코드 값",
+            "캡처·사진 촬영·스캔·해독·검사·검증·구매·사용·잔액 확인·전달·업로드·첨부·환급·차지백·취소·동결·차단·추적·복구하지 않습니다",
+            "공식·실제·안전·보안·검증·유효·접수·제출·수신·차단·취소·역전·회복·환급·동결·보호·적법·완료·해결·사용 가능·추적 가능·보장·문제없음",
+            "판정하거나 증명하지 않습니다",
+            "상점·브랜드·기관·공식 번호·전화번호·발신자 표시·URL·도메인·프로필·문서·사건·신고·신원·자격 증명",
+            "상품권·코드·잔액·사용·계정·카드·은행·결제·거래·지갑·블록체인·거래소·환급·차지백·취소·동결·차단·추적·복구",
+            "조회하거나 검증하지 않고",
+            "신고 제출·공식 경로 조회",
+            "연락처·주소록·통화 기록·통화 상태·문자·SMS·알림·클립보드",
+            "텍스트 감시기·자동완성·Credential Manager·Android 계정 관리자·로그인·인증·키 저장소·암호화 API",
+            "전화 앱 열기·다이얼·발신·통화·통화 종료·통화 선별·차단·SMS",
+            "받는 사람 선택·자동 전송·네트워크·웹·브라우저·지도·위치",
+            "파일·문서·사진·이미지·오디오·미디어·저장소를 읽지 않고",
+            "카메라·화면 캡처·스크린샷 가져오기·바코드·QR 스캔·OCR·이미지 분석·선택기·첨부·업로드·스트림·URI 공유",
+            "알림·알람·일정·리마인더·스케줄러·백그라운드 작업",
+            "상품권·결제·은행 API·NFC·기기 관리자·접근성 서비스·VPN·앱 목록 조회·설치·제거·설정 변경",
+            "카드·추천·진행·공유·결과 상태를 저장하거나 자동으로 변경하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "gift-card boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "원문·가린 단서·상품권·기프티콘·선불카드·바우처·코드·PIN·바코드·QR·일련번호·교환 코드",
+            "상점·브랜드·기관·도우미·발신자·번호·링크·URL·도메인·문서·사건·신고·제출·접수 상태",
+            "연락처·주소록·통화·문자·SMS·알림·클립보드·자동완성·자격 증명",
+            "계정·로그인·카드·은행·결제·거래·지갑·구매·잔액·사용",
+            "환급·차지백·취소·동결·차단·추적·복구·법률·금융 결과 상태",
+            "파일·사진·이미지·미디어·사건 기록",
+            "가족 안전 계획의 실제 값",
+            "공식 도움 기관 목록·기기·앱·패키지·접근성·네트워크·VPN·알림 설정·검증 상태",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "gift-card mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(summary.contains(boundaryStatement))
+        assertTrue(summary.contains(mutationStatement))
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"
@@ -1830,6 +1912,18 @@ class PrivacyCenterBuilderTest {
             "지갑 추적 완료",
             "결제 취소 완료",
             "계정 동결 완료",
+            "유효한 상품권 코드입니다",
+            "사용 가능한 코드입니다",
+            "미사용 코드입니다",
+            "상품권 사용 완료",
+            "상품권 구매 완료",
+            "잔액 확인 완료",
+            "코드 차단 완료",
+            "상품권 환급 완료",
+            "코드 추적 완료",
+            "바코드를 자동으로 스캔합니다",
+            "QR 코드를 자동으로 읽습니다",
+            "상품권 코드를 저장합니다",
             "100%"
         )
 
