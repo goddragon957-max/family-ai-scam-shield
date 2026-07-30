@@ -2293,6 +2293,93 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun screenshotPrivacyGuardCoachIsInventoriedAsManualNoDetectionOrMutation() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "스크린샷 개인정보 가드 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState = "카드 선택·추천·읽음·공유·체크 표시·메모·진행·이력"
+
+        assertTrue(transientInventory.detail.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("만들거나 기록하지 않"))
+
+        listOf(
+            "새 Android 권한·네트워크·저장소 없는 로컬 전용·무상태 수동 안내",
+            "값 없는 고정 화면캡처 개인정보 안내 문장 카드",
+            "WindowManager.LayoutParams.FLAG_SECURE를 사용하지 않으므로 이 앱의 어떤 화면도 캡처를 강제로 막지 않고",
+            "미디어스토어 콘텐츠 감시자·접근성 서비스나 다른 방법으로 실제 화면캡처 발생을",
+            "감지·기록하지 않습니다",
+            "갤러리·카메라·CameraX·Camera2·미디어스토어·",
+            "이미지·파일·미디어·저장소를 읽거나 표시·저장·분석·삭제하지 않습니다",
+            "연락처·통화 기록·문자·SMS·통화 상태·알림을 읽거나 감시하지 않고",
+            "전화 앱 열기·자동 다이얼·발신·통화·종료·SMS·받는 사람 선택·자동 전송을",
+            "웹 탐색·지도·위치·기관 번호 조회·공식 경로 조회·전화번호 검증",
+            "링크·URL·도메인 검증·링크 스캔을 하지 않고 알림·알람·일정·리마인더·스케줄러·",
+            "백그라운드 작업을 만들거나 예약하지 않습니다",
+            "결제·은행·NFC·Android 계정",
+            "관리자나 기기 관리자·접근성 서비스·VPN·사용 통계·앱·패키지 조회·설치·제거·",
+            "설정 변경 같은 기기 제어 기능을 사용하지 않습니다",
+            "카드 선택·추천·읽음·공유·",
+            "체크 표시·메모·진행·이력을 만들거나 기록하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "screenshot guard boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "원문·가린 단서·캡처본·이미지·갤러리·클라우드 백업·화면캡처 감지·차단 상태",
+            "연락처·주소록·통화·통화 기록·문자·SMS·알림·클립보드·자격 증명·계정·로그인·카드·",
+            "은행·결제·복구 상태",
+            "파일·미디어·사건 기록·가족 안전 계획의 실제 값·공식 도움",
+            "기관 목록·기기·앱·패키지·접근성·네트워크·VPN·알림 설정·검증 상태 또는 돈의",
+            "움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "screenshot guard mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(summary.contains(boundaryStatement))
+        assertTrue(summary.contains(mutationStatement))
+        assertFalse(summary.contains(persistenceStatement))
+
+        val allCopy = center.noCollectionStatements.joinToString("\n") + "\n" + summary
+        assertFalse(allCopy.contains("MediaStore"))
+        assertFalse(allCopy.contains("ContentObserver"))
+        assertFalse(allCopy.contains("AccessibilityService"))
+        listOf(
+            "화면캡처가 감지됐습니다",
+            "캡처가 차단됐습니다",
+            "캡처본이 삭제됐습니다",
+            "갤러리가 보호됩니다",
+            "클라우드 백업이 안전합니다",
+            "공유가 완료됐습니다",
+            "100%"
+        ).forEach { unsafeClaim -> assertFalse(allCopy.contains(unsafeClaim)) }
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"

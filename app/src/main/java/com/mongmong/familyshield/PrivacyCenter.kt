@@ -154,6 +154,8 @@ object PrivacyCenterBuilder {
                 "생존 확인·라이브니스·생체 정보·갤러리·카메라·스크린샷·OCR·바코드·QR·미디어·URI·경로·계정·연락처·" +
                 "전화번호·SIM·기기 식별값·업로드·제출·접수·확인·검증·유효성·가림·촬영·스캔·분석·일치·결과 상태·" +
                 "체크 표시·메모·리마인더·진행·이력은 만들거나 기록하지 않으며, " +
+                "스크린샷 개인정보 가드 코치의 카드 선택·추천·읽음·공유·체크 표시·메모·진행·" +
+                "이력은 만들거나 기록하지 않으며, " +
                 "노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, " +
                 "보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·" +
                 "공유·보호자 검토 이력, " +
@@ -668,7 +670,30 @@ object PrivacyCenterBuilder {
                 "카드·은행·결제·지갑·거래·연락처·주소록·통화·통화 기록·통화 상태·문자·SMS·발신자 표시·알림·클립보드·자동완성·자격 증명·로그인·인증, " +
                 "사건 기록·가족 안전 계획의 실제 값·공식 도움 기관 목록·카메라·마이크·OCR·QR·바코드·이미지·얼굴·생존·라이브니스·생체 인증·파일·미디어·저장소·선택기·첨부·업로드·스트림·URI·" +
                 "문서·신분·얼굴 검증·기관·직원·사건 조회·신고 제출·네트워크·웹·브라우저·앱·패키지·권한·기기·설정·기기 관리자·접근성·VPN·사용 통계·알림 수신·" +
-                "계정·인증·암호화·결제·은행·NFC·지갑·블록체인·스케줄러·백그라운드·저장소 상태 또는 돈의 움직임을 추가·수정·삭제하지 않습니다."
+                "계정·인증·암호화·결제·은행·NFC·지갑·블록체인·스케줄러·백그라운드·저장소 상태 또는 돈의 움직임을 추가·수정·삭제하지 않습니다.",
+            "스크린샷 개인정보 가드 코치는 새 Android 권한·네트워크·저장소 없는 로컬 전용·무상태 " +
+                "수동 안내입니다. 값 없는 고정 화면캡처 개인정보 안내 문장 카드에서 기존 안전 " +
+                "붙여넣기·자격 비밀값·계정 보호·노출 분류·증거 전달 개인정보·가족·보호자·신분증 " +
+                "촬영 멈춤·공식 도움·후속 점검 화면으로만 이동합니다. WindowManager.LayoutParams." +
+                "FLAG_SECURE를 사용하지 않으므로 이 앱의 어떤 화면도 캡처를 강제로 막지 않고, " +
+                "미디어스토어 콘텐츠 감시자·접근성 서비스나 다른 방법으로 실제 화면캡처 발생을 " +
+                "감지·기록하지 않습니다. 갤러리·카메라·CameraX·Camera2·미디어스토어·" +
+                "콘텐츠 감시자·OCR·이미지 분석·파일 선택기·클립보드를 사용하지 않고 캡처된 " +
+                "이미지·파일·미디어·저장소를 읽거나 표시·저장·분석·삭제하지 않습니다. 연락처·" +
+                "통화 기록·문자·SMS·통화 상태·알림을 읽거나 감시하지 않고 연락처 읽기·쓰기·" +
+                "고르기, 전화 앱 열기·자동 다이얼·발신·통화·종료·SMS·받는 사람 선택·자동 전송을 " +
+                "하지 않습니다. 웹 탐색·지도·위치·기관 번호 조회·공식 경로 조회·전화번호 검증·" +
+                "링크·URL·도메인 검증·링크 스캔을 하지 않고 알림·알람·일정·리마인더·스케줄러·" +
+                "백그라운드 작업을 만들거나 예약하지 않습니다. 결제·은행·NFC·Android 계정 " +
+                "관리자나 기기 관리자·접근성 서비스·VPN·사용 통계·앱·패키지 조회·설치·제거·" +
+                "설정 변경 같은 기기 제어 기능을 사용하지 않습니다. 카드 선택·추천·읽음·공유·" +
+                "체크 표시·메모·진행·이력을 만들거나 기록하지 않습니다.",
+            "스크린샷 개인정보 가드 코치 화면을 열거나 카드·경로·공유 버튼을 누르는 것만으로 " +
+                "원문·가린 단서·캡처본·이미지·갤러리·클라우드 백업·화면캡처 감지·차단 상태, " +
+                "연락처·주소록·통화·통화 기록·문자·SMS·알림·클립보드·자격 증명·계정·로그인·카드·" +
+                "은행·결제·복구 상태, 파일·미디어·사건 기록·가족 안전 계획의 실제 값·공식 도움 " +
+                "기관 목록·기기·앱·패키지·접근성·네트워크·VPN·알림 설정·검증 상태 또는 돈의 " +
+                "움직임을 추가·수정·삭제하지 않습니다."
         )
         val cleanupActions = buildCleanupActions(
             incidentCount = safeIncidentCount,
@@ -700,6 +725,12 @@ object PrivacyCenterBuilder {
         val idDocumentSelfieMutationStatement = noCollectionStatements.single { statement ->
             statement.startsWith("신분증·셀피 촬영 멈춤 코치 화면")
         }
+        val screenshotPrivacyGuardBoundaryStatement = noCollectionStatements.single { statement ->
+            statement.startsWith("스크린샷 개인정보 가드 코치는")
+        }
+        val screenshotPrivacyGuardMutationStatement = noCollectionStatements.single { statement ->
+            statement.startsWith("스크린샷 개인정보 가드 코치 화면")
+        }
         val familyShareSummary = buildFamilyShareSummary(
             consentAccepted = consentAccepted,
             incidentCount = safeIncidentCount,
@@ -715,7 +746,9 @@ object PrivacyCenterBuilder {
             simNumberPortBoundaryStatement = simNumberPortBoundaryStatement,
             simNumberPortMutationStatement = simNumberPortMutationStatement,
             idDocumentSelfieBoundaryStatement = idDocumentSelfieBoundaryStatement,
-            idDocumentSelfieMutationStatement = idDocumentSelfieMutationStatement
+            idDocumentSelfieMutationStatement = idDocumentSelfieMutationStatement,
+            screenshotPrivacyGuardBoundaryStatement = screenshotPrivacyGuardBoundaryStatement,
+            screenshotPrivacyGuardMutationStatement = screenshotPrivacyGuardMutationStatement
         )
 
         return PrivacyCenter(
@@ -853,6 +886,8 @@ object PrivacyCenterBuilder {
                     "생존 확인·라이브니스·생체 정보·갤러리·카메라·스크린샷·OCR·바코드·QR·미디어·URI·경로·계정·연락처·" +
                     "전화번호·SIM·기기 식별값·업로드·제출·접수·확인·검증·유효성·가림·촬영·스캔·분석·일치·결과 상태·" +
                     "체크 표시·메모·리마인더·진행·이력은 만들거나 기록하지 않으며, " +
+                    "스크린샷 개인정보 가드 코치의 카드 선택·추천·읽음·공유·체크 표시·메모·진행·" +
+                    "이력은 만들거나 기록하지 않으며, " +
                     "노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 가족 콜백 카드, " +
                     "보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·" +
                     "공유·보호자 검토 이력, " +
@@ -1179,7 +1214,9 @@ object PrivacyCenterBuilder {
         simNumberPortBoundaryStatement: String,
         simNumberPortMutationStatement: String,
         idDocumentSelfieBoundaryStatement: String,
-        idDocumentSelfieMutationStatement: String
+        idDocumentSelfieMutationStatement: String,
+        screenshotPrivacyGuardBoundaryStatement: String,
+        screenshotPrivacyGuardMutationStatement: String
     ): String = buildString {
         appendLine("[가족 AI 보이스피싱 방패] 개인정보 요약")
         appendLine()
@@ -1214,6 +1251,7 @@ object PrivacyCenterBuilder {
         appendLine("- 이동 경로·만남 장소 멈춤 코치의 카드 선택·추천·읽음·공유·이름·담당자·받는 사람·집·직장·건물·로비·호수·주소·현재 위치·경로·목적지·랜드마크·주차장·엘리베이터·인터폰·문·보관함·상점·역·교통수단·택시·버스·지하철·승차·요금·출발·도착·ETA·방문자·직원·기사·수사관·기관·은행·플랫폼·현금·금액·계좌·카드·통장·거래·결제·지갑·문서·사건·신고·제출·접수·이동·만남·인계·전달·배달·수거·입금·예약·탑승·경로 설정·확인·검증·환급·차지백·취소·동결·차단·추적·회복·결과 상태·체크 표시·메모·리마인더·진행·이력은 만들거나 기록하지 않습니다.")
         appendLine("- SIM·번호이동 멈춤 코치의 카드 선택·추천·읽음·공유·이름·담당자·받는 사람·전화번호·새 번호·이전 번호·채널·프로필·통신사·통신사 매장·SIM·eSIM·USIM·IMSI·ICCID·IMEI·기기 일련값·기기 식별값·계정·고객 번호·명의·번호이동 PIN·OTP·PIN·비밀번호·보안 답·링크·도메인·앱·패키지·파일·미디어·URI·문자·SMS·통화·통화 기록·발신자 표시·연락처·알림·사건·신고·제출·접수·영수증·번호이동·재발급·개통·해지·정지·차단·해제·취소·복구·동결·확인·검증·교체·변경·업데이트·저장·이전·결제·환급·차지백·결과 상태·체크 표시·메모·리마인더·진행·이력은 만들거나 기록하지 않습니다.")
         appendLine("- 신분증·셀피 촬영 멈춤 코치의 카드 선택·추천·읽음·공유·이름·담당자·받는 사람·신분증·주민번호·여권·면허증·건강보험증·통장 사본·문서·파일·사진·영상·셀피·얼굴·생존 확인·라이브니스·생체 정보·갤러리·카메라·스크린샷·OCR·바코드·QR·미디어·URI·경로·계정·연락처·전화번호·SIM·기기 식별값·업로드·제출·접수·확인·검증·유효성·가림·촬영·스캔·분석·일치·결과 상태·체크 표시·메모·리마인더·진행·이력은 만들거나 기록하지 않습니다.")
+        appendLine("- 스크린샷 개인정보 가드 코치의 카드 선택·추천·읽음·공유·체크 표시·메모·진행·이력은 만들거나 기록하지 않습니다.")
         appendLine("- 가족 차분 대화 안건은 새 권한·네트워크 없이 로컬에서 직접 읽는 무상태 수동 안내이며 연락처·메시지·통화를 읽거나 감시하지 않고 받는 사람을 고르거나 자동 전송하지 않습니다.")
         appendLine("- 안전 붙여넣기 개인정보 코치는 새 Android 권한·네트워크 없는 로컬 전용·무상태 수동 안내이며 연락처·메시지·통화·클립보드나 붙여넣은 원문을 읽거나 감시·저장·변경하지 않고 자동 가림·교정·검사·삭제 또는 자동 전송을 하지 않으며 알림·알람·캘린더 일정·리마인더·백그라운드 작업을 만들거나 예약하지 않습니다.")
         appendLine("- 진행 중 연락 종료 문장은 새 Android 권한·네트워크·저장소 없는 로컬 전용·무상태 수동 안내이며 문자·메시지·통화·연락처·클립보드를 읽거나 감시하지 않고, 자동 발신·통화 종료·통화 차단·통화 선별·문자 답장·받는 사람 선택·공유를 하지 않으며 알림·알람·일정·백그라운드 작업을 만들거나 예약하지 않습니다.")
@@ -1241,6 +1279,8 @@ object PrivacyCenterBuilder {
         appendLine("- $simNumberPortMutationStatement")
         appendLine("- $idDocumentSelfieBoundaryStatement")
         appendLine("- $idDocumentSelfieMutationStatement")
+        appendLine("- $screenshotPrivacyGuardBoundaryStatement")
+        appendLine("- $screenshotPrivacyGuardMutationStatement")
         appendLine("- 가족 대응 역할 보드를 열거나 역할 버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다.")
         appendLine("- 가족 차분 대화 안건을 열거나 안건·경로·공유 버튼을 누르는 것만으로 사건 기록을 추가·수정·삭제하지 않습니다.")
         appendLine("- 안전 붙여넣기 개인정보 코치 화면을 열거나 카드·경로·공유 버튼을 누르는 것만으로 붙여넣은 텍스트나 사건 기록을 추가·수정·삭제하지 않습니다.")

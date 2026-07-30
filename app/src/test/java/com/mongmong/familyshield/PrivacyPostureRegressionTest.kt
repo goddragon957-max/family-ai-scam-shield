@@ -9942,7 +9942,7 @@ class PrivacyPostureRegressionTest {
         }
         assertEquals(23, entryRouteSources.size)
         assertEquals(
-            37,
+            38,
             Regex("show\\(Screen\\.CREDENTIAL_SECRET_FREEZE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -16725,7 +16725,7 @@ class PrivacyPostureRegressionTest {
             exactRoutes.single().value
         }
         assertEquals(
-            34,
+            35,
             Regex("show\\(Screen\\.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH\\)")
                 .findAll(activitySource)
                 .count()
@@ -17334,6 +17334,237 @@ class PrivacyPostureRegressionTest {
         assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
         assertFalse(Regex("<(?:service|receiver)\\b").containsMatchIn(manifest))
         assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+    }
+
+    @Test
+    fun screenshotPrivacyGuardCoachUsesBoundedValueFreeInputsAndRoutesOnly() {
+        val activitySource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/MainActivity.kt"
+        )
+        val modelSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/ScreenshotPrivacyGuardCoach.kt"
+        )
+        val privacyCenterSource = readProjectFile(
+            "app/src/main/java/com/mongmong/familyshield/PrivacyCenter.kt"
+        )
+        val manifest = readProjectFile("app/src/main/AndroidManifest.xml")
+
+        val coachScreen = functionBlock(
+            activitySource,
+            "private fun LinearLayout.screenshotPrivacyGuardCoachScreen"
+        )
+        val cardRenderer = functionBlock(
+            activitySource,
+            "private fun LinearLayout.screenshotPrivacyGuardCard"
+        )
+        val actionRouter = functionBlock(
+            activitySource,
+            "private fun openScreenshotPrivacyGuardAction"
+        )
+        val shareHelper = functionBlock(
+            activitySource,
+            "private fun shareScreenshotPrivacyGuardCoach"
+        )
+        val normalizedActivitySource = activitySource.replace(Regex("\\s+"), " ")
+
+        assertTrue(
+            normalizedActivitySource.contains(
+                "Screen.SCREENSHOT_PRIVACY_GUARD_COACH -> screenshotPrivacyGuardCoachScreen()"
+            )
+        )
+
+        val entryMarkers = listOf(
+            "private fun LinearLayout.home()",
+            "private fun LinearLayout.result()",
+            "private fun LinearLayout.incidentTimelineBriefingScreen",
+            "private fun LinearLayout.evidencePreservationScreen"
+        )
+        val entryRoutePattern = Regex(
+            "(?:primary|secondary)Button\\(\"[^\"]+\"\\)\\s*\\{\\s*" +
+                "show\\(Screen\\.SCREENSHOT_PRIVACY_GUARD_COACH\\)\\s*}"
+        )
+        entryMarkers.forEach { marker ->
+            val entryScreen = functionBlock(activitySource, marker)
+            val exactRoutes = entryRoutePattern.findAll(entryScreen).toList()
+            assertEquals(
+                "screenshot guard entry must have one show-only button in $marker",
+                1,
+                exactRoutes.size
+            )
+        }
+
+        assertFalse(Regex("(?m)^\\s*import\\s+android(?:x)?\\.").containsMatchIn(modelSource))
+        assertFalse(
+            Regex("\\b(?:Context|Intent|SharedPreferences)\\b").containsMatchIn(modelSource)
+        )
+        val analysisProperties = Regex(
+            "analysis\\s*\\?\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val readinessProperties = Regex(
+            "readiness\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        val incidentCountOperations = Regex(
+            "incidentCount\\s*\\.\\s*([A-Za-z][A-Za-z0-9_]*)"
+        ).findAll(modelSource).map { match -> match.groupValues[1] }.toSet()
+        assertEquals(setOf("riskLevel", "matchedSignals"), analysisProperties)
+        assertEquals(setOf("level"), readinessProperties)
+        assertEquals(setOf("coerceAtLeast"), incidentCountOperations)
+        assertFalse(Regex("analysis\\s*\\.\\s*[A-Za-z]").containsMatchIn(modelSource))
+
+        val builderCallPattern = Regex(
+            "ScreenshotPrivacyGuardCoachBuilder\\.build\\(\\s*" +
+                "analysis\\s*=\\s*currentAnalysis\\s*,\\s*" +
+                "readiness\\s*=\\s*FamilyReadinessBuilder\\.build\\(" +
+                "safetyPlan\\.load\\(\\)\\)\\s*,\\s*" +
+                "incidentCount\\s*=\\s*incidents\\.count\\(\\)\\s*\\)"
+        )
+        assertEquals(1, builderCallPattern.findAll(coachScreen).count())
+        assertEquals(
+            1,
+            Regex("ScreenshotPrivacyGuardCoachBuilder\\.build\\(")
+                .findAll(activitySource)
+                .count()
+        )
+        assertFalse(coachScreen.contains("incidents.load("))
+        assertFalse(
+            coachScreen
+                .replace("FamilyReadinessBuilder.build(safetyPlan.load())", "")
+                .contains("safetyPlan.")
+        )
+        assertFalse(coachScreen.replace("incidents.count()", "").contains("incidents."))
+
+        listOf(
+            "title(coach.title)",
+            "subtitle(coach.intro)",
+            "coach.modeLabel",
+            "coach.recommendationTitle",
+            "coach.recommendationExplanation",
+            "coach.recommendedCards",
+            "coach.recommendedActions",
+            "coach.cards",
+            "coach.privacySafetyNotes",
+            "shareScreenshotPrivacyGuardCoach(coach.familyShareSummary)"
+        ).forEach { renderedField ->
+            assertTrue("screenshot guard UI omitted $renderedField", coachScreen.contains(renderedField))
+        }
+        listOf(
+            "card.displayOrder",
+            "card.title",
+            "card.screenshotPressureSituation",
+            "card.valueFreePauseScript",
+            "card.whyItMatters",
+            "card.doNotCaptureDetectStoreUploadOrAutoShareBoundaries",
+            "card.primaryAction",
+            "card.secondaryActions"
+        ).forEach { renderedCardField ->
+            assertTrue(cardRenderer.contains(renderedCardField))
+        }
+
+        assertTrue(shareHelper.contains("Intent(Intent.ACTION_SEND)"))
+        assertTrue(shareHelper.contains("type = \"text/plain\""))
+        assertTrue(shareHelper.contains("putExtra(Intent.EXTRA_TEXT, summary)"))
+        assertFalse(shareHelper.contains("Intent.EXTRA_STREAM"))
+        assertFalse(shareHelper.contains("Uri.parse"))
+
+        val statelessUiImplementationSource = stripKotlinStringLiterals(
+            coachScreen + cardRenderer + actionRouter + shareHelper
+        )
+        listOf(
+            "FLAG_SECURE",
+            "ContentObserver",
+            "MediaStore",
+            "AccessibilityService",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "IncidentPreviewRedactor",
+            "incidents.load(",
+            "incidents.add(",
+            "incidents.clear(",
+            ".safeWord",
+            ".callbackScript",
+            ".contacts",
+            "prefs.edit(",
+            "safetyPlan.save(",
+            "safetyPlan.clear(",
+            "EditText(",
+            "pendingSharedText",
+            "CameraManager",
+            "ImageCapture",
+            "TextRecognition",
+            "BarcodeScanner",
+            "Intent.ACTION_VIEW",
+            "Intent.ACTION_DIAL",
+            "Intent.ACTION_CALL",
+            "ClipboardManager"
+        ).forEach { forbiddenStateOrValue ->
+            assertFalse(
+                "screenshot guard UI used forbidden state/value: $forbiddenStateOrValue",
+                statelessUiImplementationSource.contains(forbiddenStateOrValue, ignoreCase = true)
+            )
+        }
+
+        val modelImplementationSource = stripKotlinStringLiterals(modelSource)
+        listOf(
+            "FLAG_SECURE",
+            "ContentObserver",
+            "MediaStore",
+            "AccessibilityService",
+            "analysis.input",
+            "analysis.score",
+            "analysis.actionPlan",
+            "analysis.summary",
+            "SafetyPlanStore",
+            "IncidentStore",
+            "prefs.edit(",
+            "putString(",
+            "putBoolean(",
+            ".save("
+        ).forEach { forbiddenModelSource ->
+            assertFalse(
+                "screenshot guard model used forbidden value/source: $forbiddenModelSource",
+                modelImplementationSource.contains(forbiddenModelSource, ignoreCase = true)
+            )
+        }
+
+        val privacyCenterImplementationSource = stripKotlinStringLiterals(privacyCenterSource)
+        listOf("FLAG_SECURE", "ContentObserver", "MediaStore", "AccessibilityService").forEach {
+            forbiddenPrivacyCenterSource ->
+            assertFalse(
+                "PrivacyCenter used forbidden value/source: $forbiddenPrivacyCenterSource",
+                privacyCenterImplementationSource.contains(forbiddenPrivacyCenterSource)
+            )
+        }
+
+        listOf(
+            "CALL_PHONE",
+            "READ_SMS",
+            "READ_CALL_LOG",
+            "READ_CONTACTS",
+            "RECORD_AUDIO",
+            "INTERNET",
+            "POST_NOTIFICATIONS",
+            "SCHEDULE_EXACT_ALARM",
+            "RECEIVE_BOOT_COMPLETED"
+        ).forEach { forbiddenPermission ->
+            assertFalse(manifest.contains(forbiddenPermission))
+        }
+        assertFalse(Regex("<uses-permission(?:-sdk-\\d+)?\\b").containsMatchIn(manifest))
+        assertTrue(Regex("android:allowBackup\\s*=\\s*\"false\"").containsMatchIn(manifest))
+
+        val analysis = ScamAnalysis(
+            input = "RAW_SHARE_TEST_VALUE",
+            score = 42,
+            riskLevel = RiskLevel.HIGH,
+            matchedSignals = listOf(ScamSignal.CREDENTIALS)
+        )
+        val summary = ScreenshotPrivacyGuardCoachBuilder.build(
+            analysis = analysis,
+            readiness = FamilyReadinessBuilder.build(SafetyPlan("", "", emptyList())),
+            incidentCount = 3
+        ).familyShareSummary
+        assertFalse(summary.contains("RAW_SHARE_TEST_VALUE"))
     }
 
     private fun stripKotlinStringLiterals(source: String): String {

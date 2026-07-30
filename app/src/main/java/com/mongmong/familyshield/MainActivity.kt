@@ -33,7 +33,8 @@ class MainActivity : Activity() {
         GIFT_CARD_CODE_PAUSE_COACH, LINK_APP_INSTALL_QUARANTINE_COACH,
         CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH, BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH,
         DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH, TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH,
-        SIM_NUMBER_PORT_OUT_PAUSE_COACH, ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH
+        SIM_NUMBER_PORT_OUT_PAUSE_COACH, ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH,
+        SCREENSHOT_PRIVACY_GUARD_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -177,6 +178,7 @@ class MainActivity : Activity() {
                     simNumberPortOutPauseCoachScreen()
                 Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH ->
                     idDocumentSelfieCapturePauseCoachScreen()
+                Screen.SCREENSHOT_PRIVACY_GUARD_COACH -> screenshotPrivacyGuardCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -399,6 +401,175 @@ class MainActivity : Activity() {
         }
         startActivity(
             Intent.createChooser(shareIntent, "가족에게 신분증·셀피 촬영 멈춤 안내 공유")
+        )
+    }
+
+    private fun LinearLayout.screenshotPrivacyGuardCoachScreen() {
+        val coach = ScreenshotPrivacyGuardCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 화면캡처 개인정보 문구\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.screenshotPressureSituation}\n" +
+                            card.valueFreePauseScript
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) {
+                    openScreenshotPrivacyGuardAction(action)
+                }
+            } else {
+                secondaryButton(action.label) {
+                    openScreenshotPrivacyGuardAction(action)
+                }
+            }
+        }
+
+        section(
+            "전체 수동 화면캡처 개인정보 카드",
+            "카드는 항상 같은 순서입니다. 이 앱은 화면캡처를 감지하거나 막지 않으므로, " +
+                "캡처하기 전이나 후에 값 없는 안내 문장을 직접 고르세요. 앱은 캡처본·이미지·" +
+                "갤러리·클라우드 백업 상태를 읽지 않으며 선택·읽음·확인 상태도 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            screenshotPrivacyGuardCard(
+                card,
+                recommended = card.id in recommendedIds
+            )
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 화면캡처 개인정보 안내 공유") {
+            shareScreenshotPrivacyGuardCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
+        secondaryButton("붙여넣기 전 개인정보 가리기") {
+            show(Screen.SAFE_PASTE_PRIVACY_COACH)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.screenshotPrivacyGuardCard(
+        card: ScreenshotPrivacyGuardCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("화면캡처 압박 상황\n")
+                append(card.screenshotPressureSituation)
+                append("\n\n값 없이 직접 읽을 안내 문장\n")
+                append(card.valueFreePauseScript)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n감지·차단·저장·업로드·자동 공유 경계\n")
+                card.doNotCaptureDetectStoreUploadOrAutoShareBoundaries
+                    .forEach { boundary ->
+                        append("• ").append(boundary).append('\n')
+                    }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openScreenshotPrivacyGuardAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openScreenshotPrivacyGuardAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) {
+                openScreenshotPrivacyGuardAction(action)
+            }
+        }
+    }
+
+    private fun openScreenshotPrivacyGuardAction(action: ScreenshotPrivacyGuardAction) {
+        when (action.id) {
+            ScreenshotPrivacyGuardActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            ScreenshotPrivacyGuardActionId.CHECKER -> show(Screen.CHECKER)
+            ScreenshotPrivacyGuardActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            ScreenshotPrivacyGuardActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            ScreenshotPrivacyGuardActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            ScreenshotPrivacyGuardActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            ScreenshotPrivacyGuardActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            ScreenshotPrivacyGuardActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            ScreenshotPrivacyGuardActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            ScreenshotPrivacyGuardActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            ScreenshotPrivacyGuardActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            ScreenshotPrivacyGuardActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            ScreenshotPrivacyGuardActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            ScreenshotPrivacyGuardActionId.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH ->
+                show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+            ScreenshotPrivacyGuardActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            ScreenshotPrivacyGuardActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            ScreenshotPrivacyGuardActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            ScreenshotPrivacyGuardActionId.SAFE_CALL_SCRIPTS -> show(Screen.SAFE_CALL_SCRIPTS)
+            ScreenshotPrivacyGuardActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.SCREENSHOT_PRIVACY_GUARD_COACH)
+            ScreenshotPrivacyGuardActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            ScreenshotPrivacyGuardActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            ScreenshotPrivacyGuardActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            ScreenshotPrivacyGuardActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareScreenshotPrivacyGuardCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(
+            Intent.createChooser(shareIntent, "가족에게 화면캡처 개인정보 안내 공유")
         )
     }
 
@@ -5054,6 +5225,9 @@ class MainActivity : Activity() {
         primaryButton("신분증·셀피 촬영·전송 전에 멈춤") {
             show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
+        primaryButton("사건 화면을 캡처해 공유하기 전 개인정보 가드") {
+            show(Screen.SCREENSHOT_PRIVACY_GUARD_COACH)
+        }
         primaryButton("링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5845,6 +6019,9 @@ class MainActivity : Activity() {
         primaryButton("이 신분증·셀피 촬영·전송 요구를 따르기 전 멈춤") {
             show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
+        primaryButton("이 결과 화면을 캡처해 공유하기 전 개인정보 가드") {
+            show(Screen.SCREENSHOT_PRIVACY_GUARD_COACH)
+        }
         primaryButton("이 링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5992,6 +6169,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("저장 내용 값을 읽히지 않고 회복 약속 현실 점검") {
             show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
+        secondaryButton("이 타임라인 화면을 캡처해 공유하기 전 개인정보 가드") {
+            show(Screen.SCREENSHOT_PRIVACY_GUARD_COACH)
         }
         briefing.emptyStateTitle?.let { emptyTitle ->
             section(emptyTitle, briefing.emptyStateMessage.orEmpty())
@@ -6269,6 +6449,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("증거 값 없이 회복 약속 현실 점검") {
             show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+        }
+        secondaryButton("이 체크리스트를 캡처해 공유하기 전 개인정보 가드") {
+            show(Screen.SCREENSHOT_PRIVACY_GUARD_COACH)
         }
         section(
             "수동·로컬 안내",
