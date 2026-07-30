@@ -34,12 +34,13 @@ class MainActivity : Activity() {
         CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH, BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH,
         DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH, TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH,
         SIM_NUMBER_PORT_OUT_PAUSE_COACH, ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH,
-        SCREENSHOT_PRIVACY_GUARD_COACH
+        SCREENSHOT_PRIVACY_GUARD_COACH, ACCESSIBILITY_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
     private val incidents by lazy { IncidentStore(this) }
     private val safetyPlan by lazy { SafetyPlanStore(this) }
+    private val simpleMode by lazy { SimpleModePreference(this) }
     private var currentAnalysis: ScamAnalysis? = null
     private var callbackCardAnalysis: ScamAnalysis? = null
     private var pendingSharedText: String? = null
@@ -179,6 +180,7 @@ class MainActivity : Activity() {
                 Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH ->
                     idDocumentSelfieCapturePauseCoachScreen()
                 Screen.SCREENSHOT_PRIVACY_GUARD_COACH -> screenshotPrivacyGuardCoachScreen()
+                Screen.ACCESSIBILITY_COACH -> accessibilityCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
@@ -570,6 +572,140 @@ class MainActivity : Activity() {
         }
         startActivity(
             Intent.createChooser(shareIntent, "가족에게 화면캡처 개인정보 안내 공유")
+        )
+    }
+
+    private fun LinearLayout.accessibilityCoachScreen() {
+        val coach = AccessibilityCoachBuilder.build(
+            consent = prefs.getBoolean(KEY_CONSENTED, false),
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "지금 글자 크게 보기",
+            "이 화면은 글자 크기를 직접 바꾸지 않습니다. 안드로이드 설정 → 디스플레이 → 글자 " +
+                "크기에서 슬라이더를 밀면 이 화면을 포함한 모든 앱 글자가 함께 커집니다. 설정을 " +
+                "마친 뒤 이 화면으로 돌아와 커졌는지 직접 확인하세요."
+        )
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 볼 추천 접근성 카드\n")
+                append(
+                    coach.recommendedCards.joinToString("\n") { card -> "• ${card.title}" }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action -> "• ${action.label}" }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openAccessibilityCoachAction(action) }
+            } else {
+                secondaryButton(action.label) { openAccessibilityCoachAction(action) }
+            }
+        }
+
+        section(
+            "전체 수동 접근성 카드",
+            "카드는 항상 같은 순서입니다. 이 앱은 시스템 설정을 대신 켜지 않으므로, 이 앱에서 " +
+                "직접 되는 일과 안드로이드 시스템 설정에서 해야 하는 일을 나눠 확인한 뒤 필요한 " +
+                "기존 앱 경로만 직접 고르세요."
+        )
+        coach.cards.forEach { card ->
+            accessibilityCoachCard(card, recommended = card.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 접근성 안내 공유") {
+            shareAccessibilityCoach(coach.familyShareSummary)
+        }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.accessibilityCoachCard(
+        card: AccessibilityCoachCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n이 앱에서 직접 해주는 것\n")
+                if (card.inAppSteps.isEmpty()) {
+                    append("• 없음 (이 카드는 안드로이드 시스템 설정으로만 안내합니다)")
+                } else {
+                    card.inAppSteps.forEach { step -> append("• ").append(step).append('\n') }
+                }
+                append("\n안드로이드 시스템 설정에서 해야 하는 것\n")
+                if (card.systemSettingSteps.isEmpty()) {
+                    append("• 없음 (이 카드는 이 앱 안 화면으로만 안내합니다)")
+                } else {
+                    card.systemSettingSteps.forEachIndexed { index, step ->
+                        append(index + 1).append(". ").append(step).append('\n')
+                    }
+                }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openAccessibilityCoachAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openAccessibilityCoachAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openAccessibilityCoachAction(action) }
+        }
+    }
+
+    private fun openAccessibilityCoachAction(action: AccessibilityCoachAction) {
+        when (action.id) {
+            AccessibilityCoachActionId.ONBOARDING -> show(Screen.ONBOARDING)
+            AccessibilityCoachActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            AccessibilityCoachActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            AccessibilityCoachActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            AccessibilityCoachActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            AccessibilityCoachActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            AccessibilityCoachActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            AccessibilityCoachActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            AccessibilityCoachActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.ACCESSIBILITY_COACH)
+            AccessibilityCoachActionId.CHECKER -> show(Screen.CHECKER)
+            AccessibilityCoachActionId.HOME -> show(Screen.HOME)
+        }
+    }
+
+    private fun shareAccessibilityCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(
+            Intent.createChooser(shareIntent, "가족에게 접근성 안내 공유")
         )
     }
 
@@ -4893,6 +5029,7 @@ class MainActivity : Activity() {
         secondaryButton("가족 확인 비밀 재정비 순서") {
             show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
+        secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -5205,6 +5342,14 @@ class MainActivity : Activity() {
     }
 
     private fun LinearLayout.home() {
+        if (simpleMode.isOn()) {
+            simpleModeHome()
+            return
+        }
+        secondaryButton("큰 버튼 단순 모드로 보기") {
+            simpleMode.setOn(true)
+            show(Screen.HOME)
+        }
         title("가족 AI 보호자 대기 중")
         subtitle("돈, 앱 설치, 인증번호 요청은 먼저 멈추고 AI 보호자 분석 → 가족 콜백 → 신고/차단 순서로 처리하세요.")
         primaryButton("현금 인출·만남·직접 전달 전에 멈춤") {
@@ -5289,6 +5434,7 @@ class MainActivity : Activity() {
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
+        secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("위험 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
@@ -5301,6 +5447,19 @@ class MainActivity : Activity() {
         secondaryButton("사건 타임라인 요약") { show(Screen.TIMELINE_BRIEFING) }
         secondaryButton("사건 기록 보기") { show(Screen.LOG) }
         section("AI 방지 루프", "1. 수상한 요청을 붙여넣기\n2. 위험 신호와 즉시 중단 행동 확인\n3. 기존 저장 번호로 가족 콜백\n4. 필요하면 112/1394 또는 은행 지급정지")
+    }
+
+    private fun LinearLayout.simpleModeHome() {
+        title("단순 모드")
+        subtitle("가장 많이 쓰는 세 가지만 큰 버튼으로 보여줍니다. 자세한 화면이 필요하면 아래에서 일반 모드로 돌아가세요.")
+        giantButton("수상한 문자 / 통화 분석") { show(Screen.CHECKER) }
+        giantButton("지금 가족에게 전화") { openFamilyCallbackCard(currentAnalysis) }
+        giantButton("긴급 신고") { openHelpDirectory(Screen.HOME) }
+        secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
+        secondaryButton("일반 모드로 돌아가기") {
+            simpleMode.setOn(false)
+            show(Screen.HOME)
+        }
     }
 
     private fun LinearLayout.quickStopModeScreen() {
@@ -5566,6 +5725,7 @@ class MainActivity : Activity() {
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
+        secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
         primaryButton("가족에게 안전 흐름 요약 공유") {
             shareSafetyFlowRouter(router.familyShareSummary)
         }
@@ -6307,6 +6467,19 @@ class MainActivity : Activity() {
         }
         secondaryButton("목소리 자료 없이 현실 확인") {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+        }
+        secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
+        section(
+            "큰 버튼 단순 모드",
+            "단순 모드를 켜면 홈 화면이 큰 버튼 세 개(문자 분석, 가족에게 전화, 긴급 신고)로 " +
+                "바뀝니다. 켜짐/꺼짐 값 하나만 이 기기의 family_shield 저장소에 남기며 다른 " +
+                "코치나 저장된 데이터는 바꾸지 않습니다. 시스템 글자 크기·고대비·읽어주기 설정은 " +
+                "이 토글과 별개로 안드로이드 설정에서 직접 켜야 합니다."
+        )
+        secondaryButton(if (simpleMode.isOn()) "단순 모드 끄기" else "단순 모드 켜기") {
+            simpleMode.setOn(!simpleMode.isOn())
+            toast(if (simpleMode.isOn()) "단순 모드를 켰습니다." else "단순 모드를 껐습니다.")
+            show(Screen.PRIVACY_CENTER)
         }
         section(
             "기기 안에 있는 데이터",
@@ -7626,6 +7799,15 @@ class MainActivity : Activity() {
             minimumHeight = dp(48)
         }
         addView(action, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(10)))
+    }
+
+    private fun LinearLayout.giantButton(label: String, onClick: () -> Unit) {
+        val action = button(label, 0xFF0F766E.toInt(), Color.WHITE, onClick).apply {
+            minimumHeight = dp(84)
+            textSize = 22f
+            setLineSpacing(0f, 1.5f)
+        }
+        addView(action, LinearLayout.LayoutParams(match, wrap).withMargins(bottom = dp(16)))
     }
 
     private fun button(label: String, bg: Int, fg: Int, onClick: () -> Unit): Button =
