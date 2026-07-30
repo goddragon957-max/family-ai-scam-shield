@@ -34,7 +34,8 @@ class MainActivity : Activity() {
         CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH, BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH,
         DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH, TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH,
         SIM_NUMBER_PORT_OUT_PAUSE_COACH, ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH,
-        SCREENSHOT_PRIVACY_GUARD_COACH, ACCESSIBILITY_COACH
+        SCREENSHOT_PRIVACY_GUARD_COACH, ACCESSIBILITY_COACH,
+        POST_INCIDENT_REVIEW_CALENDAR
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -181,12 +182,171 @@ class MainActivity : Activity() {
                     idDocumentSelfieCapturePauseCoachScreen()
                 Screen.SCREENSHOT_PRIVACY_GUARD_COACH -> screenshotPrivacyGuardCoachScreen()
                 Screen.ACCESSIBILITY_COACH -> accessibilityCoachScreen()
+                Screen.POST_INCIDENT_REVIEW_CALENDAR -> postIncidentReviewCalendarScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.postIncidentReviewCalendarScreen() {
+        val calendar = PostIncidentReviewCalendarBuilder.build(
+            consent = prefs.getBoolean(KEY_CONSENTED, false),
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count(),
+            lastIncidentDaysAgo = lastIncidentDaysAgo()
+        )
+        val recommendedIds = calendar.recommendedAnchorIds.toSet()
+
+        title(calendar.title)
+        subtitle(calendar.intro)
+        section("자동 예약 없음", calendar.manualCalendarNote)
+        section(
+            "${calendar.modeLabel} · ${calendar.recommendationTitle}",
+            buildString {
+                append(calendar.recommendationExplanation)
+                if (calendar.calendarSkipped) {
+                    append("\n\n먼저 볼 안내\n")
+                    append("• ${calendar.firstTimeMessage.orEmpty()}")
+                } else {
+                    append("\n\n먼저 직접 표시할 점검 시점\n")
+                    append(
+                        calendar.recommendedAnchors.joinToString("\n") { anchor ->
+                            "• ${anchor.dayLabel} · ${anchor.title} · ${anchor.emphasis.label}"
+                        }
+                    )
+                }
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    calendar.recommendedActions.joinToString("\n") { action -> "• ${action.label}" }
+                )
+            }
+        )
+        calendar.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) { openPostIncidentReviewCalendarAction(action) }
+            } else {
+                secondaryButton(action.label) { openPostIncidentReviewCalendarAction(action) }
+            }
+        }
+
+        section(
+            "전체 점검 시점",
+            "여덟 시점은 항상 같은 순서로 한 번씩 표시됩니다. 이 앱은 날짜를 저장하거나 달력 앱에 " +
+                "일정을 쓰지 않고 알림·알람을 만들지 않으므로, 각 시점은 가족이 직접 자기 달력에 " +
+                "옮겨 적고 그날 직접 열어 보세요."
+        )
+        calendar.anchors.forEach { anchor ->
+            postIncidentReviewAnchorCard(anchor, recommended = anchor.id in recommendedIds)
+        }
+
+        section(
+            "개인정보·안전 안내",
+            calendar.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 점검 시점 공유") {
+            sharePostIncidentReviewCalendar(calendar.familyShareSummary)
+        }
+        secondaryButton("며칠 뒤 다시 확인할 것") { show(Screen.FOLLOW_UP_CHECK_IN_PLANNER) }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.postIncidentReviewAnchorCard(
+        anchor: PostIncidentReviewAnchor,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(anchor.displayOrder)
+            append(". ")
+            append(anchor.dayLabel)
+            append(" · ")
+            append(anchor.title)
+            append(" · ")
+            append(anchor.emphasis.label)
+        }
+        section(
+            heading,
+            buildString {
+                append("왜 이 시점인가요?\n")
+                append(anchor.whyItMatters)
+                append("\n\n직접 다시 살펴볼 것\n")
+                anchor.manualRecheckItems.forEach { item ->
+                    append("• ").append(item).append('\n')
+                }
+                append("\n가족과 상의할 질문 3개\n")
+                anchor.familyDiscussionQuestions.forEachIndexed { index, question ->
+                    append(index + 1).append(". ").append(question).append('\n')
+                }
+                append("\n이 일정 직접 표시\n")
+                append(anchor.markInOwnCalendarInstruction)
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(anchor.inAppViewLabel) {
+                openPostIncidentReviewCalendarAction(anchor.primaryAction)
+            }
+        } else {
+            secondaryButton(anchor.inAppViewLabel) {
+                openPostIncidentReviewCalendarAction(anchor.primaryAction)
+            }
+        }
+        anchor.secondaryActions.forEach { action ->
+            secondaryButton(action.label) { openPostIncidentReviewCalendarAction(action) }
+        }
+    }
+
+    private fun openPostIncidentReviewCalendarAction(action: PostIncidentReviewAction) {
+        when (action.id) {
+            PostIncidentReviewActionId.ONBOARDING -> show(Screen.ONBOARDING)
+            PostIncidentReviewActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            PostIncidentReviewActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            PostIncidentReviewActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            PostIncidentReviewActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            PostIncidentReviewActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            PostIncidentReviewActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            PostIncidentReviewActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            PostIncidentReviewActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            PostIncidentReviewActionId.ACCOUNT_LOCKDOWN -> show(Screen.ACCOUNT_LOCKDOWN)
+            PostIncidentReviewActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            PostIncidentReviewActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            PostIncidentReviewActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            PostIncidentReviewActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.POST_INCIDENT_REVIEW_CALENDAR)
+            PostIncidentReviewActionId.PRIVACY_CENTER -> show(Screen.PRIVACY_CENTER)
+            PostIncidentReviewActionId.SAFETY_FLOW_ROUTER -> show(Screen.FLOW_ROUTER)
+            PostIncidentReviewActionId.HOME -> show(Screen.HOME)
+        }
+    }
+
+    private fun sharePostIncidentReviewCalendar(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(
+            Intent.createChooser(shareIntent, "가족에게 점검 시점 공유")
+        )
+    }
+
+    private fun lastIncidentDaysAgo(): Int? {
+        val latestTimestamp = incidents.load()
+            .maxOfOrNull { incident -> incident.timestamp }
+            ?: return null
+        val elapsedMillis = System.currentTimeMillis() - latestTimestamp
+        if (elapsedMillis <= 0L) return 0
+        return (elapsedMillis / 86_400_000L).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
     }
 
     private fun LinearLayout.idDocumentSelfieCapturePauseCoachScreen() {
@@ -5030,6 +5190,9 @@ class MainActivity : Activity() {
             show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
         }
         secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
+        secondaryButton("사건 뒤 가족 점검 달력") {
+            show(Screen.POST_INCIDENT_REVIEW_CALENDAR)
+        }
         secondaryButton("홈으로") { show(Screen.HOME) }
     }
 
@@ -5435,6 +5598,9 @@ class MainActivity : Activity() {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
         }
         secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
+        secondaryButton("사건 뒤 가족 점검 달력") {
+            show(Screen.POST_INCIDENT_REVIEW_CALENDAR)
+        }
         readinessSection()
         primaryButton("의심 메시지/통화 검사") { show(Screen.CHECKER) }
         secondaryButton("위험 신호 설명 보기") { show(Screen.RISK_SIGNAL_EXPLAINERS) }
@@ -6469,6 +6635,15 @@ class MainActivity : Activity() {
             show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
         }
         secondaryButton("큰글씨·읽어주기 접근성 코치") { show(Screen.ACCESSIBILITY_COACH) }
+        secondaryButton("알림 없이 사건 뒤 가족 점검 달력 보기") {
+            show(Screen.POST_INCIDENT_REVIEW_CALENDAR)
+        }
+        section(
+            "사건 뒤 가족 점검 달력",
+            "이 화면은 자동으로 알림을 보내지 않습니다. 가족과 직접 정한 일정에 가족 안전 계획 " +
+                "점검을 표시해 두세요. 점검 날짜·시각·반복 주기·완료 여부는 저장하지 않고 기기 " +
+                "달력 앱에 일정을 만들거나 바꾸지 않습니다."
+        )
         section(
             "큰 버튼 단순 모드",
             "단순 모드를 켜면 홈 화면이 큰 버튼 세 개(문자 분석, 가족에게 전화, 긴급 신고)로 " +
@@ -8528,6 +8703,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("증거 전달 전 개인정보 확인") {
             show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
+        secondaryButton("사건 뒤 30·90일 가족 점검 달력") {
+            show(Screen.POST_INCIDENT_REVIEW_CALENDAR)
         }
         primaryButton("가족에게 후속 점검 공유") {
             shareFollowUpCheckInPlanner(planner.familyShareSummary)
