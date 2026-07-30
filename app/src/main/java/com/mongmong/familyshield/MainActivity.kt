@@ -33,7 +33,7 @@ class MainActivity : Activity() {
         GIFT_CARD_CODE_PAUSE_COACH, LINK_APP_INSTALL_QUARANTINE_COACH,
         CASH_WITHDRAWAL_COURIER_HANDOFF_PAUSE_COACH, BANK_ATM_STAFF_DISCLOSURE_SCRIPT_COACH,
         DOORSTEP_VISITOR_HANDOFF_REFUSAL_COACH, TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH,
-        SIM_NUMBER_PORT_OUT_PAUSE_COACH
+        SIM_NUMBER_PORT_OUT_PAUSE_COACH, ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH
     }
 
     private val prefs by lazy { getSharedPreferences("family_shield", MODE_PRIVATE) }
@@ -175,12 +175,231 @@ class MainActivity : Activity() {
                     travelRouteMeetingPointPauseCoachScreen()
                 Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH ->
                     simNumberPortOutPauseCoachScreen()
+                Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH ->
+                    idDocumentSelfieCapturePauseCoachScreen()
             }
         }
         setContentView(ScrollView(this).apply {
             setBackgroundColor(0xFFF7F8FA.toInt())
             addView(content)
         })
+    }
+
+    private fun LinearLayout.idDocumentSelfieCapturePauseCoachScreen() {
+        val coach = IdDocumentSelfieCapturePauseCoachBuilder.build(
+            analysis = currentAnalysis,
+            readiness = FamilyReadinessBuilder.build(safetyPlan.load()),
+            incidentCount = incidents.count()
+        )
+        val recommendedIds = coach.recommendedCardIds.toSet()
+
+        title(coach.title)
+        subtitle(coach.intro)
+        section(
+            "${coach.modeLabel} · ${coach.recommendationTitle}",
+            buildString {
+                append(coach.recommendationExplanation)
+                append("\n\n먼저 읽을 추천 신분증·셀피 촬영 압박 멈춤 문구\n")
+                append(
+                    coach.recommendedCards.joinToString("\n\n") { card ->
+                        "• ${card.title}\n${card.idDocumentSelfiePressureSituation}\n" +
+                            card.valueFreePauseScript
+                    }
+                )
+                append("\n\n직접 고를 기존 앱 경로\n")
+                append(
+                    coach.recommendedActions.joinToString("\n") { action ->
+                        "• ${action.label}"
+                    }
+                )
+            }
+        )
+        coach.recommendedActions.forEachIndexed { index, action ->
+            if (index == 0) {
+                primaryButton(action.label) {
+                    openIdDocumentSelfieCapturePauseAction(action)
+                }
+            } else {
+                secondaryButton(action.label) {
+                    openIdDocumentSelfieCapturePauseAction(action)
+                }
+            }
+        }
+
+        section(
+            "전체 수동 신분증·셀피 촬영 압박 멈춤 문구 카드",
+            "카드는 항상 같은 순서입니다. 신분증·문서를 촬영·스캔·전송하거나 " +
+                "셀피·영상을 찍고 얼굴·계정 정보를 말하기 전에 값 없는 멈춤 문장을 " +
+                "직접 고르세요. 앱은 신분증·얼굴·사진·영상·파일·계정 값을 받지 않으며 " +
+                "선택·읽음·확인 상태도 남기지 않습니다."
+        )
+        coach.cards.forEach { card ->
+            idDocumentSelfieCapturePauseCard(
+                card,
+                recommended = card.id in recommendedIds
+            )
+        }
+
+        section(
+            "개인정보·사용 안내",
+            coach.privacySafetyNotes.joinToString("\n") { note -> "• $note" }
+        )
+        primaryButton("가족에게 값 없는 신분증·셀피 촬영 멈춤 안내 공유") {
+            shareIdDocumentSelfieCapturePauseCoach(coach.familyShareSummary)
+        }
+        if (currentAnalysis != null) {
+            secondaryButton("분석 결과로 돌아가기") { show(Screen.RESULT) }
+        }
+        secondaryButton("SIM·번호이동 멈춤 코치") {
+            show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("비밀값 전달 전 멈춤") {
+            show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+        }
+        secondaryButton("링크·앱 설치 격리") {
+            show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+        }
+        secondaryButton("원격 접근 중단 코치") {
+            show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+        }
+        secondaryButton("증거 전달 전 개인정보 확인") {
+            show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+        }
+        secondaryButton("긴급 멈춤 모드") { show(Screen.QUICK_STOP) }
+        secondaryButton("개인정보 센터") { show(Screen.PRIVACY_CENTER) }
+        secondaryButton("홈으로") { show(Screen.HOME) }
+    }
+
+    private fun LinearLayout.idDocumentSelfieCapturePauseCard(
+        card: IdDocumentSelfieCapturePauseCard,
+        recommended: Boolean
+    ) {
+        val heading = buildString {
+            if (recommended) append("추천 · ")
+            append(card.displayOrder)
+            append(". ")
+            append(card.title)
+        }
+        section(
+            heading,
+            buildString {
+                append("신분증·셀피 촬영 압박 상황\n")
+                append(card.idDocumentSelfiePressureSituation)
+                append("\n\n값 없이 직접 읽을 멈춤·거절 문장\n")
+                append(card.valueFreePauseScript)
+                append("\n\n왜 중요한가요?\n")
+                append(card.whyItMatters)
+                append("\n\n촬영·스캔·업로드·읽기·얼굴·계정·말하기·공유·첨부·기록 경계\n")
+                card.doNotPhotographScanUploadReadIdFaceAccountSayShareAttachOrRecordBoundaries
+                    .forEach { boundary ->
+                        append("• ").append(boundary).append('\n')
+                    }
+            }.trim()
+        )
+        if (recommended) {
+            primaryButton(card.primaryAction.label) {
+                openIdDocumentSelfieCapturePauseAction(card.primaryAction)
+            }
+        } else {
+            secondaryButton(card.primaryAction.label) {
+                openIdDocumentSelfieCapturePauseAction(card.primaryAction)
+            }
+        }
+        card.secondaryActions.forEach { action ->
+            secondaryButton(action.label) {
+                openIdDocumentSelfieCapturePauseAction(action)
+            }
+        }
+    }
+
+    private fun openIdDocumentSelfieCapturePauseAction(
+        action: IdDocumentSelfieCapturePauseAction
+    ) {
+        when (action.id) {
+            IdDocumentSelfieCapturePauseActionId.QUICK_STOP -> show(Screen.QUICK_STOP)
+            IdDocumentSelfieCapturePauseActionId.CHECKER -> show(Screen.CHECKER)
+            IdDocumentSelfieCapturePauseActionId.ANALYSIS_RESULT ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.RESULT)
+            IdDocumentSelfieCapturePauseActionId.SAFETY_PLAN -> show(Screen.PLAN)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_READINESS_ROADMAP ->
+                show(Screen.FAMILY_READINESS_ROADMAP)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_SAFETY_DRILL_COACH -> openDrill()
+            IdDocumentSelfieCapturePauseActionId.SAFE_PASTE_PRIVACY_COACH ->
+                show(Screen.SAFE_PASTE_PRIVACY_COACH)
+            IdDocumentSelfieCapturePauseActionId.ACTIVE_CONTACT_EXIT_SCRIPTS ->
+                show(Screen.ACTIVE_CONTACT_EXIT_SCRIPTS)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_CALLBACK_CARD ->
+                openFamilyCallbackCard(currentAnalysis)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_SAFE_WORD_RESET_COACH ->
+                show(Screen.FAMILY_SAFE_WORD_RESET_COACH)
+            IdDocumentSelfieCapturePauseActionId.SEPARATE_CHANNEL_VERIFICATION_COACH ->
+                show(Screen.SEPARATE_CHANNEL_VERIFICATION_COACH)
+            IdDocumentSelfieCapturePauseActionId.SAFE_CALL_SCRIPTS ->
+                show(Screen.SAFE_CALL_SCRIPTS)
+            IdDocumentSelfieCapturePauseActionId.VOICE_IMPERSONATION_REALITY_CHECK_COACH ->
+                show(Screen.VOICE_IMPERSONATION_REALITY_CHECK)
+            IdDocumentSelfieCapturePauseActionId.NEW_NUMBER_QUARANTINE_COACH ->
+                show(Screen.NEW_NUMBER_QUARANTINE_COACH)
+            IdDocumentSelfieCapturePauseActionId.CREDENTIAL_SECRET_FREEZE_COACH ->
+                show(Screen.CREDENTIAL_SECRET_FREEZE_COACH)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_ALERT_MESSAGES ->
+                show(Screen.FAMILY_ALERT_MESSAGES)
+            IdDocumentSelfieCapturePauseActionId.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD ->
+                show(Screen.VERIFICATION_OUTCOME_NEXT_STEPS_BOARD)
+            IdDocumentSelfieCapturePauseActionId.RECONTACT_BOUNDARY_COACH ->
+                show(Screen.RECONTACT_BOUNDARY_COACH)
+            IdDocumentSelfieCapturePauseActionId.TRUSTED_HELPER_REVIEW ->
+                show(Screen.TRUSTED_HELPER_REVIEW)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_RESPONSE_ROLE_BOARD ->
+                show(Screen.FAMILY_RESPONSE_ROLE_BOARD)
+            IdDocumentSelfieCapturePauseActionId.FAMILY_CALM_DEBRIEF_AGENDA ->
+                show(Screen.FAMILY_CALM_DEBRIEF_AGENDA)
+            IdDocumentSelfieCapturePauseActionId.TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH ->
+                show(Screen.TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH)
+            IdDocumentSelfieCapturePauseActionId.SIM_NUMBER_PORT_OUT_PAUSE_COACH ->
+                show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+            IdDocumentSelfieCapturePauseActionId.MONEY_TRANSFER_PAUSE_GATE ->
+                show(Screen.MONEY_TRANSFER_PAUSE_GATE)
+            IdDocumentSelfieCapturePauseActionId.GIFT_CARD_CODE_PAUSE_COACH ->
+                show(Screen.GIFT_CARD_CODE_PAUSE_COACH)
+            IdDocumentSelfieCapturePauseActionId.LINK_APP_INSTALL_QUARANTINE_COACH ->
+                show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
+            IdDocumentSelfieCapturePauseActionId.OFFICIAL_PRESSURE_REALITY_CHECK_COACH ->
+                show(Screen.OFFICIAL_PRESSURE_REALITY_CHECK_COACH)
+            IdDocumentSelfieCapturePauseActionId.RECOVERY_PROMISE_REALITY_CHECK_COACH ->
+                show(Screen.RECOVERY_PROMISE_REALITY_CHECK_COACH)
+            IdDocumentSelfieCapturePauseActionId.ACCOUNT_LOCKDOWN ->
+                show(Screen.ACCOUNT_LOCKDOWN)
+            IdDocumentSelfieCapturePauseActionId.REMOTE_ACCESS_CUTOFF_COACH ->
+                show(Screen.REMOTE_ACCESS_CUTOFF_COACH)
+            IdDocumentSelfieCapturePauseActionId.EXPOSURE_IMPACT_TRIAGE ->
+                show(Screen.EXPOSURE_IMPACT_TRIAGE)
+            IdDocumentSelfieCapturePauseActionId.PRIVACY_CENTER ->
+                show(Screen.PRIVACY_CENTER)
+            IdDocumentSelfieCapturePauseActionId.EVIDENCE_HANDOFF_PRIVACY_COACH ->
+                show(Screen.EVIDENCE_HANDOFF_PRIVACY_COACH)
+            IdDocumentSelfieCapturePauseActionId.EVIDENCE_KIT -> openEvidenceKit(null)
+            IdDocumentSelfieCapturePauseActionId.INCIDENT_TIMELINE_BRIEFING ->
+                show(Screen.TIMELINE_BRIEFING)
+            IdDocumentSelfieCapturePauseActionId.OFFICIAL_HELP_DIRECTORY ->
+                openHelpDirectory(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+            IdDocumentSelfieCapturePauseActionId.REPORT_PREP ->
+                show(if (currentAnalysis == null) Screen.CHECKER else Screen.REPORT_PREP)
+            IdDocumentSelfieCapturePauseActionId.FOLLOW_UP_CHECK_IN_PLANNER ->
+                show(Screen.FOLLOW_UP_CHECK_IN_PLANNER)
+            IdDocumentSelfieCapturePauseActionId.SAFETY_FLOW_ROUTER ->
+                show(Screen.FLOW_ROUTER)
+        }
+    }
+
+    private fun shareIdDocumentSelfieCapturePauseCoach(summary: String) {
+        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, summary)
+        }
+        startActivity(
+            Intent.createChooser(shareIntent, "가족에게 신분증·셀피 촬영 멈춤 안내 공유")
+        )
     }
 
     private fun LinearLayout.simNumberPortOutPauseCoachScreen() {
@@ -193,6 +412,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("SIM·번호 보호 명목의 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -408,6 +630,9 @@ class MainActivity : Activity() {
         subtitle(coach.intro)
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("이동·만남 중 신분증·셀피 촬영·전송 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
@@ -629,6 +854,9 @@ class MainActivity : Activity() {
         secondaryButton("이동·만남 지시 멈춤 코치") {
             show(Screen.TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH)
         }
+        secondaryButton("문 앞의 신분증·서류 촬영·전달 요구 거절") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -846,6 +1074,9 @@ class MainActivity : Activity() {
         secondaryButton("이동·만남 지시 멈춤 코치") {
             show(Screen.TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH)
         }
+        secondaryButton("은행·ATM 지시와 신분증·셀피 제출 압박 분리") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -1061,6 +1292,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("이동·만남 지시 멈춤 코치") {
             show(Screen.TRAVEL_ROUTE_MEETING_POINT_PAUSE_COACH)
+        }
+        secondaryButton("현금·서류 전달과 신분증·셀피 요구 함께 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
@@ -1279,6 +1513,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("링크·앱 안의 신분증·셀피 촬영 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         section(
             "${coach.modeLabel} · ${coach.recommendationTitle}",
             buildString {
@@ -1484,6 +1721,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("상품권·코드와 함께 요구한 신분증·셀피도 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("상품권·코드 링크나 설치 지시도 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -1679,6 +1919,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("회복 조건의 신분증·셀피 제출 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("회복 링크·앱 설치 지시를 열기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -1880,6 +2123,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("기관 사칭의 신분증·셀피 제출 압박 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("기관 사칭 링크·앱 설치 압박 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2080,6 +2326,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("신분증·셀피 요구도 비밀값처럼 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("로그인·인증값 입력 링크와 설치 지시 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -2285,6 +2534,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("새 연락수단의 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("새 연락수단이 건넨 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -2489,6 +2741,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("목소리 요청의 신분증·셀피 촬영·전송 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("목소리로 받은 링크·앱 설치 지시 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -2863,6 +3118,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("증거 전달과 신분증·셀피 제출 요구 분리") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 값을 넘기지 않고 격리 경계 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3058,6 +3316,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("재연락의 신분증·셀피 요구 다시 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("재연락의 링크·앱 설치 압박 다시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -3260,6 +3521,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("확인 결과와 별개로 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("확인 결과와 별개로 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3458,6 +3722,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("별도 확인 전 신분증·셀피 촬영·전송 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("별도 확인 전 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3648,6 +3915,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("원격 지시의 신분증·셀피 촬영·전송 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("원격 지시의 링크·앱 설치 단계 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -3836,6 +4106,9 @@ class MainActivity : Activity() {
         }
         primaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("대출·환급 명목의 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         primaryButton("송금 링크·앱 설치 지시를 따르기 전 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -4189,6 +4462,9 @@ class MainActivity : Activity() {
 
         title(coach.title)
         subtitle(coach.intro)
+        secondaryButton("신분증·셀피 촬영·전송 요구도 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("링크를 붙여넣거나 열지 않고 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4361,6 +4637,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("신분증·셀피 요구를 숨기지 않고 가족과 점검") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -4551,6 +4830,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("신분증·셀피 요구 대응 역할 함께 보기") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("링크·앱 설치 압박 대응 역할 전에 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -4769,6 +5051,9 @@ class MainActivity : Activity() {
         primaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        primaryButton("신분증·셀피 촬영·전송 전에 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         primaryButton("링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -4867,6 +5152,9 @@ class MainActivity : Activity() {
         }
         primaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        primaryButton("신분증·셀피 촬영·전송 요구 즉시 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         primaryButton("링크·앱 설치 압박 즉시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -5023,6 +5311,9 @@ class MainActivity : Activity() {
         primaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        primaryButton("신분증·셀피 촬영·전송 요구 멈춤 경로") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         primaryButton("링크·앱 설치 격리 경로") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5146,6 +5437,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("신분증·셀피 요구를 가족과 값 없이 점검") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("링크·앱 설치 압박을 가족과 값 없이 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -5279,6 +5573,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("계정 보호 명목의 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("계정·기기 조치 전에 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -5545,6 +5842,9 @@ class MainActivity : Activity() {
         primaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        primaryButton("이 신분증·셀피 촬영·전송 요구를 따르기 전 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         primaryButton("이 링크를 열거나 앱을 설치하기 전 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -5804,6 +6104,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("카메라·파일 읽기 없이 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("값·열기·조회·스캔 없이 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -6035,6 +6338,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("공식 도움과 상대의 신분증·셀피 요구 분리") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("공식 도움과 분리해 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -6109,6 +6415,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("신고 준비와 신분증·셀피 제출 요구 분리") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("신고 준비와 분리해 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -6284,6 +6593,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("준비 상태와 별개로 신분증·셀피 요구 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("준비 상태와 별개로 링크·앱 설치 지시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -6801,6 +7113,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("보호자와 신분증·셀피 촬영·전송 요구 점검") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("보호자와 링크·앱 설치 압박 격리 점검") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
@@ -7585,6 +7900,9 @@ class MainActivity : Activity() {
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
         }
+        secondaryButton("신분증·셀피 노출 가능성을 값 없이 점검") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
+        }
         secondaryButton("링크·앱 설치 압박과 실제 행동을 분리해 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)
         }
@@ -7758,6 +8076,9 @@ class MainActivity : Activity() {
         }
         secondaryButton("SIM·번호이동 멈춤 코치") {
             show(Screen.SIM_NUMBER_PORT_OUT_PAUSE_COACH)
+        }
+        secondaryButton("후속 연락의 신분증·셀피 요구 다시 멈춤") {
+            show(Screen.ID_DOCUMENT_SELFIE_CAPTURE_PAUSE_COACH)
         }
         secondaryButton("후속 연락의 링크·앱 설치 지시 다시 격리") {
             show(Screen.LINK_APP_INSTALL_QUARANTINE_COACH)

@@ -2181,6 +2181,118 @@ class PrivacyCenterBuilderTest {
     }
 
     @Test
+    fun idDocumentSelfieCapturePauseCoachIsInventoriedAsManualNoCaptureValidationOrMutation() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "신분증·셀피 촬영 멈춤 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val featureStatements = center.noCollectionStatements.filter { statement ->
+            statement.contains(featureName)
+        }
+        assertEquals(3, featureStatements.size)
+        val persistenceStatement = featureStatements.single { statement ->
+            !statement.startsWith(featureName)
+        }
+        val boundaryStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        val mutationStatement = featureStatements.single { statement ->
+            statement.startsWith("${featureName} 화면")
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·이름·담당자·받는 사람·신분증·주민번호·여권·면허증·" +
+                "건강보험증·통장 사본·문서·파일·사진·영상·셀피·얼굴·생존 확인·라이브니스·생체 정보·갤러리·카메라·" +
+                "스크린샷·OCR·바코드·QR·미디어·URI·경로·계정·연락처·전화번호·SIM·기기 식별값·업로드·제출·접수·" +
+                "확인·검증·유효성·가림·촬영·스캔·분석·일치·결과 상태·체크 표시·메모·리마인더·진행·이력"
+
+        assertTrue(transientInventory.detail.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("${featureName}의 $nonStoredState"))
+        assertTrue(persistenceStatement.contains("만들거나 기록하지 않"))
+
+        listOf(
+            "새 Android 권한·네트워크·저장소 없는 로컬 전용·무상태 수동 안내",
+            "값 없는 고정 신분 자료·얼굴 촬영 멈춤 문장 카드",
+            "신분증·주민번호·여권·면허증·건강보험증·통장 사본·문서",
+            "사진·영상·셀피·얼굴·생존 확인·라이브니스·생체 정보·갤러리·카메라·스크린샷·OCR·바코드·QR",
+            "입력하도록 요구하거나 읽기·표시·저장·공유·첨부·녹음하지 않습니다",
+            "카메라·CameraX·Camera2·마이크·MediaRecorder·AudioRecord·OCR·ML Kit·문자 인식",
+            "QR·바코드 스캔·이미지 분석·얼굴 인식·얼굴 검출·생존 확인·라이브니스·생체 인증 API",
+            "파일·신분 문서·사진·영상·미디어·갤러리·스크린샷·저장소를 읽지 않고",
+            "파일·문서·사진 선택기·촬영·녹화·스캔·첨부·업로드·동기화·스트림·URI 공유",
+            "신분증·주민 식별값·여권·면허증·건강보험증·통장 사본·문서·얼굴·생존성·라이브니스",
+            "조회·읽기·추출·분석·일치·확인·검증·유효성 판정하지 않고",
+            "가림·살균·정제 처리를 하지 않습니다",
+            "기관 정보·공식 번호·공식 경로·직원·사람·신원·문서·사건·신고",
+            "기관·직원·문서·사건 확인이나 신고 제출을 하지 않습니다",
+            "네트워크·웹·브라우저·웹뷰·외부 링크 열기",
+            "전화 앱 열기·다이얼·발신·통화·통화 종료·선별·차단",
+            "통화 상태·통화 기록·발신자 표시·문자·SMS·받는 사람 선택·자동 전송",
+            "연락처·주소록·알림을 읽기·쓰기·편집·선택·감시·필터링하지 않습니다",
+            "클립보드·텍스트 감시기·자동완성·Credential Manager·Android 계정 관리자",
+            "자격 증명·계정·로그인·인증·키가드·키 저장소·암호화 API",
+            "결제·은행·카드·NFC·지갑·블록체인·상품권·환급·차지백",
+            "통신·전화·SIM·구독·통신사 API",
+            "IMEI·ICCID·IMSI·기기 ID·일련값을 읽지 않습니다",
+            "앱·패키지·설치 앱 목록·앱 이름·권한·기기 상태",
+            "설치·제거·비활성화·강제 종료·권한 허용·철회·설정 변경",
+            "기기 관리자·접근성 서비스·VPN·사용 통계·알림 수신 서비스",
+            "알림·알람·캘린더 일정·리마인더·스케줄러·서비스·방송 수신기·백그라운드 작업",
+            "업로드됨·촬영됨·스캔됨·분석됨·일치함·가림됨·보장·문제없음 상태",
+            "저장하거나 자동으로 변경하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "ID/selfie boundary statement omitted $boundary",
+                boundaryStatement.contains(boundary)
+            )
+        }
+
+        listOf(
+            "카드·경로·공유 버튼",
+            "원문·가린 단서·신분증·주민번호·여권·면허증",
+            "파일·사진·영상·셀피·얼굴·생존 확인·라이브니스·생체 정보·갤러리·카메라·스크린샷·OCR·QR·바코드",
+            "업로드·제출·접수·확인·검증·유효성·가림·촬영·스캔·분석·일치·생존 통과·라이브니스 통과",
+            "전화번호·새 번호·채널·프로필·SIM·eSIM·USIM·IMEI·ICCID·IMSI·기기 ID",
+            "연락처·주소록·통화·통화 기록·통화 상태·문자·SMS·발신자 표시·알림",
+            "사건 기록·가족 안전 계획의 실제 값·공식 도움 기관 목록",
+            "카메라·마이크·OCR·QR·바코드·이미지·얼굴·생존·라이브니스·생체 인증",
+            "파일·미디어·저장소·선택기·첨부·업로드·스트림·URI",
+            "문서·신분·얼굴 검증·기관·직원·사건 조회·신고 제출",
+            "앱·패키지·권한·기기·설정·기기 관리자·접근성·VPN·사용 통계·알림 수신",
+            "계정·인증·암호화·결제·은행·NFC·지갑·블록체인·스케줄러·백그라운드·저장소 상태",
+            "돈의 움직임을 추가·수정·삭제하지 않습니다"
+        ).forEach { boundary ->
+            assertTrue(
+                "ID/selfie mutation statement omitted $boundary",
+                mutationStatement.contains(boundary)
+            )
+        }
+
+        val summary = center.familyShareSummary
+        assertTrue(summary.contains("${featureName}의 $nonStoredState"))
+        assertTrue(summary.contains(boundaryStatement))
+        assertTrue(summary.contains(mutationStatement))
+        assertFalse(summary.contains(persistenceStatement))
+
+        val allCopy = center.noCollectionStatements.joinToString("\n") + "\n" + summary
+        listOf(
+            "신분증이 공식입니다",
+            "문서가 검증됐습니다",
+            "셀피가 안전합니다",
+            "얼굴이 일치했습니다",
+            "생존 확인을 통과했습니다",
+            "라이브니스 확인을 통과했습니다",
+            "촬영이 완료됐습니다",
+            "업로드됐습니다",
+            "제출이 접수됐습니다",
+            "계정이 보호됐습니다",
+            "신고가 제출됐습니다",
+            "환급이 보장됩니다",
+            "100%"
+        ).forEach { unsafeClaim -> assertFalse(allCopy.contains(unsafeClaim)) }
+    }
+
+    @Test
     fun evidenceHandoffPrivacyCoachIsInventoriedAsLocalManualNoFileAccessAndNonAutomated() {
         val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
         val featureName = "증거 전달 개인정보 코치"
