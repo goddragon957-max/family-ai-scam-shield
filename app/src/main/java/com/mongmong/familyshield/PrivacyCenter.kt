@@ -55,7 +55,8 @@ object PrivacyCenterBuilder {
         plan: SafetyPlan,
         incidentCount: Int,
         consentAccepted: Boolean,
-        permissionFacts: PrivacyPermissionFacts = PrivacyPermissionFacts.LOCAL_ONLY_MVP
+        permissionFacts: PrivacyPermissionFacts = PrivacyPermissionFacts.LOCAL_ONLY_MVP,
+        simpleModeOn: Boolean = false
     ): PrivacyCenter {
         val safeIncidentCount = incidentCount.coerceAtLeast(0)
         val trustedContactCount = plan.contacts.count { it.number.isNotBlank() }
@@ -66,7 +67,8 @@ object PrivacyCenterBuilder {
             incidentCount = safeIncidentCount,
             consentAccepted = consentAccepted,
             trustedContactCount = trustedContactCount,
-            readiness = readiness
+            readiness = readiness,
+            simpleModeOn = simpleModeOn
         )
         val permissionStatusItems = buildPermissionItems(permissionFacts)
         val noCollectionStatements = listOf(
@@ -800,7 +802,8 @@ object PrivacyCenterBuilder {
         incidentCount: Int,
         consentAccepted: Boolean,
         trustedContactCount: Int,
-        readiness: FamilyReadiness
+        readiness: FamilyReadiness,
+        simpleModeOn: Boolean
     ): List<PrivacyCenterItem> {
         val hasSafeWord = plan.safeWord.isNotBlank()
         val hasCallbackScript = plan.callbackScript.isNotBlank()
@@ -830,6 +833,16 @@ object PrivacyCenterBuilder {
                 detail = "현재 버전은 incident_log SharedPreferences에 최근 30개까지 위험도·탐지 신호·점수·저장 시각·" +
                     "개인정보를 가린 짧은 미리보기만 저장합니다. 붙여넣은 전체 원문은 사건 기록에 보관하지 않으며, " +
                     "이전 버전의 미리보기는 사건 기록 화면에서 불러올 때 다시 가립니다."
+            ),
+            PrivacyCenterItem(
+                title = "단순 모드 표시 설정",
+                status = if (simpleModeOn) "켜짐" else "꺼짐",
+                detail = "큰글씨·읽어주기 접근성 코치의 단순 모드는 홈 화면을 큰 버튼 세 개로 " +
+                    "바꾸는 표시 설정이며, family_shield SharedPreferences에 " +
+                    "pref_simple_mode 켜짐/꺼짐 불리언 값 하나만 이 기기 로컬 값으로 " +
+                    "저장합니다. 이 값 외에 접근성 코치가 저장하는 항목은 없고, 시스템 글자 " +
+                    "크기·디스플레이 크기·고대비·굵은 텍스트·확대·TalkBack·선택하여 말하기 " +
+                    "설정은 읽지도 저장하지도 바꾸지도 않습니다."
             ),
             PrivacyCenterItem(
                 title = "임시 입력·카드·선택 상태",
@@ -918,6 +931,9 @@ object PrivacyCenterBuilder {
                     "사건 뒤 가족 점검 달력의 시점 선택·추천·읽음·공유·점검 날짜·기준 날짜·시각·" +
                     "반복 주기·알림 일정·리마인더·완료 여부·체크 표시·메모·진행·이력은 만들거나 " +
                     "기록하지 않으며, " +
+                    "큰글씨·읽어주기 접근성 코치의 카드 선택·추천·읽음·공유·체크 표시·메모·진행·" +
+                    "이력과 시스템 글자 크기·디스플레이 크기·고대비·굵은 텍스트·확대·TalkBack·" +
+                    "선택하여 말하기 설정 값·적용 여부는 만들거나 기록하지 않으며, " +
                     "노출 영향 분류의 노출 선택·답변·완료·체크·점수·읽음·진행·공유·노출 이력, 가족 콜백 카드, " +
                     "보호자 안전 검토의 카드 선택·보호자 질문·답변·메모·완료·체크·점수·읽음·진행·" +
                     "공유·보호자 검토 이력, " +

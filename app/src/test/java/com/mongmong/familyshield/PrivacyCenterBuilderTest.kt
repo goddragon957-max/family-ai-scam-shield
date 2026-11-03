@@ -2914,6 +2914,91 @@ class PrivacyCenterBuilderTest {
         }
     }
 
+    @Test
+    fun simpleModeIsInventoriedAsASingleLocalBooleanAndReflectsTheStoredFlag() {
+        val off = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val on = PrivacyCenterBuilder.build(
+            plan = emptyPlan(),
+            incidentCount = 0,
+            consentAccepted = true,
+            simpleModeOn = true
+        )
+        val title = "단순 모드 표시 설정"
+        val offItem = off.localDataInventoryItems.single { it.title == title }
+        val onItem = on.localDataInventoryItems.single { it.title == title }
+
+        assertEquals("꺼짐", offItem.status)
+        assertEquals("켜짐", onItem.status)
+        assertEquals(offItem.detail, onItem.detail)
+
+        assertTrue(offItem.detail.contains("family_shield SharedPreferences"))
+        assertTrue(offItem.detail.contains("pref_simple_mode"))
+        assertTrue(offItem.detail.contains("불리언 값 하나만"))
+        assertTrue(offItem.detail.contains("이 기기 로컬 값으로"))
+        assertTrue(offItem.detail.contains("이 값 외에 접근성 코치가 저장하는 항목은 없고"))
+        assertTrue(
+            offItem.detail.contains(
+                "설정은 읽지도 저장하지도 바꾸지도 않습니다"
+            )
+        )
+        listOf("글자 크기", "디스플레이 크기", "고대비", "굵은 텍스트", "확대", "TalkBack", "선택하여 말하기")
+            .forEach { setting -> assertTrue(offItem.detail.contains(setting)) }
+    }
+
+    @Test
+    fun accessibilityCoachIsInventoriedAsStoringNoCardOrSystemSettingState() {
+        val center = PrivacyCenterBuilder.build(emptyPlan(), 0, false)
+        val featureName = "큰글씨·읽어주기 접근성 코치"
+        val transientInventory = center.localDataInventoryItems.single { item ->
+            item.title == "임시 입력·카드·선택 상태"
+        }
+        val nonStoredState =
+            "카드 선택·추천·읽음·공유·체크 표시·메모·진행·이력과 시스템 글자 크기·" +
+                "디스플레이 크기·고대비·굵은 텍스트·확대·TalkBack·선택하여 말하기 설정 값·적용 여부"
+
+        assertTrue(transientInventory.detail.contains("${featureName}의 $nonStoredState"))
+        assertTrue(transientInventory.detail.contains("만들거나 기록하지 않"))
+
+        val boundaryStatement = center.noCollectionStatements.single { statement ->
+            statement.startsWith("${featureName}는")
+        }
+        assertTrue(boundaryStatement.contains("로컬 전용·"))
+        assertTrue(boundaryStatement.contains("새 Android 권한·네트워크·저장소 없는"))
+        listOf(
+            "Configuration.fontScale",
+            "AccessibilityManager",
+            "WindowManager",
+            "TextToSpeech",
+            "TtsSpan",
+            "자동으로 켜거나 바꾸지 않고",
+            "사용자가 직접 켜는 방법만 안내합니다",
+            "안전단어·콜백 값·연락처·사건 내용을 읽거나 표시하지 않습니다"
+        ).forEach { phrase -> assertTrue(boundaryStatement.contains(phrase)) }
+
+        val simpleModeStatement = center.noCollectionStatements.single { statement ->
+            statement.startsWith("단순 모드는")
+        }
+        assertTrue(simpleModeStatement.contains("pref_simple_mode"))
+        assertTrue(simpleModeStatement.contains("새 Android 권한을 요청하지"))
+        assertTrue(simpleModeStatement.contains("Intent.ACTION_DIAL"))
+        assertFalse(simpleModeStatement.contains("Intent.ACTION_CALL"))
+        assertTrue(
+            simpleModeStatement.contains(
+                "다른 코치의 선택·진행·읽음·완료 상태나 가족 안전 계획·사건 기록을 덮어쓰거나 읽지 않으며"
+            )
+        )
+
+        val allCopy = allCopy(center)
+        listOf(
+            "자동으로 글자 크게",
+            "글자가 자동으로 커집니다",
+            "읽어주기가 켜졌습니다",
+            "TalkBack을 켜 드렸습니다",
+            "고대비가 적용됐습니다",
+            "100%"
+        ).forEach { unsafeClaim -> assertFalse(allCopy.contains(unsafeClaim)) }
+    }
+
     private fun emptyPlan(): SafetyPlan = SafetyPlan("", "", emptyList())
 
     private fun allCopy(center: PrivacyCenter): String = buildString {

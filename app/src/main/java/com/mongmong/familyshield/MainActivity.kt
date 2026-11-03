@@ -6590,7 +6590,8 @@ class MainActivity : Activity() {
         val privacyCenter = PrivacyCenterBuilder.build(
             plan = safetyPlan.load(),
             incidentCount = incidents.count(),
-            consentAccepted = prefs.getBoolean(KEY_CONSENTED, false)
+            consentAccepted = prefs.getBoolean(KEY_CONSENTED, false),
+            simpleModeOn = simpleMode.isOn()
         )
 
         title(privacyCenter.title)
